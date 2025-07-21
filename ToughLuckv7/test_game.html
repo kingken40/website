@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8"> <!-- Added charset meta tag -->
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Added viewport meta tag -->
+        <title>Test ToughLuck Game</title>
+        <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 10px; border: 1px solid #ccc; }
+        button { margin: 5px; padding: 5px 10px; }
+    </style>
+    </head>
+    <body>
+        <h1>ToughLuck Game Test</h1>
+
+        <div class="test-section">
+            <h2>Server Status</h2>
+            <button onclick="testServer()">Test Server Connection</button>
+            <button onclick="getGameState()">Get Game State</button>
+            <button onclick="resetGame()">Reset Game</button>
+            <div id="serverStatus"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>Game Logic Test</h2>
+            <button onclick="testEasyMode()">Test Easy Mode</button>
+            <button onclick="testMediumMode()">Test Medium Mode</button>
+            <button onclick="testHardMode()">Test Hard Mode</button>
+            <div id="gameTest"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>Game Links</h2>
+            <a href="http://localhost:3000/templates/UserGUI.html"
+                target="_blank">
+                <button>Open Game</button>
+            </a>
+        </div>
+
+        <script>
+        async function testServer() {
+            try {
+                const response = await fetch('http://localhost:3000/gamestate');
+                const data = await response.json();
+                document.getElementById('serverStatus').innerHTML = 
+                    `<p>Server Status: Online</p><pre>${JSON.stringify(data, null, 2)}</pre>`;
+            } catch (error) {
+                document.getElementById('serverStatus').innerHTML = 
+                    `<p>Server Status: Offline or Error</p><p>Error: ${error.message}</p>`;
+            }
+        }
+
+        async function getGameState() {
+            try {
+                const response = await fetch('http://localhost:3000/gamestate');
+                const data = await response.json();
+                document.getElementById('serverStatus').innerHTML = 
+                    `<p>Current Game State:</p><pre>${JSON.stringify(data, null, 2)}</pre>`;
+            } catch (error) {
+                document.getElementById('serverStatus').innerHTML = 
+                    `<p>Error: ${error.message}</p>`;
+            }
+        }
+
+        async function resetGame() {
+            try {
+                const response = await fetch('http://localhost:3000/reset', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                document.getElementById('serverStatus').innerHTML = 
+                    `<p>Reset Result: ${data.Message}</p>`;
+            } catch (error) {
+                document.getElementById('serverStatus').innerHTML = 
+                    `<p>Error: ${error.message}</p>`;
+            }
+        }
+
+        async function testEasyMode() {
+            await resetGame();
+            
+            const testMove = {
+                move: 5,
+                difficulty: 'easy',
+                totalMoves: 3,
+                allowDuplicates: true,
+                currentPosition: 1,
+                attemptsForCurrentPosition: 1,
+                gameStarted: false
+            };
+
+            try {
+                const response = await fetch('http://localhost:3000/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(testMove)
+                });
+                const data = await response.json();
+                document.getElementById('gameTest').innerHTML = 
+                    `<p>Easy Mode Test:</p><pre>${JSON.stringify(data, null, 2)}</pre>`;
+            } catch (error) {
+                document.getElementById('gameTest').innerHTML = 
+                    `<p>Error: ${error.message}</p>`;
+            }
+        }
+
+        async function testMediumMode() {
+            await resetGame();
+            
+            const testMove = {
+                move: 5,
+                difficulty: 'medium',
+                totalMoves: 3,
+                allowDuplicates: false,
+                currentPosition: 1,
+                attemptsForCurrentPosition: 1,
+                gameStarted: false
+            };
+
+            try {
+                const response = await fetch('http://localhost:3000/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(testMove)
+                });
+                const data = await response.json();
+                document.getElementById('gameTest').innerHTML = 
+                    `<p>Medium Mode Test:</p><pre>${JSON.stringify(data, null, 2)}</pre>`;
+            } catch (error) {
+                document.getElementById('gameTest').innerHTML = 
+                    `<p>Error: ${error.message}</p>`;
+            }
+        }
+
+        async function testHardMode() {
+            await resetGame();
+            
+            const testMove = {
+                move: 5,
+                difficulty: 'hard',
+                totalMoves: 3,
+                allowDuplicates: true,
+                currentPosition: 1,
+                attemptsForCurrentPosition: 1,
+                gameStarted: false
+            };
+
+            try {
+                const response = await fetch('http://localhost:3000/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(testMove)
+                });
+                const data = await response.json();
+                document.getElementById('gameTest').innerHTML = 
+                    `<p>Hard Mode Test:</p><pre>${JSON.stringify(data, null, 2)}</pre>`;
+            } catch (error) {
+                document.getElementById('gameTest').innerHTML = 
+                    `<p>Error: ${error.message}</p>`;
+            }
+        }
+    </script>
+    </body>
+</html>

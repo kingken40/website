@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tough Luck Game - Intro</title>
+    <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            color: #333;
+            text-align: center;
+            padding: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+            font-weight: bold;
+            font-size: 36px; /* Larger font size for the main title */
+        }
+        .button {
+            background-color: #3498db;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 18px; /* Larger font size for the button */
+            font-weight: bold;
+            margin-top: 20px; /* Add margin to separate from instructions */
+        }
+        .button:hover {
+            background-color: #2980b9;
+        }
+        .instructions {
+            margin-top: 20px;
+            text-align: left;
+            display: inline-block;
+            max-width: 600px;
+        }
+        .instructions h2 {
+            font-weight: bold;
+            color: #2980b9;
+            font-size: 28px; /* Larger font size for the instructions heading */
+        }
+        .instructions ul {
+            list-style-type: disc; /* Use bullet points */
+            padding-left: 20px; /* Indent the bullet points */
+        }
+        .instructions li {
+            margin: 15px 0; /* Increased margin for better spacing */
+            font-weight: bold;
+            font-size: 20px; /* Larger font size for list items */
+        }
+        /* Centering the button */
+        .button-container {
+            display: flex;
+            justify-content: center; /* Center the button horizontally */
+            margin-top: 20px; /* Add margin to separate from instructions */
+        }
+    </style>
+</head>
+<body>
+    <h1>Welcome to Tough Luck!</h1>
+    <p><strong>Get ready to test your luck and skills in this exciting game!</strong></p>
+    
+    <div class="instructions">
+        <h2>How to Play:</h2>
+        <ul>
+            <li>Choose the <strong>number of moves</strong> you want to play.</li>
+            <li>Select the <strong>difficulty level</strong>: Easy, Medium, or Hard.</li>
+            <li>Decide if you want to allow <strong>duplicate numbers</strong> in the game.</li>
+            <li>Enter your moves based on the <strong>numbers generated</strong> by the game.</li>
+            <li>Score points for <strong>correct moves</strong> and try to avoid wrong ones!</li>
+        </ul>
+    </div>
+    
+    <div class="button-container">
+        <button class="button" id="start-button">Start Game</button>
+    </div>
+
+    <!-- Back Button -->
+    <!-- <button type="button" class="button" onclick="window.close()">Game Page</button> -->
+
+    <!-- Old Back Button (goes to homepage) -->
+        <a href="..\..\..\..\Games.html">
+        <!-- <a href="http://localhost:3000/Home.html">  -->
+            <button type="button" class="button">Return to Games Page</button>
+        </a>
+
+    <script>
+        // Add functionality to the start button
+        document.getElementById("start-button").addEventListener("click", function() {
+            // Redirect to the game setup screen (you can change this to your actual game setup page)
+            window.location.href = "UserStart.html"; // Change to your actual game setup file
+        });
+    </script>
+<py-script src="ToughLuck/ToughLuckStart.py"></py-script>
+</body>
+</html>

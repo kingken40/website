@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8"> <!-- Added charset meta tag -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Added viewport meta tag -->
+    <title>Game Results</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            text-align: center;
+            padding: 50px;
+        }
+        .result {
+            margin: 20px 0;
+            font-size: 18px;
+        }
+        .win {
+            color: green;
+            font-weight: bold;
+        }
+        .lose {
+            color: red;
+            font-weight: bold;
+        }
+        .main-btn {
+            background-color: #0078d4;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 12px 32px;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 20px;
+        }
+        .main-btn:hover {
+            background-color: #005fa3;
+        }
+    </style>
+</head>
+<body>
+    <h1>Game Results</h1>
+    <div class="result">
+        <p>Game Mode: <span id="gameMode"></span></p>
+        <p>Path List: <span id="pathList"></span></p>
+        <p>Path List Length: <span id="pathListLength"></span></p>
+        <p>Your Moves: <span id="userMoves"></span></p>
+        <p>Missed Moves: <span id="missed"></span></p>
+        <p>Total Moves: <span id="totalMoves"></span></p>
+        <p>Time Elapsed: <span id="elapsedTime"></span></p>
+        <p>Total Available Points: <span id="totalAvailablePoints"></span></p>
+        <p>Points Earned: <span id="points"></span></p>
+    </div>
+    <h2 id="resultMessage"></h2>
+
+    <br>
+    <div style="display: flex; flex-direction: column; align-items: center;">
+        <div>
+            <button class="main-btn" onclick="window.location.href='UserStart.html'">Play Again</button>
+            <button class="main-btn" onclick="window.location.href='/Games.html'">Go Home</button>
+        </div>
+        <button id="metricsHelpBtn" style="margin-top: 18px; font-size: 28px; width: 48px; height: 48px; border-radius: 50%; background: #ffb347; color: #222; border: none; font-weight: bold; cursor: pointer;">?</button>
+    </div>
+
+    <script>
+        // Function to get URL parameters
+        function getUrlParams() {
+            const params = {};
+            const queryString = window.location.search.substring(1);
+            const regex = /([^&=]+)=([^&]*)/g;
+            let m;
+            while (m = regex.exec(queryString)) {
+                params[decodeURIComponent(m[1])] = decodeURIComponent(m[2]);
+            }
+            return params;
+        }
+
+        // Get parameters from the URL
+        const params = getUrlParams();
+
+        // Debugging: Log the parameters to see if they are being retrieved correctly
+        console.log(params);
+
+        // Populate the results on the page
+        function formatList(str) {
+            if (!str || str === 'N/A' || str.trim() === '') return 'N/A';
+            // If it's a single number, just return it
+            if (!str.includes(',')) return str.trim();
+            // Otherwise, format as comma-separated list
+            return str.split(',').map(x => x.trim()).filter(x => x !== '').join(', ');
+        }
+
+        document.getElementById('pathList').innerText = formatList(params.path_list);
+        document.getElementById('pathListLength').innerText = params.path_list_length && parseInt(params.path_list_length) > 0 ? params.path_list_length : 'N/A';
+        document.getElementById('userMoves').innerText = formatList(params.user_moves);
+        document.getElementById('points').innerText = params.points && params.points !== '' ? params.points : '0';
+        document.getElementById('totalAvailablePoints').innerText = params.total_available_points && params.total_available_points !== '' ? params.total_available_points : '0';
+        document.getElementById('missed').innerText =
+    (params.path_list_length && params.user_moves)
+        ? Math.max(parseInt(params.path_list_length) - params.user_moves.split(',').filter(x => x.trim() !== '').length, 0)
+        : '0';
+        document.getElementById('totalMoves').innerText = params.total_moves && parseInt(params.total_moves) > 0 ? params.total_moves : 'N/A';
+
+        function formatElapsedTime(seconds) {
+          seconds = parseInt(seconds, 10);
+          if (isNaN(seconds) || seconds < 0) return "0 seconds";
+          if (seconds < 60) {
+            return `${seconds} second${seconds === 1 ? '' : 's'}`;
+          } else {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            let result = `${minutes} minute${minutes === 1 ? '' : 's'}`;
+            if (remainingSeconds > 0) {
+              result += ` ${remainingSeconds} second${remainingSeconds === 1 ? '' : 's'}`;
+            }
+            return result;
+          }
+        }
+        document.getElementById('elapsedTime').innerText = formatElapsedTime(params.elapsed_time || '0');
+
+        // Determine win or lose message
+        const points = parseInt(params.points || '0');
+        const totalAvailablePoints = parseInt(params.total_available_points || '0');
+        const resultMessageElem = document.getElementById('resultMessage');
+
+        if (points === 0) {
+            resultMessageElem.innerText = 'Tough Luck...';
+            resultMessageElem.style.color = 'red';
+            resultMessageElem.className = 'lose';
+        } else if (userMoves === pathList) {
+            resultMessageElem.innerText = 'Perfect Game!';
+            resultMessageElem.style.color = 'green';
+            resultMessageElem.className = 'win';
+        } else if(userMoves !== pathList && points > 0){
+            resultMessageElem.innerText = 'Not Quite!';
+            resultMessageElem.style.color = 'orange';
+            resultMessageElem.className = 'lose';
+        } else {
+            resultMessageElem.innerText = 'Good Try!';
+            resultMessageElem.style.color = 'orange';
+            resultMessageElem.className = 'lose';
+        }
+
+        // Map difficulty/mode names
+        function getModeName(val) {
+            if (!val) return "Unknown";
+            val = val.toLowerCase();
+            if (val === "easy" || val === "endless") return "Endless";
+            if (val === "medium" || val === "level1") return "TL - 1";
+            if (val === "hard" || val === "level2") return "TL - 2";
+            return val.charAt(0).toUpperCase() + val.slice(1);
+        }
+        const modeValue = params.mode || params.difficulty;
+        document.getElementById('gameMode').innerText = getModeName(modeValue);
+
+        document.getElementById('metricsHelpBtn').onclick = function() {
+    const helpText = `
+<b>Game Mode:</b> The mode you selected for this game.
+
+<b>Path List:</b> The sequence of numbers generated for you to guess.
+
+<b>Path List Length:</b> The total number of positions in the path list.
+
+<b>Your Moves:</b> All the guesses you entered during the game.
+
+<b>Missed Moves:</b> The number of spots in the path list that were not guessed correct.
+
+<b>Total Moves:</b> The total number of moves required to complete the path list.
+
+<b>Time Elapsed:</b> The total time you spent playing this game.
+
+<b>Total Available Points:</b> The maximum points you could earn, based on the path list length and game mode.
+
+<b>Points Earned:</b> The points you actually earned in this game.
+    `;
+    const popup = document.createElement('div');
+    popup.style.position = 'fixed';
+    popup.style.top = '0';
+    popup.style.left = '0';
+    popup.style.width = '100vw';
+    popup.style.height = '100vh';
+    popup.style.background = 'rgba(0,0,0,0.4)';
+    popup.style.display = 'flex';
+    popup.style.alignItems = 'center';
+    popup.style.justifyContent = 'center';
+    popup.style.zIndex = '9999';
+
+    const inner = document.createElement('div');
+    inner.style.background = '#fff';
+    inner.style.padding = '32px';
+    inner.style.borderRadius = '12px';
+    inner.style.maxWidth = '400px';
+    inner.style.fontSize = '18px';
+    inner.style.textAlign = 'left';
+    inner.style.color = '#222';
+    inner.innerHTML = `<h3 style="margin-top:0;">Results Metrics Explained</h3><pre style="white-space:pre-wrap; font-family:inherit;">${helpText}</pre><button style="margin-top:18px; padding:8px 18px; border-radius:6px; background:#0078d4; color:#fff; border:none; font-size:16px; cursor:pointer;" onclick="this.parentElement.parentElement.remove()">Close</button>`;
+
+    popup.appendChild(inner);
+    document.body.appendChild(popup);
+};
+    </script>
+    <py-script src="ToughLuck/ToughLuckResults.py"></py-script>
+</body>
+</html>

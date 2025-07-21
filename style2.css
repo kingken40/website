@@ -1,0 +1,89 @@
+/* Set up the page with Flexbox so we can push the footer to the bottom */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* The wrapper holds all content except the footer */
+#wrapper {
+  flex: 1;  /* Takes up available space between header and footer */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Navigation styling (ensure it's visible) */
+nav {
+  background-color: #000; /* or any dark color */
+}
+
+nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 10px;
+  display: flex;
+  justify-content: center;
+}
+
+nav ul li a {
+  color: #fff; /* white text for better contrast */
+  text-decoration: none;
+  padding: 10px;
+}
+
+nav ul li a:hover {
+  color: #ccc; /* a lighter shade when hovered */
+}
+
+/* .linkedin-button {
+  display: inline-flex;             
+  align-items: center;              
+  padding: 10px 15px;               
+  border: 2px solid #0e76a8;          
+  border-radius: 8px;                 
+  color: #0e76a8;                     
+  text-decoration: none;              
+  font-size: 18px;                    
+  transition: background-color 0.3s ease, color 0.3s ease;
+  font-weight: 500;                   
+}
+
+.linkedin-button img {
+  width: 20px;                       
+  vertical-align: middle;
+  margin-right: 8px;                 
+}
+
+.linkedin-button:hover {
+  background-color: #0e76a8;         
+  color: #fff;                       
+  cursor: pointer;                   
+} */
+
+/* Content container styling */
+.container {
+  margin: 20px auto;
+  width: 80%;
+  padding: 20px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.content {
+  flex: 1;                /* Takes up all available space */
+}
+
+/* Footer styling */
+footer {
+  background-color: #333;
+  color: white;
+  text-align: center;
+  padding: 10px 0;
+  width: 100%;
+}
+
+

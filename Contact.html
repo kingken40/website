@@ -1,0 +1,58 @@
+<!-- Game Page -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ContactPage</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="wrapper">
+        <h2 style="text-align: center;">
+            How To Reach Me
+        </h2>
+        <!-- For Loading the navbar -->
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                fetch("navbar.html")
+                    .then((response) => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! Status: ${response.status}`);
+                        }
+                        return response.text();
+                    })
+                    .then((html) => {
+                        document.getElementById("navbar").innerHTML = html;
+                    })
+                    .catch((error) => console.error("Error loading navbar:", error));
+            });
+        </script>
+        <div id="navbar"></div>
+        <div class="content">
+            <!-- <h2>
+                Games: 
+            </h2> -->
+            <div class="contact-container">
+                <!-- LinkedIn -->
+                <div class="contact-item">
+                    <h3><img src="https://upload.wikimedia.org/wikipedia/commons/e/e9/Linkedin_icon.svg" alt="LinkedIn Logo" style="width: 40px; vertical-align: -10px; margin-right: 7px;" />LinkedIn</h3>
+                    <a ref="https://www.linkedin.com/in/ken-okwun/" class="play-button" target="_blank">Go</a>
+                </div>
+            </div>
+            <div class="contact-container">
+                <!-- Email, Have it open the mail App -->
+
+                <!-- Instagram  -->
+                <!-- <div class="contact-item">
+                    <h3><img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png" alt="Instagram Logo" style="width: 40px; vertical-align: -10px; margin-right: 8px;" />Instagram</h3>
+                    <a href="https://www.instagram.com/offdawall40/" class="play-button" target="_blank">Go</a>
+                </div> -->
+            </div>
+        </div>
+        <footer>
+            <p>Copyright 2025 Kenneth Okwunwanne</p>
+        </footer>
+    </div>
+</body>
+</html>

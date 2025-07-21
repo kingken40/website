@@ -1,0 +1,413 @@
+/* Set up the page with Flexbox so we can push the footer to the bottom */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* The wrapper holds all content except the footer */
+#wrapper {
+  flex: 1;  /* Takes up available space between header and footer */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Navigation styling (ensure it's visible) */
+nav {
+  background-color: #000; /* or any dark color */
+}
+
+nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 10px;
+  display: flex;
+  justify-content: center;
+}
+
+nav ul li a {
+  color: #fff; /* white text for better contrast */
+  text-decoration: none;
+  padding: 10px 15px;
+  font-size: 18px; /* Added font size */
+  font-weight: 500;
+}
+
+nav ul li a:hover {
+  color: #ccc; /* a lighter shade when hovered */
+}
+
+/* .linkedin-button {
+  display: inline-flex;             
+  align-items: center;              
+  padding: 10px 15px;               
+  border: 2px solid #0e76a8;          
+  border-radius: 8px;                 
+  color: #0e76a8;                     
+  text-decoration: none;              
+  font-size: 18px;                    
+  transition: background-color 0.3s ease, color 0.3s ease;
+  font-weight: 500;                   
+}
+
+.linkedin-button img {
+  width: 20px;                       
+  vertical-align: middle;
+  margin-right: 8px;                 
+}
+
+.linkedin-button:hover {
+  background-color: #0e76a8;         
+  color: #fff;                       
+  cursor: pointer;                   
+} */
+
+/* Content container styling */
+.container {
+  margin: 20px auto;
+  width: 80%;
+  padding: 20px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.contact-item h3 {
+  font-size: 2rem;
+  font-weight: 900;
+  color: #005f99;
+  text-shadow: none;
+  -webkit-text-stroke: 1px white;
+  -webkit-text-fill-color: #005f99;
+  -webkit-text-stroke: 1px white;
+  -webkit-text-fill-color: #005f99;
+}
+
+.content {
+  flex: 1;                /* Takes up all available space */
+}
+
+h2 {
+  margin-left: 50px; 
+  text-align: left;  
+  font-size: 24px;   
+  color: #ffffff;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.6);
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+
+/* General styling for the page */
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #f4f4f4;
+  color: #333;
+}
+
+.contact-container {
+  width: 30%;
+  margin: 20px auto; /* Center the container */
+  padding: 10px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Individual game items */
+.contact-item {
+  /*border-bottom: 1px solid #ddd;*/
+  padding: 10px 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+/* Game container */
+.game-container {
+  width: 80%;
+  margin: 20px auto; /* Center the container */
+  padding: 10px;
+  background-color: rgba(255, 255, 255, 0.6);
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  color: #f0f0f0;
+  font-weight: 600;
+  font-size: 1.3rem; /* Increased from 1.1rem */
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.6);
+}
+
+/* Individual game items */
+.game-item {
+  border-bottom: 1px solid #ddd;
+  padding: 15px 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 20px;
+}
+
+.game-item:last-child {
+  border-bottom: none; /* No border for the last game */
+}
+
+.game-item h3 {
+  margin: 0;
+  font-size: 22px;
+  color: #fafdff;
+  font-weight: 700;
+  text-shadow: 2px 2px 4px rgba(30, 30, 30, 0.6);
+}
+
+.game-item p {
+  margin: 10px 0;
+  font-size: 18px; /* Increased from 16px */
+  line-height: 1.6;
+  color: white;
+}
+
+/* New layout for Projects/Works page */
+.game-item .left-content {
+  flex: 1;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 15px;
+  padding-left: 20px;
+}
+
+.game-item .left-content h3 {
+  width: 100%;
+}
+
+.play-button {
+  display: block;
+  margin-top: 10px;
+}
+
+.game-item .right-content {
+  flex: 2;
+  padding-right: 20px;
+  display: flex;
+  align-items: center;
+}
+
+.game-item .right-content p {
+  margin: 0;
+}
+
+/* Play button styling */
+.play-button {
+  display: inline-block;
+  background-color: #0077b5; /* LinkedIn blue */
+  color: white;
+  padding: 12px 20px;
+  text-decoration: none;
+  font-size: 18px; /* Increased from 16px */
+  border-radius: 5px;
+  transition: background-color 0.3s ease;
+}
+
+.play-button:hover {
+  background-color: #005f8d; /* Slightly darker blue on hover */
+}
+
+#output {
+  margin-top: 20px;
+  font-size: 18px;
+  text-align: center;
+}
+
+
+/* Footer styling */
+footer {
+  background-color: #333;
+  color: white;
+  text-align: center;
+  padding: 12px 0;
+  width: 100%;
+  font-size: 18px; /* Added font size */
+}
+
+/* Polished styles and effects */
+
+/* Body background gradient */
+body {
+  background: transparent;
+  color: #f0f0f0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  transition: background 0.5s ease;
+}
+
+#wrapper {
+  background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Container with subtle shadow and rounded corners */
+.container {
+  background: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+  border-radius: 15px;
+  padding: 30px;
+  margin: 30px auto;
+  width: 80%;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+  color: #f0f0f0;
+  font-weight: 800;
+  font-size: 1.5rem; /* Increased from 1.3rem */
+  text-shadow: 4px 4px 8px rgba(0,0,0,0.9);
+}
+
+.container:hover {
+  box-shadow: 0 12px 48px 0 rgba(31, 38, 135, 0.6);
+  transform: translateY(-8px);
+}
+
+/* Headings with text shadow */
+
+/* Paragraphs with increased line height */
+h4 {
+  line-height: 1.7;
+  font-size: 1.3rem; /* Increased from 1.1rem */
+  color: #ffffff;
+  font-weight: 800;
+  text-shadow: 3px 3px 8px rgba(0,0,0,0.9);
+}
+
+/* Links with hover effects */
+
+a:hover {
+  color: #ffb703;
+  text-decoration: underline;
+}
+
+/* LinkedIn button polished */
+.linkedin-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 28px;
+  border: none;
+  border-radius: 12px;
+  color: #005f99 !important;
+  font-size: 24px;
+  font-weight: 900;
+  background: #e0f0ff;
+  box-shadow: 0 0 10px 3px #a0c4ff;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  margin: 20px auto 0 auto;
+  cursor: pointer;
+  text-shadow: none;
+  line-height: 1;
+  text-align: center;
+  width: fit-content;
+  justify-self: center;
+}
+
+.linkedin-button strong {
+  position: relative;
+  top: 5px;
+}
+
+.linkedin-button:hover {
+  background: #005f8d;
+  box-shadow: 0 6px 20px rgba(0, 95, 141, 0.8);
+  color: white;
+}
+
+.linkedin-button img {
+  width: 24px;
+  margin-right: 10px;
+  filter: drop-shadow(0 0 1px rgba(0,0,0,0.5));
+  position: relative;
+  top: 3px;
+}
+
+.linkedin-button:hover {
+  background: linear-gradient(135deg, #005f99 0%, #007acc 100%);
+  color: #e0f0ff;
+  box-shadow: 0 8px 30px rgba(0, 122, 204, 0.9);
+  text-shadow: 2px 2px 6px rgba(0,0,0,0.7);
+  transform: scale(1.05);
+  transition: all 0.4s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Image styling */
+.image img {
+  border-radius: 20px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+  transition: transform 0.3s ease;
+}
+
+.image img:hover {
+  transform: scale(1.05);
+}
+
+/* List styling */
+ul {
+  list-style-type: disc;
+  padding-left: 40px;
+  font-size: 20px; /* Increased from 18px */
+  color: #fcfcfc;
+  line-height: 1.6;
+}
+
+li strong {
+  color: #ffb703;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .container {
+    width: 95%;
+    padding: 20px;
+  }
+  h2 {
+    font-size: 1.7rem; /* Increased from 1.5rem */
+  }
+  h4 {
+    font-size: 1.2rem; /* Increased from 1rem */
+  }
+  .linkedin-button {
+    font-size: 18px; /* Increased from 16px */
+    padding: 10px 16px;
+  }
+  .game-item p {
+    font-size: 16px;
+  }
+  ul {
+    font-size: 18px;
+  }
+}
+
+/* Styles for Games.html top-content and bottom-content */
+.top-content {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 10px;
+}
+
+.bottom-content {
+  margin-left: 20px;
+  padding-bottom: 15px;
+}
+
+

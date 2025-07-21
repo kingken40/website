@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"> <!-- Added charset meta tag -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Added viewport meta tag -->
+  <title>Game In Progress</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f0f0;
+      text-align: center;
+      padding: 50px;
+    }
+    input[type="number"] {
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+    button {
+      background-color: #3498db;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 18px;
+      margin-top: 10px;
+    }
+    button:hover {
+      background-color: #2980b9;
+    }
+  </style>
+</head>
+<body>
+  <h1>Game In Progress</h1>
+  <button onclick="window.location.href='UserGUI.html'">
+    Return Home
+  </button>
+
+  <form id="gameForm">
+    <label for="move">What number is at this position? (0-9): </label>
+    <input type="number" id="move" name="move" min="0" max="9" required>
+    <button type="submit">Submit</button>
+  </form>
+<!-- a timed mode, complete the path within a given time
+ in the timed mode, theres a mode to get a spot too, so a timer to complete the game and the current spot -->
+  <!-- Display game info dynamically -->
+  <p id="currentPosition">Current Position: <span id="currentPos">1</span> of <span id="totalMoves"></span></p>
+  <p id="attemptsRemaining">Attempts Remaining: <span id="remainingAttempts"></span></p>
+  <p id="points">Points: <span id="currentPoints">0</span></p>
+  <p id="timeElapsed">Time Elapsed: <span id="elapsedTime">0</span> seconds</p>
+  <p id="message"></p>
+
+  <script>
+  // Initialize variables
+  let currentPosition = 1;
+  let score = 0;
+  let pathList = [];
+  let userMoves = [];
+  let attemptsForCurrentPosition = 0;
+  let maxAttempts = 1;
+  let gameStarted = false;
+  let missedMoves = 0;
+
+  // Retrieve parameters from the URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const totalMoves = parseInt(urlParams.get('moves')) || 5;
+  const mode = urlParams.get('mode');
+  const allowDuplicates = urlParams.get('duplicates') === '1';
+
+  // Set max attempts and points per correct move based on mode
+  maxAttempts = 3; // Default for endless mode
+
+  let pointsPerCorrectMove = 2;
+  if (mode === 'endless' || mode === 'easy') {
+    maxAttempts = 999; // Unlimited attempts
+    pointsPerCorrectMove = 2;
+  } else if (mode === 'level1') {
+    maxAttempts = 3;
+    pointsPerCorrectMove = 3;
+  } else if (mode === 'level2') {
+    maxAttempts = 1;
+    pointsPerCorrectMove = 5;
+    // For TL-2, show 0 chances remaining at the start (1 and done)
+    document.getElementById('remainingAttempts').innerText = '0';
+  }
+
+  document.getElementById('totalMoves').innerText = totalMoves;
+  if (mode === 'endless' || mode === 'easy') {
+    document.getElementById('remainingAttempts').innerText = '∞';
+  } else if (mode === 'level2') {
+    document.getElementById('remainingAttempts').innerText = '0';
+  } else {
+    document.getElementById('remainingAttempts').innerText = maxAttempts;
+  }
+
+  function updateAttemptsDisplay() {
+    if (mode === 'endless' || mode === 'easy') {
+      document.getElementById('remainingAttempts').innerText = '∞';
+    } else if (mode === 'level2') {
+      // TL-2: always show 0 remaining after first move
+      document.getElementById('remainingAttempts').innerText = '0';
+    } else {
+      const remaining = maxAttempts - attemptsForCurrentPosition;
+      document.getElementById('remainingAttempts').innerText = remaining;
+    }
+  }
+
+  let startTime = Date.now();
+  setInterval(() => {
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    document.getElementById('elapsedTime').innerText = elapsed;
+  }, 1000);
+
+  function redirectToResults() {
+    let pathListLength = Array.isArray(pathList) ? pathList.length : (pathList ? 1 : 0);
+    let pathListString = Array.isArray(pathList) ? pathList.join(',') : (pathList ? pathList.toString() : 'N/A');
+    let userMovesString = Array.isArray(userMoves) ? userMoves.join(',') : (userMoves ? userMoves.toString() : 'N/A');
+    let missed = missedMoves; // Use the backend calculated missed moves
+    let totalMovesValue = pathListLength;
+    let elapsedTime = Math.floor((Date.now() - startTime) / 1000);
+
+    window.location.href = `UserResults.html?path_list=${encodeURIComponent(pathListString)}` +
+    `&path_list_length=${pathListLength}` +
+    `&user_moves=${encodeURIComponent(userMovesString)}` +
+    `&points=${score}` +
+    `&total_available_points=${pointsPerCorrectMove * pathListLength}` +
+    `&missed=${missed}` +
+    `&total_moves=${totalMovesValue}` +
+    `&elapsed_time=${elapsedTime}` +
+    `&mode=${encodeURIComponent(mode)}`;
+  }
+
+  document.getElementById('gameForm').onsubmit = async function(event) {
+    event.preventDefault();
+
+    const move = parseInt(document.getElementById('move').value);
+    if (isNaN(move) || move < 0 || move > 9) {
+        document.getElementById('message').innerText = "Please enter a valid number between 0 and 9.";
+        return;
+    }
+
+    userMoves.push(move);
+
+    // Send move to backend and get result
+    try {
+        const response = await fetch("http://127.0.0.1:5000/start", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+                move: move,
+                mode: mode,
+                totalMoves: totalMoves,
+                allowDuplicates: allowDuplicates,
+                currentPosition: currentPosition,
+                attemptsForCurrentPosition: attemptsForCurrentPosition,
+                gameStarted: gameStarted,
+                points: score,
+                missed: 0,
+                chances: maxAttempts,
+                pathList: pathList
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (data.pathList) {
+            pathList = data.pathList;
+            gameStarted = true;
+        }
+        score = data.Points;
+        missedMoves = data.Missed;
+        document.getElementById('currentPoints').innerText = score;
+        document.getElementById('message').innerText = data.Message;
+
+        // If move was correct, reset attempts and move to next position
+        if (data.MoveToNext) {
+            currentPosition++;
+            attemptsForCurrentPosition = 0;
+            document.getElementById('currentPos').innerText = currentPosition;
+            updateAttemptsDisplay();
+            document.getElementById('move').value = '';
+            if (currentPosition > totalMoves) {
+                redirectToResults();
+                return;
+            }
+            return; // Don't check for game over if move was correct
+        }
+
+        // If move was incorrect, increment attempts
+        attemptsForCurrentPosition++;
+
+        // Game over due to attempts (TL-1/TL-2 only, not Endless)
+        if (mode === 'level1' || mode === 'level2') {
+            const remaining = maxAttempts - attemptsForCurrentPosition;
+            if (remaining < 1) {
+                document.getElementById('message').innerText = "No attempts remaining for this position.";
+                redirectToResults();
+                return;
+            }
+        }
+
+        updateAttemptsDisplay();
+        document.getElementById('move').value = '';
+
+        if (data.GameOver) {
+            redirectToResults();
+            return;
+        }
+    } catch (error) {
+        let errorMessage;
+        if (!window.navigator.onLine) {
+            errorMessage = "You appear to be offline. Please check your internet connection.";
+        } else if (error.name === 'TypeError') {
+            errorMessage = "Unable to connect to game server. Please ensure the server is running.";
+        } else {
+            errorMessage = "An error occurred while processing your move. Please try again.";
+        }
+        document.getElementById('message').innerText = errorMessage;
+    }
+  };
+  </script>
+
+  <!-- Assuming py-script is used for some gameplay logic -->
+  <py-script src="ToughLuck/ToughLuckGameplay.py"></py-script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Random Facts</title>
+  <link rel="stylesheet" href="style3.css">
+</head>
+<body>
+  <!-- <div class="refresh" id="refresh">
+        <button onclick="window.location.href='//127.0.0.1:5500/RandomFact/randfact.html'"><strong>↻</strong></button>
+  </div> -->
+  <div class="container">
+    <div class="refresh" id="refresh">
+      <button onclick="window.location.href='//127.0.0.1:5500/RandomFact/randfact.html'"><strong>↻</strong></button>
+    </div>
+    <div class="goBack">
+        <button class="return" onclick="window.location.href='//127.0.0.1:5500/Games.html'">Return to Games page</button>
+    </div>
+    
+    <h1>Random Facts Generator</h1>
+    <form id="factForm">
+      <input type="number" id="numberInput" placeholder="Enter a number (1-10)" min="1" max="10" required>
+      <button type="submit">Get Fact</button>
+    </form>
+    <p id="output"></p>
+    <h2 id="factHistory" class="factHistory" style="position:absolute;"></h2>
+    <ul id="factList"></ul>
+  </div>
+  <script src="scripts.js"></script>
+</body>
+</html>
