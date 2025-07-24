@@ -160,7 +160,7 @@ body {
 
 .game-item h3 {
   margin: 0;
-  font-size: 22px;
+  font-size: 24px;
   color: #fafdff;
   font-weight: 700;
   text-shadow: 2px 2px 4px rgba(30, 30, 30, 0.6);
@@ -198,10 +198,12 @@ body {
   padding-right: 20px;
   display: flex;
   align-items: center;
+  
 }
 
 .game-item .right-content p {
   margin: 0;
+  font-size: 20px;
 }
 
 /* Play button styling */
@@ -371,6 +373,11 @@ ul {
 
 li strong {
   color: #ffb703;
+  font-size: 24px;
+}
+
+u strong {
+  font-size: 28px;
 }
 
 /* Responsive adjustments */

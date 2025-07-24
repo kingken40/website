@@ -10,7 +10,7 @@
 <body>
     <div id="wrapper">
         <h2 style="text-align: center;">
-            Have Fun!
+            <strong>Have Fun!</strong>
         </h2>
         <!-- For Loading the navbar -->
         <script>
@@ -35,7 +35,7 @@
                 <div class="game-item">
                     <div class="left-content">
                         <h3>Tough-Luck</h3>
-                        <a href="ToughLuckv7\game-server\templates\UserGUI.html" class="play-button">Play</a>
+                        <a href="ToughLuckv7\game-server\templates\UserGUI.html" class="play-button">Play!</a>
                         <button class="feedback-btn" onclick="openFeedback('Tough-Luck')">Feedback</button>
                     </div>
                     <div class="right-content">
@@ -98,7 +98,7 @@
           <label>Email:<br><input type="email" id="feedbackEmail" style="width:100%;" required></label><br>
           <label>Feedback:<br><textarea id="feedbackMessage" rows="4" style="width:100%;" required></textarea></label><br>
           <button type="submit" class="feedback-btn">Submit</button>
-          <button type="button" onclick="closeFeedback()" style="margin-left:10px;">Cancel</button>
+          <button type="button" class="feedback-btn" onclick="closeFeedback()" style="margin-left:10px;">Cancel</button>
         </form>
         <div id="feedbackStatus" style="margin-top:10px;"></div>
       </div>
