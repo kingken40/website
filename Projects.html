@@ -1,0 +1,232 @@
+<!-- Game Page -->
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>ProjectPage</title>
+        <link rel="stylesheet" href="style.css">
+    </head>
+    <body>
+        <div id="wrapper">
+            <h2 style="text-align: center;">
+                Personal Projects & Tools
+            </h2>
+            <!-- For Loading the navbar -->
+            <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                fetch("navbar.html")
+                    .then((response) => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! Status: ${response.status}`);
+                        }
+                        return response.text();
+                    })
+                    .then((html) => {
+                        document.getElementById("navbar").innerHTML = html;
+                    })
+                    .catch((error) => console.error("Error loading navbar:", error));
+            });
+        </script>
+            <div id="navbar"></div>
+            <div class="content">
+                <div class="game-container">
+                    <!-- First Project -->
+                    <div class="game-item">
+                        <div class="left-content">
+                            <h3>Weather Forecaster</h3>
+                            <div class="button-group">
+                                <a href="https://weather-forecast-ken.vercel.app/"
+                                    class="play-button">Try</a>
+                                <button class="feedback-btn" onclick="openFeedback('Weather Forecaster')">Feedback</button>
+                            </div>
+                        </div>
+                        <div class="right-content">
+                            <p>A simple interactive tool that shows real-time weather info for any 
+                                U.S. city. Enter a city and state to see its current temperature and 
+                                conditions!</p>
+                        </div>
+                    </div>
+                
+                    <div class="game-item">
+                        <div class="left-content">
+                            <h3 style="color: #fafdff;">Rubric Generator</h3>
+                            <div class="button-group">
+                                <a
+                                    href="RealityAI_Rubric_Generator\public\rubric_gen_p1.html"
+                                    class="play-button">Try</a>
+                                <button class="feedback-btn" onclick="openFeedback('Rubric Generator')">Feedback</button>
+                            </div>
+                        </div>
+                        <div class="right-content">
+                            <p style="color: #fafdff;">An AI-powered tool
+                                designed to help educators create comprehensive
+                                assignment rubrics quickly and efficiently.
+                                Customize criteria, scoring, and feedback for
+                                any educational level.</p>
+                        </div>
+                    </div>
+                    <div class="game-item">
+                        <div class="left-content">
+                            <h3 style="color: #fafdff;">Lesson Planner</h3>
+                            <div class="button-group">
+                                <a
+                                    href="lesson_plan_generator\public\lesson_planner_p1.html"
+                                    class="play-button">Try</a>
+                                <button class="feedback-btn" onclick="openFeedback('Lesson Planner')">Feedback</button>
+                            </div>
+                        </div>
+                        <div class="right-content">
+                            <p style="color: #fafdff;">A comprehensive lesson
+                                planning tool that helps teachers create
+                                structured, engaging lesson plans for any
+                                subject or grade level. Features customizable
+                                templates, standards alignment, and activity
+                                suggestions.</p>
+                        </div>
+                    </div>
+
+                    <div class="game-item">
+                        <div class="left-content">
+                            <h3 style="color: #fafdff;">N/A</h3>
+                            <a
+                                href="#"
+                                class="play-button">N/A</a>
+                        </div>
+                        <div class="right-content">
+                            <p style="color: #fafdff;">N/A</p>
+                        </div>
+                    </div>
+                    
+                    <!-- perhaps the list of games can be in a database and the page showing them can -->
+                    <!-- <ul> 
+                    <li><strong>Tough-Luck</strong></li>
+                    <ul>
+                        <a href="ToughLuckv7\game-server\public\templates\UserGUI.html">Play</a> 
+                    </ul>
+                </ul> -->
+                </div>
+            </div>
+            <footer>
+                <p>Copyright 2025 Kenneth Okwunwanne</p>
+            </footer>
+        </div>
+
+        <style>
+        .project-item {
+            margin-bottom: 32px;
+            padding: 16px;
+            background: #fafafa;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        textarea {
+            margin-top: 8px;
+            width: 100%;
+            max-width: 400px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            padding: 8px;
+            font-size: 16px;
+            resize: vertical;
+        }
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: flex-start;
+        }
+        .play-button {
+            width: 60px; /* Shorter Try button */
+            padding: 12px 0;
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 8px;
+            background-color: #0078d4;
+            color: #fff;
+            border: none;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: background 0.2s;
+            text-align: center; /* Center the 'Try' text */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .feedback-btn {
+            width: 120px; /* Feedback button stays wider */
+            background-color: #ffb347;
+            color: #222;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 18px;
+            font-size: 16px;
+            font-weight: bold;
+            margin-left: 0;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .feedback-btn:hover {
+            background-color: #ffa500;
+        }
+        </style>
+        
+        <!-- Feedback Modal HTML -->
+<div id="feedbackModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); z-index:9999; align-items:center; justify-content:center;">
+  <div style="background:#fff; padding:24px; border-radius:10px; min-width:300px; max-width:90vw;">
+    <h3 id="feedbackProjectTitle"></h3>
+    <form id="feedbackForm">
+      <label>Name (optional):<br><input type="text" id="feedbackName" style="width:100%;"></label><br>
+      <label>Email:<br><input type="email" id="feedbackEmail" style="width:100%;" required></label><br>
+      <label>Feedback:<br><textarea id="feedbackMessage" rows="4" style="width:100%;" required></textarea></label><br>
+      <button type="submit" class="feedback-btn">Submit</button>
+      <button type="button" onclick="closeFeedback()" style="margin-left:10px;">Cancel</button>
+    </form>
+    <div id="feedbackStatus" style="margin-top:10px;"></div>
+  </div>
+</div>
+
+<style>
+#feedbackModal * {
+    color: #222 !important;
+}
+</style>
+
+<script>
+function openFeedback(project) {
+    document.getElementById('feedbackProjectTitle').innerText = `Feedback for "${project}"`;
+    document.getElementById('feedbackModal').style.display = 'flex';
+    document.getElementById('feedbackStatus').innerText = '';
+    document.getElementById('feedbackForm').onsubmit = function(e) {
+        e.preventDefault();
+        const name = document.getElementById('feedbackName').value;
+        const email = document.getElementById('feedbackEmail').value;
+        const message = document.getElementById('feedbackMessage').value;
+        fetch('http://127.0.0.1:5000/submit_feedback', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                project: project,
+                name: name,
+                email: email,
+                message: message
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('feedbackStatus').innerText = data.success ? "Thank you for your feedback!" : "Error submitting feedback.";
+            if (data.success) setTimeout(closeFeedback, 1500);
+        })
+        .catch(() => {
+            document.getElementById('feedbackStatus').innerText = "Error submitting feedback.";
+        });
+    };
+}
+function closeFeedback() {
+    document.getElementById('feedbackModal').style.display = 'none';
+    document.getElementById('feedbackForm').reset();
+}
+</script>
+    </body>
+</html>

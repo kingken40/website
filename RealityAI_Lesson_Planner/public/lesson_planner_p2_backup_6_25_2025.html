@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Generated Lesson</title>
+    <!-- Google Font as used in p1 -->
+    <link
+      href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* Overall Page Styling */
+      body {
+        font-family: 'Roboto', Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        /* Darker purple gradient background */
+        background: linear-gradient(135deg, #372a7b, #1e1e2f);
+        background-size: cover;
+        background-attachment: fixed;
+      }
+      /* Content Container */
+      .container {
+        max-width: 900px;
+        margin: 2rem auto;
+        padding: 2rem;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      /* Header Styling */
+      header {
+        text-align: center;
+        padding: 1rem;
+        background: linear-gradient(135deg, #372a7b, #4c3c8e);
+        color: #fff;
+        border-radius: 5px;
+        margin-bottom: 2rem;
+      }
+      header h1 {
+        margin: 0;
+        font-size: 2rem;
+      }
+      header p {
+        margin: 0.5rem 0 0;
+      }
+      /* Table Styling */
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 2rem 0;
+        background: #fff;
+        border-radius: 5px;
+        overflow: hidden;
+      }
+      th,
+      td {
+        padding: 0.75rem;
+        border: 1px solid #ccc;
+        text-align: center;
+      }
+      th {
+        background: #372a7b;
+        color: #fff;
+      }
+      /* Bold the first column (criterion names) */
+      table td:first-child {
+        font-weight: bold;
+      }
+      caption {
+        padding: 1rem;
+        font-size: 1.3rem;
+        font-weight: bold;
+      }
+      /* Button Styling */
+      .download-button-container,
+      .button-container {
+        text-align: center;
+        margin: 2rem 0;
+      }
+      button {
+        font-size: 1rem;
+        padding: 0.75rem 1.5rem;
+        background-color: #372a7b;
+        border: none;
+        border-radius: 5px;
+        color: #fff;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+      }
+      button:hover {
+        background-color: #2d2161;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- Header -->
+      <header>
+        <h1>Lesson Generator</h1>
+        <p>Your generated lesson is below</p>
+      </header>
+
+      <!-- Generated lesson goes here -->
+      <div id="lessonContainer"></div>
+
+    <!-- PDF Download -->
+    <div class="download-button-container">
+      <button type="button" id="downloadPdfBtn">Download PDF</button>
+    </div>
+
+    <!-- Back Button -->
+    <div class="button-container">
+      <button type="button" onclick="window.location.href='lesson_planner_p1.html'">
+        Back
+      </button>
+    </div>
+  </div>
+
+  <!-- Google Translate widget container -->
+  <div id="google_translate_element" style="position: fixed; top: 10px; right: 10px; z-index: 1000;"></div>
+
+  <!-- html2canvas & jsPDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<!-- 
+The Google Translate widget and script use this language parameter to automatically set the 
+page language and translate the lesson content accordingly.
+-->
+  <!-- Google Translate API -->
+  <script type="text/javascript" 
+    src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit">
+  </script>
+
+  <script>
+    // 1) Parse the lesson plan data from URL
+    const params = new URLSearchParams(window.location.search);
+    const lessonPlanData = JSON.parse(decodeURIComponent(params.get("lessonPlan") || "{}"));
+    const { gradeLevel = "", topic = "", standards = "", customization = "", language = "en" } = lessonPlanData;
+
+    // 2) Generate lesson plan
+    async function generateLessonPlan() {
+        try {
+            const lessonPlan = generateLessonPlanContent(lessonPlanData);
+            document.getElementById("lessonContainer").innerHTML = lessonPlan;
+            return lessonPlan;
+        } catch (error) {
+            console.error('Error generating lesson plan:', error);
+            throw error;
+        }
+    }
+
+    function generateLessonPlanContent({gradeLevel, topic, standards, customization}) {
+        return `
+            <h1>${topic || 'Untitled Lesson'}</h1>
+            ${gradeLevel ? `<p><strong>Grade Level:</strong> ${gradeLevel}</p>` : ''}
+            
+            <h2>Objective:</h2>
+            <p>Students will be able to understand and apply concepts related to ${topic || 'the topic'}.</p>
+            
+            <h2>Materials:</h2>
+            <ul>
+                <li>Whiteboard and markers</li>
+                <li>Student notebooks</li>
+                <li>Relevant worksheets or handouts</li>
+                ${customization ? `<li>${customization}</li>` : ''}
+            </ul>
+            
+            <h2>Key Concepts:</h2>
+            <ul>
+                <li>Core principles of ${topic || 'the topic'}</li>
+                <li>Important terminology and definitions</li>
+                <li>Practical applications</li>
+                <li>Common misconceptions</li>
+            </ul>
+            
+            <h2>Lesson Introduction:</h2>
+            <ul>
+                <li>Begin by connecting ${topic || 'the topic'} to students' prior knowledge</li>
+                <li>Explain the relevance and importance of ${topic || 'the topic'}</li>
+                <li>Provide an overview of what students will learn</li>
+            </ul>
+            
+            <h2>Instructional Content:</h2>
+            <ul>
+                <li>Present key information about ${topic || 'the topic'}</li>
+                <li>Use examples and non-examples to clarify concepts</li>
+                <li>Demonstrate skills or processes step-by-step</li>
+                <li>Address common misunderstandings</li>
+            </ul>
+            
+            <h2>Guided Practice:</h2>
+            <ul>
+                <li>Have students practice applying ${topic || 'the topic'} concepts with teacher support</li>
+                <li>Provide scaffolded activities that gradually increase in difficulty</li>
+                <li>Offer immediate feedback and correction as needed</li>
+                <li>Use questioning techniques to check for understanding</li>
+            </ul>
+            
+            <h2>Independent Practice:</h2>
+            <ul>
+                <li>Students apply ${topic || 'the topic'} concepts independently</li>
+                <li>Provide differentiated activities based on student needs</li>
+                <li>Encourage critical thinking and problem-solving</li>
+                <li>Allow for creative application of concepts</li>
+            </ul>
+            
+            <h2>Lesson Closure:</h2>
+            <ul>
+                <li>Summarize key points about ${topic || 'the topic'}</li>
+                <li>Have students reflect on what they learned</li>
+                <li>Preview how this connects to future lessons</li>
+                <li>Address any remaining questions</li>
+            </ul>
+            
+            <h2>Extension Activities:</h2>
+            <ul>
+                <li>For advanced students: Provide more challenging applications of ${topic || 'the topic'}</li>
+                <li>Encourage deeper research or creative projects</li>
+                <li>Offer real-world connections and applications</li>
+            </ul>
+            
+            <h2>Assessment:</h2>
+            <ul>
+                <li>Formative assessments during guided and independent practice</li>
+                <li>Summative assessment options</li>
+                <li>Differentiated assessment strategies</li>
+            </ul>
+            
+            <h2>Standards Addressed:</h2>
+            <ul>
+                ${standards ? standards.split('\n').map(standard => `<li>${standard}</li>`).join('') : '<li>Standards not specified</li>'}
+            </ul>
+            
+            ${customization ? `<h2>Teacher Notes:</h2><p>${customization}</p>` : ''}
+        `;
+    }
+
+    // 3) Generate & append
+    generateLessonPlan()
+      .then(() => {
+          console.log('Lesson plan generated successfully');
+      })
+      .catch(error => {
+          console.error('Error generating lesson plan:', error);
+          alert('An error occurred while generating the lesson plan. Please try again.');
+      });
+      
+    // 4) Google Translate initialization
+    function googleTranslateElementInit() {
+        new google.translate.TranslateElement({
+            pageLanguage: 'en',
+            includedLanguages: 'en,es,fr,de,zh-CN,ja,ar,pt,ru,hi',
+            autoDisplay: false
+        }, 'google_translate_element');
+
+        // Automatically select the language from URL parameter
+        setTimeout(() => {
+            const select = document.querySelector('#google_translate_element select');
+            if (select) {
+                select.value = language;
+                select.dispatchEvent(new Event('change'));
+            }
+        }, 1000);
+    }
+
+    // Load Google Translate script dynamically
+    const gtScript = document.createElement('script');
+    gtScript.type = 'text/javascript';
+    gtScript.src = '//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+    document.head.appendChild(gtScript);
+
+    // 5) PDF generation with proper text formatting
+    document.getElementById("downloadPdfBtn").addEventListener("click", () => {
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a4'
+        });
+
+        // Set margins and initial position
+        const marginLeft = 15;
+        const marginRight = 15;
+        const marginTop = 20;
+        let currentY = marginTop;
+        const pageWidth = pdf.internal.pageSize.getWidth() - marginLeft - marginRight;
+        
+        // Set font styles
+        const titleFontSize = 19;
+        const headingFontSize = 15;
+        const bodyFontSize = 12;
+        const lineHeight = 1.5;
+
+        // Helper function to add text with automatic page breaks
+        function addText(text, fontSize = bodyFontSize, isBold = false) {
+            pdf.setFontSize(fontSize);
+            pdf.setFont(undefined, isBold ? 'bold' : 'normal');
+            
+            const splitText = pdf.splitTextToSize(text, pageWidth);
+            for (let i = 0; i < splitText.length; i++) {
+                if (currentY > pdf.internal.pageSize.getHeight() - 20) {
+                    pdf.addPage();
+                    currentY = marginTop;
+                }
+                pdf.text(splitText[i], marginLeft, currentY);
+                currentY += fontSize * 0.5; // Tight line spacing
+            }
+        }
+
+        // Helper function to add a section
+        function addSection(title, content) {
+            addText(title, headingFontSize, true);
+            currentY += 2; // Minimal space after heading
+            addText(content);
+            currentY += 3; // Minimal space between sections
+        }
+
+        // Get the lesson plan content
+        const lessonHTML = document.getElementById("lessonContainer").innerHTML;
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = lessonHTML;
+        
+        // Extract and format sections
+        const sections = [];
+        const elements = tempDiv.children;
+        
+        for (let i = 0; i < elements.length; i++) {
+            const el = elements[i];
+            if (el.tagName === 'H1') {
+                pdf.setFontSize(titleFontSize);
+                pdf.setFont(undefined, 'bold');
+                addText(el.textContent, titleFontSize, true);
+                currentY += 10;
+            } 
+            else if (el.tagName === 'H2') {
+                sections.push({
+                    title: el.textContent,
+                    content: ''
+                });
+            }
+            else if (sections.length > 0) {
+                const lastSection = sections[sections.length - 1];
+                if (el.tagName === 'P') {
+                    lastSection.content += el.textContent + '\n\n';
+                } 
+                else if (el.tagName === 'UL') {
+                    const items = el.getElementsByTagName('li');
+                    for (let j = 0; j < items.length; j++) {
+                        lastSection.content += '• ' + items[j].textContent + '\n';
+                    }
+                    lastSection.content += '\n';
+                }
+            }
+        }
+
+        // Add all sections to PDF
+        sections.forEach(section => {
+            addSection(section.title, section.content);
+        });
+
+        pdf.save("lesson_plan.pdf");
+    });
+</script>
+  </body>
+</html>

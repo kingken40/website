@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Forecast</title>
+    <link rel="stylesheet" href="../styles/styles.css"> <!-- Ensure this path is correct -->
+</head>
+<body>
+    <div class="app">
+        <h1>Weather Forecast</h1>
+        <div class="weather-form">
+            <input type="text" id="city" placeholder="City" required>
+            <input type="text" id="state" placeholder="State (2-letter code)" required>
+            <button id="getWeatherButton">Get Weather</button>
+        </div>
+        <div class="error" id="error"></div>
+        <div class="weather-output" id="weatherOutput"></div>
+        <div id="loading" style="display: none;">Loading...</div> 
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script> <!-- Include Axios -->
+    <script>
+        document.getElementById('getWeatherButton').addEventListener('click', getWeather); // Use event listener
+        async function getWeather() {
+            const city = document.getElementById('city').value;
+            const state = document.getElementById('state').value;
+            const apiKey = 'd890cfd5d93193af3ffabaa8eda1baeb'; // OpenWeatherMap API key
+            const url = `https://api.openweathermap.org/data/2.5/weather?q=${city},${state}&units=imperial&appid=${apiKey}`;
+            const errorDiv = document.getElementById('error');
+            const outputDiv = document.getElementById('weatherOutput');
+            try {
+                const response = await axios.get(url);
+                const data = response.data;
+                <img src="icon_url" alt="Weather Condition" />
+                // Update the output with weather data
+                outputDiv.innerHTML = `
+                    <div class="weather-info">
+                        <h2>Weather in ${data.name}, ${state}</h2>
+                        <p><strong>Temperature:</strong> ${data.main.temp.toFixed(1)} °F / ${((data.main.temp - 32) * 5 / 9).toFixed(1)} °C</p>
+                        <p><strong>Condition:</strong> ${data.weather[0].description}</p>
+                        <p><strong>Humidity:</strong> ${data.main.humidity}%</p>
+                    </div>
+                `;
+                errorDiv.innerHTML = ''; // Clear any previous error messages
+            } catch (err) {
+                errorDiv.innerHTML = 'Could not fetch weather data. Please check your input.';
+                outputDiv.innerHTML = ''; // Clear previous output
+            }
+        }
+    </script>
+</body>
+</html>
