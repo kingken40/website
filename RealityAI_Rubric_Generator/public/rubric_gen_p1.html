@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rubric Generator</title>
+  <!-- DOMPurify for client-side sanitization -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/2.3.12/purify.min.js" 
+          integrity="sha512-2AA1x7B6p974xSiLetr9Pyr9J0w9bXw2jYF6Pjld4uyMbYmxbF54Lqm8xNzfPKxwXODdcUi1r2Jl5ALJGz8YSw==" 
+          crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+
+  <script>
+  // Make sure the script runs after the DOM loads
+  document.addEventListener("DOMContentLoaded", function() {
+    const rubricForm = document.getElementById("rubricForm");
+
+    rubricForm.addEventListener("submit", function(e) {
+      e.preventDefault(); // Prevent the default form submission
+
+      // Capture values from input fields
+      const gradeLevel = document.getElementById("gradeLevel").value;
+      const pointScale = document.getElementById("pointScale").value;
+      const difficulty = document.getElementById("difficulty") ? document.getElementById("difficulty").value : "";
+      const description = document.getElementById("descriptionText") ? document.getElementById("descriptionText").value : "";
+      const language = document.getElementById("language").value;
+
+      // Build the URL with parameters
+      const url = `rubric_template_p2.html?` +
+        `gradeLevel=${encodeURIComponent(gradeLevel)}` +
+        `&pointScale=${encodeURIComponent(pointScale)}` +
+        `&difficulty=${encodeURIComponent(difficulty)}` +
+        `&description=${encodeURIComponent(description)}` +
+        `&language=${encodeURIComponent(language)}`;
+
+      // Redirect to the new page
+      window.location.href = url;
+    });
+  });
+</script>
+  <style>
+    h1 {
+      text-align: center;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      padding: 2rem;
+      background: #1e1e2f;
+      color: #eee;
+    }
+    form {
+      background: #2a2a40;
+      padding: 2rem;
+      border-radius: 10px;
+      max-width: 600px;
+      margin: auto;
+      box-shadow: 0 0 15px rgba(100, 100, 255, 0.5);
+    }
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+    label {
+      font-weight: 700;
+      display: block;
+      margin-bottom: 0.75rem;
+      color: #a0a0ff;
+    }
+    input[type="text"], select {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #555;
+      border-radius: 6px;
+      background: #1e1e2f;
+      color: #eee;
+      box-sizing: border-box;
+      font-size: 1rem;
+    }
+    input[type="text"]::placeholder {
+      color: #6666aa;
+    }
+    select {
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2210%22%20height%3D%227%22%20viewBox%3D%220%200%2010%207%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cpath%20d%3D%22M0%200l5%207%205-7z%22%20fill%3D%22%23a0a0ff%22/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.75rem center;
+      background-size: 10px 7px;
+      cursor: pointer;
+    }
+    /* Style the anchor to look like a button */
+    button#rubricLink {
+    button#backBtn {
+      display: inline-block;
+      margin-top: 1.5rem;
+      padding: 0.75rem 1.5rem;
+      font-size: 1.1rem;
+      border-radius: 6px;
+      background-color: #4c51bf;
+      color: #fff;
+      text-decoration: none;
+      cursor: pointer;
+      box-shadow: 0 0 10px #4c51bf;
+      transition: background-color 0.3s ease;
+    }
+    button#backBtn:hover {
+      background-color: #2c2f5e;
+    }
+      display: inline-block;
+      margin-top: 1.5rem;
+      padding: 0.75rem 1.5rem;
+      font-size: 1.1rem;
+      border-radius: 6px;
+      background-color: #4c51bf;
+      color: #fff;
+      text-decoration: none;
+      cursor: pointer;
+      box-shadow: 0 0 10px #4c51bf;
+      transition: background-color 0.3s ease;
+    }
+    button#rubricLink:hover {
+      background-color: #2c2f5e;
+    }
+    button {
+      align-items: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>Rubric Generator</h1>
+  
+  
+  
+  <!-- Form for input -->
+    <form id="rubricForm" name="rubricForm" class="max-w-2xl mx-auto bg-white p-6 rounded-md shadow" action="rubric_template_p2.html" method="get">
+      <!-- <button onclick='window.location.href="rubric_template_p2.html"' type="button" id="rubricLink">Generate Rubric</button> -->
+      <!-- <button type="submit" id="rubricLink">Generate Rubric</button> -->
+      <div class="mb-6">
+        <!-- Language (for multi-language support) -->
+        <label class="block font-semibold mb-1" for="language">Language</label>
+        <select id="language" name="language" class="border w-full p-2 rounded">
+          <!-- Selected language codes  -->
+          <option value="en">English</option>
+          <option value="es">Spanish</option>
+          <option value="fr">French</option>
+          <option value="de">German</option>
+          <option value="zh-CN">Chinese</option>
+          <option value="ja">Japanese</option>
+          <option value="ar">Arabic</option>
+          <option value="pt">Portuguese</option>
+          <option value="ru">Russian</option>
+          <option value="hi">Hindi</option>
+        </select>
+      </div>
+      <br>
+
+        <!-- Grade Level (required) -->
+      <div class="mb-6">
+        <label class="block font-semibold mb-1" for="gradeLevel">Grade Level</label>
+        <select id="gradeLevel" name="gradeLevel" class="border w-full p-2 rounded" required>
+          <option value="" disabled selected>Select…</option>
+          <option>Pre-K</option>
+          <option>Kindergarten</option>
+          <option>1st Grade</option>
+          <option>2nd Grade</option>
+          <option>3rd Grade</option>
+          <option>4th Grade</option>
+          <option>5th Grade</option>
+          <option>6th Grade</option>
+          <option>7th Grade</option>
+          <option>8th Grade</option>
+          <option>9th Grade</option>
+          <option>10th Grade</option>
+          <option>11th Grade</option>
+          <option>12th Grade</option>
+        </select>
+      </div>
+      <br>
+
+      <!-- Point scale -->
+      <div class="mb-6">
+        <label class="block font-semibold mb-1" for="pointScale">Point Scale</label>
+        <select id="pointScale" name="pointScale" class="border w-full p-2 rounded" required>
+          <option value="" disabled selected>Select…</option>
+          <option>1</option> 
+          <option>2</option>
+          <option>3</option>
+          <option>4</option>  
+          <!-- looks cool -> -–- -->
+        </select>
+      </div>
+
+      <!-- Helper component -->
+      <template id="richPrompt">
+        <div class="mb-8">
+          <label class="block font-semibold mb-2 prompt-label"></label>
+
+          <!-- Mode toggles -->
+          <div class="flex gap-4 mb-3">
+            <label class="flex items-center gap-1">
+              <input type="radio" name="" value="text" class="modeRadio" checked/>
+              <span>Text</span>
+            </label>
+            <label class="flex items-center gap-1">
+              <input type="radio" name="" value="file" class="modeRadio"/>
+              <span>File</span>
+            </label>
+            <label class="flex items-center gap-1">
+              <input type="radio" name="" value="url"  class="modeRadio"/>
+              <span>URL</span>
+            </label>
+          </div>
+
+          <!-- Textarea -->
+          <textarea rows="4" class="prompt-text border w-full p-2 rounded"></textarea>
+
+          <!-- File -->
+          <input
+            type="file"
+            class="prompt-file border p-2 rounded w-full hidden"
+            accept=".csv,.pdf,.docx,.ppt,.pptx,.txt,text/plain,application/pdf"/>
+
+          <!-- URL -->
+          <input
+            type="url"
+            placeholder="https://example.com"
+            class="prompt-url border w-full p-2 rounded hidden"/>
+        </div>
+      </template>
+
+      <!-- Standard / Objective -->
+      <br>
+      <div id="standardPrompt">
+        <label class="block font-semibold mb-1" for="standardText">Standards / Objectives</label>
+        <input type="text" id="standardText" name="standardText" placeholder="Enter Standards/Objectives or Choose Files to Upload" class="border w-full p-2 rounded mb-2" />
+        <label for="standardFile" class="block font-semibold mb-1">Standards / Objectives File</label>
+        <input type="file" id="standardFile" name="standardFile" accept=".pdf,.doc,.docx,.pptx,.csv" class="border w-full p-2 rounded" />
+      </div>
+      <br>
+
+      <!-- Assignment description -->
+      <div id="descriptionPrompt">
+        <label class="block font-semibold mb-1" for="descriptionText">Assignment Description</label>
+        <input type="text" id="descriptionText" name="descriptionText" placeholder="Enter Description or Choose Files to Upload" class="border w-full p-2 rounded mb-2" />
+        <label for="descriptionFile" class="block font-semibold mb-1">Assignment Description File</label>
+        <input type="file" id="descriptionFile" name="descriptionFile" accept=".pdf,.doc,.docx,.pptx,.csv" class="border w-full p-2 rounded" />
+      </div>
+
+      <!-- Customization (optional) -->
+      <!-- <div id="customPrompt"></div> ▸ -->
+      <!-- <button type="button" onclick='window.location.href="rubric_template_p2.html"' id="rubricLink">Generate Rubric</button> -->
+      <button type="submit" id="rubricLink">Generate Rubric</button> <br>
+      <button type="button" id="rubricLink" style="margin-right: 10px;" onclick="window.location.href='../../Projects.html'">Back</button>
+    </form>
+    <script>
+      const params = new URLSearchParams(window.location.search);
+        const gradeLevel  = params.get('gradeLevel')  || '';
+        const pointScale  = parseInt(params.get('pointScale')) || 4; // default to 4 if missing
+        const difficulty  = params.get('difficulty')  || '';
+        const description = params.get('description') || '';
+
+        /*
+        Rubric generation table logic.
+        Customizable function Categories and performance descriptions.
+        */
+        function buildRubric({ gradeLevel, pointScale, difficulty, description }) {
+          // Fixed-set Rubric criteria 
+          const criteria = [
+              "Clarity",
+              "Organization",
+              "Supporting evidence",
+              "Grammar and Mechanics",
+              "Creativity and Style"
+            ];
+            // Update a timed game, self race
+
+          // Create the table element
+          const table = document.createElement("table");
+
+          // Caption includes some info from the query string.
+          const caption = document.createElement("caption");
+          caption.textContent = `Rubric for ${gradeLevel}` +
+              (difficulty ? ` (Difficulty: ${difficulty})` : "") +
+              (description ? ` - ${description}` : "");
+          table.appendChild(caption);
+
+          // Build table header
+          const thead = document.createElement("thead");
+          const headerRow = document.createElement("tr");
+
+          // First column for criteria names
+          const thCriteria = document.createElement("th");
+          thCriteria.textContent = "Criteria";
+          headerRow.appendChild(thCriteria);
+
+          // Create a column for each level (from lowest to highest, for example)
+          // Here we assume higher numbers are better.
+          for (let i = 1; i <= pointScale; i++) {
+            const th = document.createElement("th");
+            th.textContent = `Level ${i}`;
+            headerRow.appendChild(th);
+          }
+          thead.appendChild(headerRow);
+          table.appendChild(thead);
+
+          // Build table body
+          const tbody = document.createElement("tbody");
+          criteria.forEach((criterion) => {
+            const row = document.createElement("tr");
+            const cellCriterion = document.createElement("td");
+            cellCriterion.textContent = criterion;
+            row.appendChild(cellCriterion);
+
+            // Performance description for each level.
+            for (let i = 1; i <= pointScale; i++) {
+              const td = document.createElement("td");
+              // For demonstration, we provide a custom description based on the level.
+              if (i === pointScale) {
+                td.textContent = `Exceeds expectations for ${criterion.toLowerCase()}`;
+              } else if (i === 1) {
+                td.textContent = `Needs improvement for ${criterion.toLowerCase()}`;
+              } else {
+                td.textContent = `${criterion} meets level ${i}`;
+              }
+              row.appendChild(td);
+            }
+            tbody.appendChild(row);
+          });
+          table.appendChild(tbody);
+          return table;
+        }
+
+        // Use the buildRubric function to generate the rubric HTML.
+        const rubric = buildRubric({
+          gradeLevel,
+          pointScale,
+          difficulty,
+          description,
+        });
+
+        // Append the generated rubric to the container in the page.
+        document.getElementById("rubricContainer").appendChild(rubric);
+
+    </script>
+  </body> 
+</html>
