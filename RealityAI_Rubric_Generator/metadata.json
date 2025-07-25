@@ -1,0 +1,35 @@
+{
+  "input_parameters": {
+    "language": {
+      "type": "string",
+      "required": false,
+      "description": "The language for the rubric (e.g., English, Spanish)."
+    },
+    "grade_level": {
+      "type": "string",
+      "required": true,
+      "description": "The academic grade level (e.g., 9th Grade)."
+    },
+    "point_scale": {
+      "type": "number",
+      "required": true,
+      "minimum": 1,
+      "description": "The maximum point scale (e.g., 4)."
+    },
+    "subject": {
+      "type": "string",
+      "required": true,
+      "description": "The standard/objective for the assignment (e.g., Write an argumentative essay)."
+    },
+    "description": {
+      "type": "string",
+      "required": true,
+      "description": "A brief description of the assignment (e.g., Write a persuasive essay that convinces school heads to change a policy)."
+    },
+    "customization": {
+      "type": "string",
+      "required": false,
+      "description": "Optional: Additional customization details, such as including supporting arguments as a category."
+    }
+  }
+}

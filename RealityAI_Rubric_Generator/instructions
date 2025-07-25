@@ -1,0 +1,21 @@
+Planned Jobs to Be Done
+Basic Rubric Generation
+
+When creating a rubric, I want to define grading standards based on input parameters, so my evaluations are clear and consistent.
+    Design Status: Designed
+    GitHub Issue: https://github.com/marvelai-org/marvel-ai-backend/issues/116
+    Customizable Templates
+
+When generating rubrics, I want to choose from pre-designed templates, so the output matches my needs.
+    Design Status: To be scoped
+    GitHub Issue: Not yet created
+    Multi-Language Support
+
+When creating rubrics, I want the option to generate them in different languages, so they are accessible to diverse audiences.
+    Design Status: To be scoped
+    GitHub Issue: Not yet created
+    AI-Powered Suggestions
+
+When creating rubrics, I want AI suggestions for categories and performance levels, so the rubric reflects best practices.
+    Design Status: Planned
+    GitHub Issue: Not yet created
