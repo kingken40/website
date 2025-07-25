@@ -1,0 +1,125 @@
+<!-- Lesson Plan Generator - Input Form Page: Collects teacher inputs for AI-generated lesson plans -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lesson Plan Generator</title>
+    <!-- 
+    ===================================
+    LESSON PLANNER - PAGE 1 (INPUT FORM)
+    ===================================
+    This is the first page of the Lesson Planner application.
+    It provides a form for teachers to input lesson details including:
+    - Grade level
+    - Language
+    - Topic
+    - Standards/Objectives
+    - Additional customization notes (Optional)
+    
+    The form also supports file uploads and includes language translation options.
+    When submitted, the form data is passed to page 2 (lesson_planner_p2.html)
+    which generates and displays the lesson plan.
+    -->
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
+    <!-- External CSS file -->
+    <link rel="stylesheet" href="../styles/style_p1.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Lesson Plan Generator</h1>
+        <p>Create a lesson plan for any topic you're teaching!</p>
+
+        <!-- Main form for lesson plan input -->
+        <form id="lessonPlanForm">
+            <!-- Grade level selection -->
+            <div class="form-group">
+                <label for="gradeLevel">Grade Level</label>
+                <select id="gradeLevel" name="gradeLevel" required>
+                    <option value="" disabled selected>Enter Grade Level</option>
+                    <option>Pre-K</option>
+                    <option>Kindergarten</option>
+                    <option>1st Grade</option>
+                    <option>2nd Grade</option>
+                    <option>3rd Grade</option>
+                    <option>4th Grade</option>
+                    <option>5th Grade</option>
+                    <option>6th Grade</option>
+                    <option>7th Grade</option>
+                    <option>8th Grade</option>
+                    <option>9th Grade</option>
+                    <option>10th Grade</option>
+                    <option>11th Grade</option>
+                    <option>12th Grade</option>
+                    <option>University</option>
+                </select>
+            </div>
+
+            <!-- Language selection for the lesson plan -->
+            <div class="form-group">
+                <label for="language">Language</label>
+                <select id="language" name="language" required>
+                    <option value="" disabled selected>Select Language</option>
+                    <option value="en">English</option>
+                    <option value="es">Spanish (Español)</option>
+                    <option value="fr">French (Français)</option>
+                    <option value="de">German (Deutsch)</option>
+                    <option value="zh-CN">Chinese (中文 简体)</option>
+                    <option value="ja">Japanese (日本語)</option>
+                    <option value="ar">Arabic (العربية)</option>
+                    <option value="pt">Portuguese (Português)</option>
+                    <option value="ru">Russian (Русский)</option>
+                    <option value="hi">Hindi (हिन्दी)</option>
+                </select>
+            </div>
+
+            <!-- Lesson topic input -->
+            <div class="form-group">
+                <label for="topic">Topic</label>
+                <input type="text" id="topic" name="topic" placeholder="Enter Topic" required>
+            </div>
+
+            <!-- Standards/Objectives input with file upload option -->
+            <div class="form-group">
+                <label for="standards">Standards / Objectives</label>
+                <textarea id="standards" name="standards" placeholder="Enter Standards or Choose Files to Upload"></textarea>
+                <button type="button" class="upload-btn" onclick="showFileUploadMenu('standards', event)">Upload Files</button>
+            </div>
+
+            <!-- Additional customization notes with file upload option -->
+            <div class="form-group">
+                <label for="customization">Additional Customization or Notes (Optional)</label>
+                <textarea id="customization" name="customization" placeholder="Enter Any Additional Information or Choose Files to Upload"></textarea>
+                <button type="button" class="upload-btn" onclick="showFileUploadMenu('customization', event)">Upload Files</button>
+            </div>
+
+            <!-- Generate button to submit the form -->
+            <button type="submit" id="generateBtn">Generate</button>
+            <br>
+
+            <!-- Back to Projects Page  -->
+            <button type="button" id="generateBtn" style="margin-right: 10px;" onclick="window.location.href='../../Projects.html'">Go Back</button>
+            
+        </form>
+
+        <!-- File upload menu (hidden by default, shown when upload button is clicked) -->
+        <div id="fileUploadMenu" class="file-upload-menu">
+            <button onclick="uploadFile('pdf')">Upload (pdf, doc, docx, pptx)</button>
+            <button onclick="uploadFile('csv')">CSV File</button>
+            <button onclick="handleUrlInput('Google Sheets')">Google Sheets</button>
+            <button onclick="handleUrlInput('YouTube')">YouTube Video</button>
+            <button onclick="handleUrlInput('Website')">Website</button>
+        </div>
+    </div>
+
+    <!-- Hidden file input element used for file uploads -->
+    <input type="file" id="fileInput" style="display: none;" accept=".pdf,.doc,.docx,.pptx,.csv,.txt">
+
+    <!-- Google Translate script for language translation -->
+    <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+    
+    <!-- External JavaScript file -->
+    <script src="../src/lesson_planner_p1.js"></script>
+</body>
+</html>
