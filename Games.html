@@ -1,19 +1,23 @@
 <!-- Game Page -->
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GamePage</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <div id="wrapper">
-        <h2 style="text-align: center;">
-            Have Fun!
-        </h2>
-        <!-- For Loading the navbar -->
-        <script>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <!-- Content Security Policy for XSS protection -->
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' http://127.0.0.1:5000;">
+        <title>ProjectPage</title>
+        <link rel="stylesheet" href="style.css">
+        <!-- DOMPurify for client-side sanitization -->
+        <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.8/dist/purify.min.js"></script>
+    </head>
+    <body>
+        <div id="wrapper">
+            <h2 style="text-align: center;">
+                Personal Projects & Tools
+            </h2>
+            <!-- For Loading the navbar -->
+            <script>
             document.addEventListener("DOMContentLoaded", function () {
                 fetch("navbar.html")
                     .then((response) => {
@@ -23,143 +27,309 @@
                         return response.text();
                     })
                     .then((html) => {
-                        document.getElementById("navbar").innerHTML = html;
+                        // Sanitize the HTML content before inserting
+                        const cleanHTML = DOMPurify.sanitize(html);
+                        document.getElementById("navbar").innerHTML = cleanHTML;
                     })
                     .catch((error) => console.error("Error loading navbar:", error));
             });
         </script>
-        <div id="navbar"></div>
-        <div class="content">
-            <div class="game-container">
-                <!-- First Game -->
-                <div class="game-item">
-                    <div class="left-content">
-                        <h3>Tough-Luck</h3>
-                        <a href="ToughLuckv7\game-server\templates\UserGUI.html" class="play-button">Play</a>
-                        <button class="feedback-btn" onclick="openFeedback('Tough-Luck')">Feedback</button>
+            <div id="navbar"></div>
+            <div class="content">
+                <div class="game-container">
+                    <!-- First Project -->
+                    <div class="game-item">
+                        <div class="left-content">
+                            <h3>Weather Forecaster</h3>
+                            <div class="button-group">
+                                <a href="https://weather-forecast-ken.vercel.app/"
+                                    class="play-button">Try</a>
+                                <button class="feedback-btn" onclick="openFeedback('Weather Forecaster')">Feedback</button>
+                            </div>
+                        </div>
+                        <div class="right-content">
+                            <p>A simple interactive tool that shows real-time weather info for any 
+                                U.S. city. Enter a city and state to see its current temperature and
+                                conditions!</p>
+                        </div>
                     </div>
-                    <div class="right-content">
-                        <p>A luck-based game where the outcome depends entirely on chance. <strong>Are you feeling lucky today?</strong> Take your chances and see if fortune favors you!</p>
-                    </div>
-                </div>
 
-                <div class="game-item">
-                    <div class="left-content">
-                        <h3>N/A</h3>
-                        <a class="play-button">N/A</a>
+                    <div class="game-item">
+                        <div class="left-content">
+                            <h3 style="color: #fafdff;">Rubric Generator</h3>
+                            <div class="button-group">
+                                <a
+                                    href="RealityAI_Rubric_Generator\public\rubric_gen_p1.html"    
+                                    class="play-button">Try</a>
+                                <button class="feedback-btn" onclick="openFeedback('Rubric Generator')">Feedback</button>
+                            </div>
+                        </div>
+                        <div class="right-content">
+                            <p style="color: #fafdff;">An AI-powered tool
+                                designed to help educators create comprehensive
+                                assignment rubrics quickly and efficiently.
+                                Customize criteria, scoring, and feedback for
+                                any educational level.</p>
+                        </div>
                     </div>
-                    <div class="right-content">
-                        <p>N/A</p>
+                    <div class="game-item">
+                        <div class="left-content">
+                            <h3 style="color: #fafdff;">Lesson Planner</h3>
+                            <div class="button-group">
+                                <a
+                                    href="lesson_plan_generator\public\lesson_planner_p1.html"     
+                                    class="play-button">Try</a>
+                                <button class="feedback-btn" onclick="openFeedback('Lesson Planner')">Feedback</button>
+                            </div>
+                        </div>
+                        <div class="right-content">
+                            <p style="color: #fafdff;">A comprehensive lesson
+                                planning tool that helps teachers create
+                                structured, engaging lesson plans for any
+                                subject or grade level. Features customizable
+                                templates, standards alignment, and activity
+                                suggestions.</p>
+                        </div>
                     </div>
-                </div>
 
-                <div class="game-item">
-                    <div class="left-content">
-                        <h3>N/A</h3>
-                        <a class="play-button">N/A</a>
+                    <div class="game-item">
+                        <div class="left-content">
+                            <h3 style="color: #fafdff;">N/A</h3>
+                            <a
+                                href="#"
+                                class="play-button">N/A</a>
+                        </div>
+                        <div class="right-content">
+                            <p style="color: #fafdff;">N/A</p>
+                        </div>
                     </div>
-                    <div class="right-content">
-                        <p>N/A</p>
-                    </div>
-                </div>
-                
-                <div class="game-item">
-                    <div class="left-content">
-                       <h3>N/A</h3>
-                       <a class="play-button">N/A</a>
-                    </div>
-                    <div class="right-content">
-                        <p>N/A</p>
-                    </div>
-                </div>
-                <!-- perhaps the list of games can be in a database and the page showing them can -->
-                <!-- <ul> 
+
+                    <!-- perhaps the list of games can be in a database and the page showing them can -->
+                    <!-- <ul>
                     <li><strong>Tough-Luck</strong></li>
                     <ul>
-                        <a href="ToughLuckv7\game-server\public\templates\UserGUI.html">Play</a> 
+                        <a href="ToughLuckv7\game-server\public\templates\UserGUI.html">Play</a>   
                     </ul>
                 </ul> -->
+                </div>
             </div>
+            <footer>
+                <p>Copyright 2025 Kenneth Okwunwanne</p>
+            </footer>
         </div>
-        <footer>
-            <p>Copyright 2025 Kenneth Okwunwanne</p>
-        </footer>
-    </div>
 
-    <!-- Place this where you want the feedback button for each game -->
-    <button class="feedback-btn" onclick="openFeedback('Game Title')">Feedback</button>
+        <style>
+        .project-item {
+            margin-bottom: 32px;
+            padding: 16px;
+            background: #fafafa;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        textarea {
+            margin-top: 8px;
+            width: 100%;
+            max-width: 400px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            padding: 8px;
+            font-size: 16px;
+            resize: vertical;
+        }
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: flex-start;
+        }
+        .play-button {
+            width: 60px; /* Shorter Try button */
+            padding: 12px 0;
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 8px;
+            background-color: #0078d4;
+            color: #fff;
+            border: none;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: background 0.2s;
+            text-align: center; /* Center the 'Try' text */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .feedback-btn {
+            width: 120px; /* Feedback button stays wider */
+            background-color: #ffb347;
+            color: #222;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 18px;
+            font-size: 16px;
+            font-weight: bold;
+            margin-left: 0;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .feedback-btn:hover {
+            background-color: #ffa500;
+        }
+        </style>
 
-    <!-- Add the feedback modal and script at the end of your file (once only) -->
-    <div id="feedbackModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); z-index:9999; align-items:center; justify-content:center;">
-      <div style="background:#fff; padding:24px; border-radius:10px; min-width:300px; max-width:90vw;">
-        <h3 id="feedbackProjectTitle"></h3>
-        <form id="feedbackForm">
-          <label>Name (optional):<br><input type="text" id="feedbackName" style="width:100%;"></label><br>
-          <label>Email:<br><input type="email" id="feedbackEmail" style="width:100%;" required></label><br>
-          <label>Feedback:<br><textarea id="feedbackMessage" rows="4" style="width:100%;" required></textarea></label><br>
-          <button type="submit" class="feedback-btn">Submit</button>
-          <button type="button" onclick="closeFeedback()" style="margin-left:10px;">Cancel</button>
-        </form>
-        <div id="feedbackStatus" style="margin-top:10px;"></div>
-      </div>
-    </div>
+        <!-- Feedback Modal HTML -->
+<div id="feedbackModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); z-index:9999; align-items:center; justify-content:center;">        
+  <div style="background:#fff; padding:24px; border-radius:10px; min-width:300px; max-width:90vw;">
+    <h3 id="feedbackProjectTitle"></h3>
+    <form id="feedbackForm">
+      <label>Name (optional):<br><input type="text" id="feedbackName" style="width:100%;" maxlength="100" pattern="[a-zA-Z\s\-\.]{0,100}"></label><br>
+      <label>Email:<br><input type="email" id="feedbackEmail" style="width:100%;" required maxlength="254"></label><br>
+      <label>Feedback:<br><textarea id="feedbackMessage" rows="4" style="width:100%;" required maxlength="1000" placeholder="Please share your feedback (max 1000 characters)"></textarea></label><br>
+      <button type="submit" class="feedback-btn">Submit</button>
+      <button type="button" class="feedback-btn" onclick="closeFeedback()" style="margin-left:10px;">Cancel</button>
+    </form>
+    <div id="feedbackStatus" style="margin-top:10px;"></div>
+  </div>
+</div>
 
-    <style>
-    #feedbackModal * {
-        color: #222 !important;
+<style>
+#feedbackModal * {
+    color: #222 !important;
+}
+</style>
+
+<script>
+// XSS Security Functions
+function sanitizeInput(input) {
+    if (typeof input !== 'string') return '';
+    
+    // Use DOMPurify to sanitize input
+    if (typeof DOMPurify !== 'undefined') {
+        return DOMPurify.sanitize(input, {ALLOWED_TAGS: [], ALLOWED_ATTR: []});
     }
-    .feedback-btn {
-        width: 120px;
-        background-color: #ffb347;
-        color: #222;
-        border: none;
-        border-radius: 6px;
-        padding: 8px 18px;
-        font-size: 16px;
-        font-weight: bold;
-        margin-left: 0;
-        cursor: pointer;
-        transition: background 0.2s;
-    }
-    .feedback-btn:hover {
-        background-color: #ffa500;
-    }
-    </style>
+    
+    // Fallback: HTML entity encoding
+    return input
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#x27;')
+        .replace(/\//g, '&#x2F;');
+}
 
-    <script>
-    function openFeedback(project) {
-        document.getElementById('feedbackProjectTitle').innerText = `Feedback for "${project}"`;
-        document.getElementById('feedbackModal').style.display = 'flex';
-        document.getElementById('feedbackStatus').innerText = '';
-        document.getElementById('feedbackForm').onsubmit = function(e) {
-            e.preventDefault();
-            const name = document.getElementById('feedbackName').value;
-            const email = document.getElementById('feedbackEmail').value;
-            const message = document.getElementById('feedbackMessage').value;
-            fetch('http://127.0.0.1:5000/submit_feedback', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    project: project,
-                    name: name,
-                    email: email,
-                    message: message
-                })
+function validateInput(input, type, maxLength) {
+    if (!input || input.length > maxLength) return false;
+    
+    switch(type) {
+        case 'name':
+            // Only allow letters, spaces, hyphens, and dots
+            return /^[a-zA-Z\s\-\.]{0,100}$/.test(input);
+        case 'email':
+            // Basic email validation
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input) && input.length <= 254;
+        case 'message':
+            // Prevent extremely long messages and check for suspicious patterns
+            return input.length <= 1000 && !/(<script|javascript:|data:text\/html|vbscript:|onload=|onerror=)/i.test(input);
+        default:
+            return true;
+    }
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function openFeedback(project) {
+    // Escape project name to prevent XSS in title
+    const safeProject = escapeHtml(project);
+    document.getElementById('feedbackProjectTitle').innerHTML = `Feedback for "${safeProject}"`;
+    
+    document.getElementById('feedbackModal').style.display = 'flex';
+    document.getElementById('feedbackStatus').innerText = '';
+    
+    document.getElementById('feedbackForm').onsubmit = function(e) {
+        e.preventDefault();
+        
+        // Get and validate inputs
+        const nameInput = document.getElementById('feedbackName').value.trim();
+        const emailInput = document.getElementById('feedbackEmail').value.trim();
+        const messageInput = document.getElementById('feedbackMessage').value.trim();
+        
+        // Validate inputs
+        if (nameInput && !validateInput(nameInput, 'name', 100)) {
+            document.getElementById('feedbackStatus').innerText = 'Invalid name format. Please use only letters, spaces, hyphens, and dots.';
+            return;
+        }
+        
+        if (!validateInput(emailInput, 'email', 254)) {
+            document.getElementById('feedbackStatus').innerText = 'Please enter a valid email address.';
+            return;
+        }
+        
+        if (!validateInput(messageInput, 'message', 1000)) {
+            document.getElementById('feedbackStatus').innerText = 'Message is too long or contains invalid characters.';
+            return;
+        }
+        
+        // Sanitize inputs
+        const sanitizedName = sanitizeInput(nameInput);
+        const sanitizedEmail = sanitizeInput(emailInput);
+        const sanitizedMessage = sanitizeInput(messageInput);
+        const sanitizedProject = sanitizeInput(project);
+        
+        // Submit sanitized data
+        fetch('http://127.0.0.1:5000/submit_feedback', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest' // CSRF protection header
+            },
+            body: JSON.stringify({
+                project: sanitizedProject,
+                name: sanitizedName,
+                email: sanitizedEmail,
+                message: sanitizedMessage
             })
-            .then(res => res.json())
-            .then(data => {
-                document.getElementById('feedbackStatus').innerText = data.success ? "Thank you for your feedback!" : "Error submitting feedback.";
-                if (data.success) setTimeout(closeFeedback, 1500);
-            })
-            .catch(() => {
-                document.getElementById('feedbackStatus').innerText = "Error submitting feedback.";
-            });
-        };
-    }
-    function closeFeedback() {
-        document.getElementById('feedbackModal').style.display = 'none';
-        document.getElementById('feedbackForm').reset();
-    }
-    </script>
-</body>
+        })
+        .then(res => {
+            if (!res.ok) throw new Error('Network response was not ok');
+            return res.json();
+        })
+        .then(data => {
+            const statusElement = document.getElementById('feedbackStatus');
+            if (data && data.success) {
+                statusElement.innerText = "Thank you for your feedback!";
+                statusElement.style.color = 'green';
+                setTimeout(closeFeedback, 1500);
+            } else {
+                statusElement.innerText = "Error submitting feedback. Please try again.";
+                statusElement.style.color = 'red';
+            }
+        })
+        .catch(error => {
+            console.error('Feedback submission error:', error);
+            const statusElement = document.getElementById('feedbackStatus');
+            statusElement.innerText = "Error submitting feedback. Please check your connection.";
+            statusElement.style.color = 'red';
+        });
+    };
+}
+
+/**
+ * Closes the feedback modal by hiding it, resets the feedback form fields,
+ * and clears any feedback status messages and their styling.
+ */
+
+function closeFeedback() {
+    document.getElementById('feedbackModal').style.display = 'none';
+    document.getElementById('feedbackForm').reset();
+    document.getElementById('feedbackStatus').innerText = '';
+    document.getElementById('feedbackStatus').style.color = '';
+}
+</script>
+    </body>
 </html>
