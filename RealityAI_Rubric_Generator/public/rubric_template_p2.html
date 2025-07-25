@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Generated Rubric</title>
+    <!-- Google Font as used in p1 -->
+    <link
+      href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* Overall Page Styling */
+      body {
+        font-family: 'Roboto', Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        /* Darker purple gradient background */
+        background: linear-gradient(135deg, #372a7b, #1e1e2f);
+        background-size: cover;
+        background-attachment: fixed;
+      }
+      /* Content Container */
+      .container {
+        max-width: 900px;
+        margin: 2rem auto;
+        padding: 2rem;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      /* Header Styling */
+      header {
+        text-align: center;
+        padding: 1rem;
+        background: linear-gradient(135deg, #372a7b, #4c3c8e);
+        color: #fff;
+        border-radius: 5px;
+        margin-bottom: 2rem;
+      }
+      header h1 {
+        margin: 0;
+        font-size: 2rem;
+      }
+      header p {
+        margin: 0.5rem 0 0;
+      }
+      /* Table Styling */
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 2rem 0;
+        background: #fff;
+        border-radius: 5px;
+        overflow: hidden;
+      }
+      th,
+      td {
+        padding: 0.75rem;
+        border: 1px solid #ccc;
+        text-align: center;
+      }
+      th {
+        background: #372a7b;
+        color: #fff;
+      }
+      /* Bold the first column (criterion names) */
+      table td:first-child {
+        font-weight: bold;
+      }
+      caption {
+        padding: 1rem;
+        font-size: 1.3rem;
+        font-weight: bold;
+      }
+      /* Button Styling */
+      .download-button-container,
+      .button-container {
+        text-align: center;
+        margin: 2rem 0;
+      }
+      button {
+        font-size: 1rem;
+        padding: 0.75rem 1.5rem;
+        background-color: #372a7b;
+        border: none;
+        border-radius: 5px;
+        color: #fff;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+      }
+      button:hover {
+        background-color: #2d2161;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- Header -->
+      <header>
+        <h1>Rubric Generator</h1>
+        <p>Your generated rubric is below</p>
+      </header>
+
+      <!-- Generated rubric goes here -->
+      <div id="rubricContainer"></div>
+
+    <!-- PDF Download -->
+    <div class="download-button-container">
+      <button type="button" id="downloadPdfBtn">Download PDF</button>
+    </div>
+
+    <!-- Back Button -->
+    <div class="button-container">
+      <button type="button" onclick="window.location.href='rubric_gen_p1.html'">
+        Back
+      </button>
+    </div>
+  </div>
+
+  <!-- Google Translate widget container -->
+  <div id="google_translate_element" style="position: fixed; top: 10px; right: 10px; z-index: 1000;"></div>
+
+  <!-- html2canvas & jsPDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<!-- 
+The Google Translate widget and script use this language parameter to automatically set the 
+page language and translate the rubric content accordingly.
+-->
+  <!-- Google Translate API -->
+  <script type="text/javascript" 
+    src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit">
+  </script>
+
+  <script>
+    // 1) Read URL parameters
+    const params       = new URLSearchParams(window.location.search);
+    const gradeLevel   = params.get("gradeLevel") || "";
+    const pointScale   = parseInt(params.get("pointScale")) || 4;
+    const subject      = params.get("subject")     || "";
+    const difficulty   = params.get("difficulty")  || "";
+    const description  = params.get("description") || "";
+    const language    = params.get("language") || "en";
+
+    // 2) Descriptive text per criterion & level
+    const rubricDesc = {
+      "Clarity": {
+        4: "Argument is exceptionally clear and concise, with no ambiguity.",
+        3: "Argument is clear and concise, with minimal ambiguity.",
+        2: "Argument is somewhat clear but contains occasional ambiguity.",
+        1: "Argument is unclear and difficult to follow."
+      },
+      "Organization": {
+        4: "Essay is exceptionally well-organized, with a logical flow throughout.",
+        3: "Essay is well-organized, with a logical flow and minor issues.",
+        2: "Essay shows some organization but lacks logical consistency.",
+        1: "Essay is poorly organized and lacks logical structure."
+      },
+      "Supporting evidence": {
+        4: "All claims are thoroughly supported with highly relevant evidence.",
+        3: "Most claims are supported with relevant evidence.",
+        2: "Some claims are supported, but evidence is weak or insufficient.",
+        1: "Few or no claims are supported by evidence."
+      },
+      "Grammar and Mechanics": {
+        4: "Writing is error-free and demonstrates mastery of language conventions.",
+        3: "Writing has minor errors that do not interfere with meaning.",
+        2: "Writing contains noticeable errors that interfere with meaning.",
+        1: "Writing has frequent errors that make it difficult to understand."
+      },
+      "Creativity and Style": {
+        4: "Writing demonstrates exceptional creativity and an engaging style.",
+        3: "Writing shows creativity and style, though somewhat limited.",
+        2: "Writing has limited creativity or an inconsistent style.",
+        1: "Writing lacks creativity and is bland or uninspired."
+      }
+    };
+
+    // 3) Header labels matching sample
+    const levelLabels = {
+      4: "4 Points (Exceeds Expectations)",
+      3: "3 Points (Meets Expectations)",
+      2: "2 Points (Approaching Expectations)",
+      1: "1 Point (Below Expectations)"
+    };
+
+    // 4) Build the table
+    function buildRubric({ gradeLevel, pointScale, subject, difficulty, description }) {
+      // Caption text
+      let captionText = `Rubric for ${gradeLevel}`;
+      if (subject)      captionText += `: ${subject}`;
+      if (difficulty)   captionText += ` (Difficulty: ${difficulty})`;
+      if (description)  captionText += ` - ${description}`;
+
+      const criteria = [
+        "Clarity",
+        "Organization",
+        "Supporting evidence",
+        "Grammar and Mechanics",
+        "Creativity and Style"
+      ];
+
+      // Create table element
+      const table = document.createElement("table");
+      // Caption
+      const cap = document.createElement("caption");
+      cap.textContent = captionText;
+      table.appendChild(cap);
+
+      // Header
+      const thead = document.createElement("thead");
+      const hrow  = document.createElement("tr");
+      const thCrit= document.createElement("th");
+      thCrit.textContent = "Criteria";
+      hrow.appendChild(thCrit);
+
+      // Levels (descending: highest on left)
+      for (let lvl = pointScale; lvl >= 1; lvl--) {
+        const th = document.createElement("th");
+        th.textContent = levelLabels[lvl];
+        hrow.appendChild(th);
+      }
+      thead.appendChild(hrow);
+      table.appendChild(thead);
+
+      // Body
+      const tbody = document.createElement("tbody");
+      criteria.forEach(crit => {
+        const row = document.createElement("tr");
+        // Criterion cell
+        const tdCrit = document.createElement("td");
+        tdCrit.textContent = crit;
+        row.appendChild(tdCrit);
+        // Level cells
+        for (let lvl = pointScale; lvl >= 1; lvl--) {
+          const td = document.createElement("td");
+          td.textContent = rubricDesc[crit][lvl] || "";
+          row.appendChild(td);
+        }
+        tbody.appendChild(row);
+      });
+      table.appendChild(tbody);
+
+      return table;
+    }
+
+    // 5) Generate & append
+    const rubric = buildRubric({ gradeLevel, pointScale, subject, difficulty, description });
+    document.getElementById("rubricContainer").appendChild(rubric);
+
+    // 6) Google Translate initialization
+    function googleTranslateElementInit() {
+      new google.translate.TranslateElement({
+        pageLanguage: 'en',
+        includedLanguages: 'en,es,fr,de,zh-CN,ja,ar,pt,ru,hi',
+        autoDisplay: false
+      }, 'google_translate_element');
+
+      // Automatically select the language from URL parameter
+      setTimeout(() => {
+        const select = document.querySelector('#google_translate_element select');
+        if (select) {
+          select.value = language;
+          select.dispatchEvent(new Event('change'));
+        }
+      }, 1000);
+    }
+
+    // Load Google Translate script dynamically
+    const gtScript = document.createElement('script');
+    gtScript.type = 'text/javascript';
+    gtScript.src = '//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+    document.head.appendChild(gtScript);
+
+    // 7) PDF download
+    document.getElementById("downloadPdfBtn").addEventListener("click", async () => {
+      const element = document.querySelector("#rubricContainer > table");
+      if (!element) {
+        alert("Rubric table not found.");
+        return;
+      }
+      const canvas = await html2canvas(element);
+      const imgData = canvas.toDataURL("image/png");
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF();
+      const imgWidth = 210;
+      const pageHeight = 295;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position   = 0;
+
+      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+      while (heightLeft >= 0) {
+        position   = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+      pdf.save("rubric.pdf");
+    });
+  </script>
+  </body>
+</html>

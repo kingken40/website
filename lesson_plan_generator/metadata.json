@@ -1,0 +1,75 @@
+{
+  "name": "lesson_plan_generator",
+  "display_name": "Lesson Plan Generator",
+  "description": "Generate structured lesson plans based on topic and grade level",
+  "version": "1.0.0",
+  "author": "Marvel AI Team",
+  "input_parameters": {
+    "topic": {
+      "type": "string",
+      "description": "The main subject of the lesson",
+      "required": true
+    },
+    "grade_level": {
+      "type": "string",
+      "description": "The target grade level for the lesson",
+      "required": true,
+      "enum": [
+        "Pre-K",
+        "Kindergarten",
+        "1st Grade",
+        "2nd Grade",
+        "3rd Grade",
+        "4th Grade",
+        "5th Grade",
+        "6th Grade",
+        "7th Grade",
+        "8th Grade",
+        "9th Grade",
+        "10th Grade",
+        "11th Grade",
+        "12th Grade",
+        "University"
+      ]
+    },
+    "standards": {
+      "type": "string",
+      "description": "Educational standards addressed by the lesson",
+      "required": false
+    },
+    "customization": {
+      "type": "string",
+      "description": "Special instructions or customizations",
+      "required": false
+    },
+    "output_format": {
+      "type": "string",
+      "description": "The desired output format",
+      "required": false,
+      "default": "docx",
+      "enum": ["json", "docx", "pdf"]
+    }
+  },
+  "output_parameters": {
+    "status": {
+      "type": "string",
+      "description": "Status of the request (success or error)"
+    },
+    "data": {
+      "type": "object",
+      "description": "The generated lesson plan data"
+    },
+    "format": {
+      "type": "string",
+      "description": "The format of the output"
+    },
+    "error_type": {
+      "type": "string",
+      "description": "Type of error if status is error"
+    },
+    "message": {
+      "type": "string",
+      "description": "Error message if status is error"
+    }
+  }
+}

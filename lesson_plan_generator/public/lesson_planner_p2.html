@@ -1,0 +1,71 @@
+<!-- Lesson Plan Generator - Display Page: Shows AI-generated lesson plans and provides export options -->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Generated Lesson</title>
+    <!-- 
+    ===================================
+    LESSON PLANNER - PAGE 2 (LESSON PLAN DISPLAY & EXPORT)
+    ===================================
+    This is the second page of the Lesson Planner application.
+    It receives lesson plan data from page 1 via URL parameters,
+    generates a formatted lesson plan, and provides options to:
+    - View the generated lesson plan
+    - Download the lesson plan as DOCX
+    - Return to the input form (page 1)
+    
+    The page also includes language translation capabilities to match
+    the language selected on page 1.
+    -->
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
+    <!-- External CSS file -->
+    <link rel="stylesheet" href="../styles/style_p2.css">
+  </head>
+  <body>
+    <div class="container">
+      <!-- Header -->
+      <header>
+        <h1>Lesson Generator</h1>
+        <p>Your generated lesson is below</p>
+      </header>
+
+      <!-- Generated lesson content will be inserted here -->
+      <div id="lessonContainer"></div>
+
+      <!-- Download Buttons -->
+      <div class="download-button-container">
+        <!-- 
+        To enable PDF download functionality, uncomment the button below.
+        When uncommenting, also restore the margin-left style to the DOCX button.
+        -->
+        <!-- <button type="button" id="downloadPdfBtn">Download PDF</button> -->
+        <button type="button" id="downloadDocxBtn">Download DOCX</button>
+      </div>
+
+      <!-- Back Button -->
+      <div class="button-container">
+        <button type="button" onclick="window.location.href='lesson_planner_p1.html'">
+          Back
+        </button>
+      </div>
+    </div>
+
+    <!-- Google Translate widget container -->
+    <div id="google_translate_element" style="position: fixed; top: 10px; right: 10px; z-index: 1000;"></div>
+
+    <!-- External libraries for document generation -->
+    <!-- html2canvas & jsPDF for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    
+    <!-- Load docx library directly - using a specific version known to work with a global variable -->
+    <script src="https://unpkg.com/docx@7.1.0/build/index.js"></script>
+    
+    <!-- External JavaScript file -->
+    <script src="../src/lesson_planner_p2.js"></script>
+  </body>
+</html> 

@@ -1,0 +1,86 @@
+/* Overall Page Styling */
+body {
+  font-family: 'Roboto', Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  /* Darker purple gradient background */
+  background: linear-gradient(135deg, #372a7b, #1e1e2f);
+  background-size: cover;
+  background-attachment: fixed;
+}
+/* Content Container */
+.container {
+  max-width: 900px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+/* Header Styling */
+header {
+  text-align: center;
+  padding: 1rem;
+  background: linear-gradient(135deg, #372a7b, #4c3c8e);
+  color: #fff;
+  border-radius: 5px;
+  margin-bottom: 2rem;
+}
+header h1 {
+  margin: 0;
+  font-size: 2rem;
+}
+header p {
+  margin: 0.5rem 0 0;
+}
+/* Table Styling */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 2rem 0;
+  background: #fff;
+  border-radius: 5px;
+  overflow: hidden;
+}
+th,
+td {
+  padding: 0.75rem;
+  border: 1px solid #ccc;
+  text-align: center;
+}
+th {
+  background: #372a7b;
+  color: #fff;
+}
+/* Bold the first column (criterion names) */
+table td:first-child {
+  font-weight: bold;
+}
+caption {
+  padding: 1rem;
+  font-size: 1.3rem;
+  font-weight: bold;
+}
+/* Button Styling */
+.download-button-container,
+.button-container {
+  text-align: center;
+  margin: 2rem 0;
+}
+button {
+  font-size: 1rem;
+  padding: 0.75rem 1.5rem;
+  background-color: #372a7b;
+  border: none;
+  border-radius: 5px;
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+button:hover {
+  background-color: #2d2161;
+}
+/* Red button for download issues */
+.download-button-error {
+  background-color: #ff0000; /* Red background */
+}

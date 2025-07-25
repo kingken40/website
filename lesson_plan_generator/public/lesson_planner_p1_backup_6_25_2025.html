@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lesson Plan Generator</title>
+    <style>
+        /* Existing styles remain unchanged */
+        body {
+            font-family: 'Roboto', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #372a7b, #1e1e2f);
+            background-size: cover;
+            background-attachment: fixed;
+            color: #eee;
+        }
+        .container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: rgba(42, 42, 64, 0.9);
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #a0a0ff;
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #a0a0ff;
+        }
+        input[type="text"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #555;
+            border-radius: 6px;
+            background: #1e1e2f;
+            color: #eee;
+            font-size: 1rem;
+        }
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        .upload-btn {
+            display: inline-block;
+            margin-top: 0.5rem;
+            padding: 0.5rem 1rem;
+            background-color: #4c51bf;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        #generateBtn {
+            display: block;
+            width: 100%;
+            padding: 1rem;
+            background-color: #6c63ff;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        #generateBtn:hover {
+            background-color: #5a52cc;
+        }
+        .file-upload-menu {
+            display: none;
+            position: absolute;
+            background-color: #2a2a40;
+            border: 1px solid #555;
+            border-radius: 4px;
+            padding: 0.5rem;
+        }
+        .file-upload-menu button {
+            display: block;
+            width: 100%;
+            padding: 0.5rem;
+            margin-bottom: 0.5rem;
+            background-color: #4c51bf;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .file-upload-menu button:last-child {
+            margin-bottom: 0;
+        }
+        /* New style for language select */
+        #languageSelect {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            padding: 5px;
+            border-radius: 5px;
+            background-color: #4c3c8e;
+            color: #fff;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Lesson Plan Generator</h1>
+        <p>Create a lesson plan for any topic you're teaching!</p>
+
+        <form id="lessonPlanForm">
+            <div class="form-group">
+                <label for="gradeLevel">Grade Level</label>
+                <select id="gradeLevel" name="gradeLevel" required>
+                    <option value="" disabled selected>Enter Grade Level</option>
+                    <option>Pre-K</option>
+                    <option>Kindergarten</option>
+                    <option>1st Grade</option>
+                    <option>2nd Grade</option>
+                    <option>3rd Grade</option>
+                    <option>4th Grade</option>
+                    <option>5th Grade</option>
+                    <option>6th Grade</option>
+                    <option>7th Grade</option>
+                    <option>8th Grade</option>
+                    <option>9th Grade</option>
+                    <option>10th Grade</option>
+                    <option>11th Grade</option>
+                    <option>12th Grade</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="language">Language</label>
+                <select id="language" name="language" required>
+                    <option value="" disabled selected>Select Language</option>
+                    <option value="en">English</option>
+                    <option value="es">Spanish (Español)</option>
+                    <option value="fr">French (Français)</option>
+                    <option value="de">German (Deutsch)</option>
+                    <option value="zh-CN">Chinese (中文 简体)</option>
+                    <option value="ja">Japanese (日本語)</option>
+                    <option value="ar">Arabic (العربية)</option>
+                    <option value="pt">Portuguese (Português)</option>
+                    <option value="ru">Russian (Русский)</option>
+                    <option value="hi">Hindi (हिन्दी)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="topic">Topic</label>
+                <input type="text" id="topic" name="topic" placeholder="Enter Topic" required>
+            </div>
+
+            <div class="form-group">
+                <label for="standards">Standards / Objectives</label>
+                <textarea id="standards" name="standards" placeholder="Enter Standards or Choose Files to Upload"></textarea>
+                <button type="button" class="upload-btn" onclick="showFileUploadMenu('standards')">Upload Files</button>
+            </div>
+
+            <div class="form-group">
+                <label for="customization">Additional Customization or Notes (Optional)</label>
+                <textarea id="customization" name="customization" placeholder="Enter Any Additional Information or Choose Files to Upload"></textarea>
+                <button type="button" class="upload-btn" onclick="showFileUploadMenu('customization')">Upload Files</button>
+            </div>
+
+            <button type="submit" id="generateBtn">Generate</button>
+        </form>
+
+        <div id="fileUploadMenu" class="file-upload-menu">
+            <button onclick="uploadFile('pdf')">Upload (pdf, doc, docx, pptx)</button>
+            <button onclick="uploadFile('csv')">CSV File</button>
+            <button onclick="uploadFile('sheets')">Google Sheets</button>
+            <button onclick="uploadFile('youtube')">YouTube Video</button>
+            <button onclick="uploadFile('website')">Website</button>
+        </div>
+    </div>
+
+    <input type="file" id="fileInput" style="display: none;" accept=".pdf,.doc,.docx,.pptx,.csv,.txt">
+
+    <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+    <script>
+        let currentUploadField = '';
+
+        function showFileUploadMenu(field) {
+            currentUploadField = field;
+            const menu = document.getElementById('fileUploadMenu');
+            const button = event.target;
+            const rect = button.getBoundingClientRect();
+            menu.style.display = 'block';
+            menu.style.top = `${rect.bottom}px`;
+            menu.style.left = `${rect.left}px`;
+        }
+
+
+        function uploadFile(type) {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = type === 'pdf' ? '.pdf,.doc,.docx,.pptx' : 
+                        type === 'csv' ? '.csv' : 
+                        type === 'youtube' ? 'video/*' : '*/*';
+            
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const fileName = file.name;
+                        document.getElementById(currentUploadField).value = `File uploaded: ${fileName}`;
+                    };
+                    reader.readAsText(file);
+                }
+            };
+            
+            input.click();
+        }
+
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const content = e.target.result;
+                    document.getElementById(currentUploadField).value += content + '\n';
+                };
+                reader.readAsText(file);
+            }
+            document.getElementById('fileUploadMenu').style.display = 'none';
+        });
+
+        function handleUrlInput(type) {
+            const url = prompt(`Enter the ${type} URL:`);
+            if (url) {
+                document.getElementById(currentUploadField).value += url + '\n';
+            }
+            document.getElementById('fileUploadMenu').style.display = 'none';
+        }
+
+        document.getElementById('lessonPlanForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            generateLessonPlan();
+        });
+
+        // function generateLessonPlan() {
+        //     const gradeLevel = document.getElementById('gradeLevel').value;
+        //     const language = document.getElementById('language').value;
+        //     const topic = document.getElementById('topic').value;
+        //     const standards = document.getElementById('standards').value;
+        //     const customization = document.getElementById('customization').value;
+
+        //     // Redirect to p2 with query parameters including language
+        //     const url = `lesson_planner_p2.html?gradeLevel=${encodeURIComponent(gradeLevel)}&language=${encodeURIComponent(language)}&topic=${encodeURIComponent(topic)}&standards=${encodeURIComponent(standards)}&customization=${encodeURIComponent(customization)}`;
+        //     window.location.href = url;
+        // }
+
+        // Close the file upload menu when clicking outside
+        document.addEventListener('click', function(event) {
+            const menu = document.getElementById('fileUploadMenu');
+            if (!event.target.closest('.upload-btn') && !event.target.closest('.file-upload-menu')) {
+                menu.style.display = 'none';
+            }
+        });
+
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({
+                pageLanguage: 'en',
+                includedLanguages: 'en,es,fr,de,zh-CN,ja,ar,pt,ru,hi',
+                layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+            }, 'google_translate_element');
+        }
+
+        function changeLanguage() {
+            const language = document.getElementById('languageSelect').value;
+            const googleFrame = document.getElementsByClassName('goog-te-menu-frame')[0];
+            if (googleFrame) {
+                const googleFrameDoc = googleFrame.contentDocument || googleFrame.contentWindow.document;
+                const googleFrameBody = googleFrameDoc.getElementsByTagName('body')[0];
+                const googleFrameItems = googleFrameBody.getElementsByClassName('goog-te-menu2-item');
+
+                for (let i = 0; i < googleFrameItems.length; i++) {
+                    if (googleFrameItems[i].innerHTML.includes(language)) {
+                        googleFrameItems[i].click();
+                        return;
+                    }
+                }
+            }
+        }
+
+        function generateLessonPlan() {
+            const generateBtn = document.getElementById('generateBtn');
+            const originalBtnText = generateBtn.textContent;
+            generateBtn.textContent = 'Generating...';
+            generateBtn.disabled = true;
+
+            try {
+                const gradeLevel = document.getElementById('gradeLevel').value;
+                const language = document.getElementById('language').value;
+                const topic = document.getElementById('topic').value;
+                const standards = document.getElementById('standards').value;
+                const customization = document.getElementById('customization').value;
+
+                // Create a simple object with the form data
+                const lessonPlanData = {
+                    gradeLevel,
+                    language,
+                    topic,
+                    standards,
+                    customization
+                };
+
+                // Convert the object to a JSON string and encode it for the URL
+                const encodedData = encodeURIComponent(JSON.stringify(lessonPlanData));
+
+                // Redirect to p2 with the data
+                window.location.href = `lesson_planner_p2.html?lessonPlan=${encodedData}`;
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An unexpected error occurred. Please try again.');
+            } finally {
+                generateBtn.textContent = originalBtnText;
+                generateBtn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

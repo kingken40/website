@@ -1,0 +1,112 @@
+/* Main styling for the application */
+body {
+    font-family: 'Roboto', Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(135deg, #372a7b, #1e1e2f); /* Purple gradient background */
+    background-size: cover;
+    background-attachment: fixed;
+    color: #eee;
+}
+/* Container for the main content */
+.container {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: rgba(42, 42, 64, 0.9); /* Semi-transparent background */
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+/* Heading styles */
+h1 {text-align: center; color: #a0a0ff;}
+.form-group {margin-bottom: 1.5rem;}
+label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #a0a0ff;
+}
+/* Form input styling */
+input[type="text"], select, textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #555;
+    border-radius: 6px;
+    background: #1e1e2f;
+    color: #eee;
+    font-size: 1rem;
+}
+textarea {min-height: 100px; resize: vertical;}
+/* Upload button styling */
+.upload-btn {
+    display: inline-block;
+    margin-top: 0.5rem;
+    padding: 0.5rem 1rem;
+    background-color: #4c51bf;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+/* Generate button styling */
+#generateBtn {
+#backBtn {
+    display: block;
+    width: 100%;
+    padding: 1rem;
+    background-color: #6c63ff;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    margin-bottom: 10px;
+}
+#backBtn:hover {
+    background-color: #5a52cc;
+}
+    display: block;
+    width: 100%;
+    padding: 1rem;
+    background-color: #6c63ff;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+#generateBtn:hover {background-color: #5a52cc;}
+/* File upload menu styling */
+.file-upload-menu {
+    display: none;
+    position: absolute;
+    background-color: #2a2a40;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 0.5rem;
+}
+.file-upload-menu button {
+    display: block;
+    width: 100%;
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+    background-color: #4c51bf;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.file-upload-menu button:last-child {margin-bottom: 0;}
+/* Language selector styling */
+#languageSelect {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    z-index: 1000;
+    padding: 5px;
+    border-radius: 5px;
+    background-color: #4c3c8e;
+    color: #fff;
+    border: none;
+}

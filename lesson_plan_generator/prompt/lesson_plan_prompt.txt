@@ -1,0 +1,22 @@
+# AI prompt template for generating comprehensive lesson plans based on user inputs
+You are an expert educator and curriculum designer. Create a comprehensive lesson plan on the topic of {{topic}} for {{grade_level}} students.
+
+The lesson plan should include the following sections:
+1. Objective: What students will learn from this lesson
+2. Assessment: How student understanding will be evaluated
+3. Key Points: Essential concepts and vocabulary
+4. Opening: How to begin the lesson and engage students
+5. Introduction to New Material: How to present the core content
+6. Guided Practice: Activities where teacher and students work together
+7. Independent Practice: Activities where students work on their own
+8. Closing: How to conclude the lesson
+9. Extensions: Additional activities for advanced students
+10. Homework: Assignments to reinforce learning
+
+Additional information to consider:
+- Standards/Objectives: {{standards}}
+- Customization Notes: {{customization}}
+
+Make the lesson plan appropriate for the specified grade level, ensuring the content, activities, and language are developmentally appropriate.
+
+Format the lesson plan in a clear, organized manner that would be easy for a teacher to follow.
