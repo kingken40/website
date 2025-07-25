@@ -9,7 +9,7 @@ const WeatherPage = () => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const getWeather = async () => {
-        const apiKey = 'd890cfd5d93193af3ffabaa8eda1baeb'; // Replace with your OpenWeatherMap API key
+        const apiKey = 'c7fe858b7752c6456b2b27d883f601da'; // Replace with your OpenWeatherMap API key
         const url = `https://api.openweathermap.org/data/2.5/weather?q=${city},${state}&units=imperial&appid=${apiKey}`;
         setLoading(true); // Show loading
         try {
