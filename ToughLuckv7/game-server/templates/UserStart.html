@@ -170,7 +170,7 @@
     // Rules button functionality
     document.getElementById('rulesBtn').onclick = function() {
       const rulesText = `
-Tough Luck Rules:
+<strong>Tough Luck Rules:</strong>
    - Choose the correct number for each position in 
      the path.
    - You have a limited number of attempts per 
@@ -180,7 +180,7 @@ Tough Luck Rules:
    - Game Mode affects points per correct move and 
      number of attempts.
      
-Moves Description:
+<strong>Moves Description:</strong>
    - A "move" is your guess for the number at a 
      specific position in the path.
    - A correct move matches the hidden number for 
@@ -189,25 +189,31 @@ Moves Description:
      your available attempts or points, depending on 
      game mode.
 
-Game Mode Descriptions:
+<strong>Game Mode Descriptions:</strong>
 Endless:
    - Points per correct move: +2
    - Points per incorrect move: 0
    - Unlimited attempts per position
    - Never ends due to wrong moves
    - Complete the entire path length
+   "Game doesn't stop until you do."
 
 TL - 1:
    - Points per correct move: +3
    - Points per incorrect move: 0
    - Attempts per position: 3
    - Game ends when attempts reach 0
+   "3 strikes you're out!"
 
 TL - 2:
    - Points per correct move: +5
    - Points per incorrect move: 0
    - Attempts per position: 1
    - Game ends when attempts reach 0
+   "1 Chance Only." <small>(Fortune’s not exactly smiling on you!)</small>
+
+   <strong>Allow Duplicates:</strong>
+   - If enabled, players can have the same number in multiple moves.
   `;
 
       const rulesWindow = window.open("", "GameRules", "width=420,height=420");
