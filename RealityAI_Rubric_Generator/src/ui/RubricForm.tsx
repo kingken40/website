@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 import { parseUpload } from '../logic/parseUpload';
-import { fetchUrlText } from '../logic/fetchurlText';
+import { fetchUrlText } from '../logic/fetchUrlText';
 import { buildRubric } from '../logic/buildRubric';
 import { toPdf } from '../export/toPdf';
 import { toDocx } from '../export/toDocsx';
@@ -85,8 +85,9 @@ export const RubricForm = () => {
 
         {/* Grade level */}
         <div>
-          <label>Grade level</label>
+          <label htmlFor="grade-level-select">Grade level</label>
           <select
+            id="grade-level-select"
             value={gradeLevel}
             required
             onChange={e => setGradeLevel(e.target.value)}
@@ -101,8 +102,9 @@ export const RubricForm = () => {
 
         {/* Point scale */}
         <div>
-          <label>Point scale</label>
+          <label htmlFor="point-scale-input">Point scale</label>
           <input
+            id="point-scale-input"
             type="number"
             min={2}
             max={10}
@@ -110,6 +112,8 @@ export const RubricForm = () => {
             required
             onChange={e => setPointScale(+e.target.value)}
             className="border rounded p-2 w-24"
+            title="Enter a point scale between 2 and 10"
+            placeholder="e.g. 4"
           />
         </div>
 
@@ -189,6 +193,8 @@ const PromptBlock = ({
         required={required}
         value={typeof value === 'string' ? value : ''}
         onChange={e => setValue(e.target.value)}
+        placeholder="Enter text here"
+        title={title}
       />
     )}
     {mode === 'file' && (
@@ -197,6 +203,8 @@ const PromptBlock = ({
         required={required}
         accept=".csv,.pdf,.docx,.ppt,.pptx,.txt,text/plain,application/pdf"
         onChange={e => setValue(e.target.files?.[0] ?? '')}
+        title="Upload a file"
+        placeholder="Choose a file"
       />
     )}
     {mode === 'url' && (
