@@ -97,10 +97,7 @@
         document.getElementById('userMoves').innerText = formatList(params.user_moves);
         document.getElementById('points').innerText = params.points && params.points !== '' ? params.points : '0';
         document.getElementById('totalAvailablePoints').innerText = params.total_available_points && params.total_available_points !== '' ? params.total_available_points : '0';
-        document.getElementById('missed').innerText =
-    (params.path_list_length && params.user_moves)
-        ? Math.max(parseInt(params.path_list_length) - params.user_moves.split(',').filter(x => x.trim() !== '').length, 0)
-        : '0';
+        document.getElementById('missed').innerText = params.missed || '0';
         document.getElementById('totalMoves').innerText = params.total_moves && parseInt(params.total_moves) > 0 ? params.total_moves : 'N/A';
 
         function formatElapsedTime(seconds) {
@@ -129,19 +126,20 @@
             resultMessageElem.innerText = 'Tough Luck...';
             resultMessageElem.style.color = 'red';
             resultMessageElem.className = 'lose';
+        } else if(userMoves !== pathList && points > 0){
+            resultMessageElem.innerText = 'Not quite there, but precision counts!';
+            resultMessageElem.style.color = 'orange';
+            resultMessageElem.className = 'lose';
         } else if (userMoves === pathList) {
             resultMessageElem.innerText = 'Perfect Game!';
             resultMessageElem.style.color = 'green';
             resultMessageElem.className = 'win';
-        } else if(userMoves !== pathList && points > 0){
-            resultMessageElem.innerText = 'Not Quite!';
-            resultMessageElem.style.color = 'orange';
-            resultMessageElem.className = 'lose';
         } else {
             resultMessageElem.innerText = 'Good Try!';
             resultMessageElem.style.color = 'orange';
             resultMessageElem.className = 'lose';
         }
+
 
         // Map difficulty/mode names
         function getModeName(val) {

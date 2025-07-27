@@ -34,6 +34,7 @@
 </head>
 <body>
   <h1>Game In Progress</h1>
+  <p id="gameMode" style="font-size: 18px; font-weight: bold; margin: 10px 0;">Game Mode: <span id="currentMode"></span></p>
   <button onclick="window.location.href='UserGUI.html'">
     Return Home
   </button>
@@ -68,6 +69,19 @@
   const totalMoves = parseInt(urlParams.get('moves')) || 5;
   const mode = urlParams.get('mode');
   const allowDuplicates = urlParams.get('duplicates') === '1';
+
+  // Map mode names for display
+  function getModeName(val) {
+    if (!val) return "Unknown";
+    val = val.toLowerCase();
+    if (val === "easy" || val === "endless") return "Endless";
+    if (val === "medium" || val === "level1") return "TL-1";
+    if (val === "hard" || val === "level2") return "TL-2";
+    return val.charAt(0).toUpperCase() + val.slice(1);
+  }
+
+  // Display the current game mode
+  document.getElementById('currentMode').innerText = getModeName(mode);
 
   // Set max attempts and points per correct move based on mode
   maxAttempts = 3; // Default for endless mode
