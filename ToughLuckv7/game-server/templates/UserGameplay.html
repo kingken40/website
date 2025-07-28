@@ -141,7 +141,7 @@
     `&points=${score}` +
     `&total_available_points=${pointsPerCorrectMove * pathListLength}` +
     `&missed=${missed}` +
-    `&total_moves=${totalMovesValue}` +
+    `&total_moves=${userMoves.length}` +
     `&elapsed_time=${elapsedTime}` +
     `&mode=${encodeURIComponent(mode)}`;
   }
@@ -175,7 +175,7 @@
                 attemptsForCurrentPosition: attemptsForCurrentPosition,
                 gameStarted: gameStarted,
                 points: score,
-                missed: 0,
+                missed: missedMoves,
                 chances: maxAttempts,
                 pathList: pathList
             })
@@ -189,9 +189,17 @@
         if (data.pathList) {
             pathList = data.pathList;
             gameStarted = true;
+            // DEBUG: Uncomment next line to see generated path during gameplay
+            console.log("Generated Path List:", pathList);
+            console.log("=== DEBUG: ANSWER KEY ===");
+            console.log("Path:", pathList.join(" → "));
+            console.log("========================");
+            
+            // DEBUG: Uncomment next line to show path on page during gameplay
+            // document.getElementById('message').innerHTML = `<strong style="color:red;">DEV MODE: Path = [${pathList.join(', ')}]</strong><br>` + document.getElementById('message').innerHTML;
         }
         score = data.Points;
-        missedMoves = data.Missed;
+        missedMoves = data.MissedPlayerMoves;
         document.getElementById('currentPoints').innerText = score;
         document.getElementById('message').innerText = data.Message;
 

@@ -122,9 +122,9 @@
     <div class="input-container">
       <label for="mode">Select Game Mode</label>
       <select id="mode">
-        <option value="endless">Endless</option>
         <option value="level1">TL - 1</option>
         <option value="level2">TL - 2</option>
+        <option value="endless">Endless</option>
       </select>
     </div>
     <div class="input-container">
@@ -140,7 +140,7 @@
       <button type="button" class="button">Back</button>
     </a>
     <!-- Rules Button -->
-    <button class="main-btn" id="rulesBtn" style="margin-left:10px;">?</button>
+    <button class="main-btn" id="rulesBtn" style="margin-left:10px;"><strong>?</strong></button>
   </div>
 
   <script>
@@ -171,7 +171,7 @@
     document.getElementById('rulesBtn').onclick = function() {
       const rulesText = `
 <strong>Tough Luck Rules:</strong>
-   - Choose the correct number for each position in 
+<span style="font-size:4px;line-height:4px;display:block;">&nbsp;</span>   - Choose the correct number for each position in 
      the path.
    - You have a limited number of attempts per 
      position.
@@ -181,7 +181,7 @@
      number of attempts.
      
 <strong>Moves Description:</strong>
-   - A "move" is your guess for the number at a 
+<span style="font-size:4px;line-height:4px;display:block;">&nbsp;</span>   - A "move" is your guess for the number at a 
      specific position in the path.
    - A correct move matches the hidden number for 
      that position and earns you points.
@@ -190,30 +190,30 @@
      game mode.
 
 <strong>Game Mode Descriptions:</strong>
+<span style="font-size:4px;line-height:4px;display:block;">&nbsp;</span>TL - 1:
+<span style="font-size:4px;line-height:4px;display:block;">&nbsp;</span>   - Points per correct move: +3
+   - Points per incorrect move: 0
+   - Attempts per position: 3
+   - Game ends when attempts reach 0
+   "3 strikes, you're out!"
+
+TL - 2:
+<span style="font-size:4px;line-height:4px;display:block;">&nbsp;</span>   - Points per correct move: +5
+   - Points per incorrect move: 0
+   - Attempts per position: 1
+   - Game ends when attempts reach 0
+   "Only 1 Chance." <small>(Make it count!)</small>
+
 Endless:
-   - Points per correct move: +2
+<span style="font-size:4px;line-height:4px;display:block;">&nbsp;</span>   - Points per correct move: +2
    - Points per incorrect move: 0
    - Unlimited attempts per position
    - Never ends due to wrong moves
    - Complete the entire path length
    "Game doesn't stop until you do."
 
-TL - 1:
-   - Points per correct move: +3
-   - Points per incorrect move: 0
-   - Attempts per position: 3
-   - Game ends when attempts reach 0
-   "3 strikes you're out!"
-
-TL - 2:
-   - Points per correct move: +5
-   - Points per incorrect move: 0
-   - Attempts per position: 1
-   - Game ends when attempts reach 0
-   "Only 1 Chance." <small>(Make it count!)</small>
-
    <strong>Allow Duplicates:</strong>
-   - If enabled, players can have the same number
+<span style="font-size:4px;line-height:4px;display:block;">&nbsp;</span>   - If enabled, players can have the same number
      in multiple moves.
   `;
 

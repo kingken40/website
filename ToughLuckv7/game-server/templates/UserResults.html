@@ -47,8 +47,9 @@
         <p>Path List: <span id="pathList"></span></p>
         <p>Path List Length: <span id="pathListLength"></span></p>
         <p>Your Moves: <span id="userMoves"></span></p>
-        <p>Missed Moves: <span id="missed"></span></p>
-        <p>Total Moves: <span id="totalMoves"></span></p>
+        <p>Total Moves Entered: <span id="totalMoves"></span></p>
+        <p>Missed Player Moves: <span id="missed"></span></p>
+        <p>Correct Player Moves: <span id="correct"></span></p>
         <p>Time Elapsed: <span id="elapsedTime"></span></p>
         <p>Total Available Points: <span id="totalAvailablePoints"></span></p>
         <p>Points Earned: <span id="points"></span></p>
@@ -97,8 +98,16 @@
         document.getElementById('userMoves').innerText = formatList(params.user_moves);
         document.getElementById('points').innerText = params.points && params.points !== '' ? params.points : '0';
         document.getElementById('totalAvailablePoints').innerText = params.total_available_points && params.total_available_points !== '' ? params.total_available_points : '0';
-        document.getElementById('missed').innerText = params.missed || '0';
-        document.getElementById('totalMoves').innerText = params.total_moves && parseInt(params.total_moves) > 0 ? params.total_moves : 'N/A';
+        const missedMoves = parseInt(params.missed || '0');
+        document.getElementById('missed').innerText = missedMoves;
+        // Calculate total moves entered by counting user moves
+        const userMovesCount = params.user_moves && params.user_moves !== 'N/A' && params.user_moves.trim() !== '' 
+            ? params.user_moves.split(',').filter(x => x.trim() !== '').length 
+            : 0;
+        document.getElementById('totalMoves').innerText = userMovesCount;
+        // Calculate correct moves
+        const correctMoves = Math.max(0, userMovesCount - missedMoves);
+        document.getElementById('correct').innerText = correctMoves;
 
         function formatElapsedTime(seconds) {
           seconds = parseInt(seconds, 10);
@@ -130,11 +139,13 @@
             resultMessageElem.innerText = 'Not quite there, but precision counts!';
             resultMessageElem.style.color = 'orange';
             resultMessageElem.className = 'lose';
-        } else if (userMoves === pathList) {
-            resultMessageElem.innerText = 'Perfect Game!';
+        } 
+        else if (userMoves === pathList) {
+            resultMessageElem.innerText = 'Congratulations!!!\nA Perfect Game! Lucky You!!';
             resultMessageElem.style.color = 'green';
             resultMessageElem.className = 'win';
-        } else {
+        }
+         else {
             resultMessageElem.innerText = 'Good Try!';
             resultMessageElem.style.color = 'orange';
             resultMessageElem.className = 'lose';
@@ -163,9 +174,11 @@
 
 <b>Your Moves:</b> All the guesses you entered during the game.
 
-<b>Missed Moves:</b> The number of spots in the path list that were not guessed correct.
+<b>Total Moves Entered:</b> The total number of guesses you made during the game.
 
-<b>Total Moves:</b> The total number of moves required to complete the path list.
+<b>Missed Player Moves:</b> The total number of wrong guesses you made during the game.
+
+<b>Correct Player Moves:</b> The total number of correct guesses you made during the game.
 
 <b>Time Elapsed:</b> The total time you spent playing this game.
 
