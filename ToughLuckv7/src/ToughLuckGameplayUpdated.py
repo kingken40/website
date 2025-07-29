@@ -79,7 +79,7 @@ def start(moves, endless_mode=False, dupp=1):
         # If move isn't correct
         while new_inp != i:
             missed += 1  # Increment missed moves for every incorrect attempt
-            print(f"Missed Moves: {missed}")  # Display missed moves after each incorrect attempt
+            print(f"Missed Player Moves: {missed}")  # Display missed player moves after each incorrect attempt
             chances -= 1  # Decrement chances
             points -= 1  # Subtract points for wrong moves
             if chances < 0:

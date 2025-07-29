@@ -44,9 +44,9 @@
     <h1>Game Results</h1>
     <div class="result">
         <p>Game Mode: <span id="gameMode"></span></p>
-        <p>Path List: <span id="pathList"></span></p>
+        <p>Generated Path List: <span id="pathList"></span></p>
         <p>Path List Length: <span id="pathListLength"></span></p>
-        <p>Your Moves: <span id="userMoves"></span></p>
+        <p>What You've Entered: <span id="userMoves"></span></p>
         <p>Total Moves Entered: <span id="totalMoves"></span></p>
         <p>Missed Player Moves: <span id="missed"></span></p>
         <p>Correct Player Moves: <span id="correct"></span></p>
@@ -135,12 +135,16 @@
             resultMessageElem.innerText = 'Tough Luck...';
             resultMessageElem.style.color = 'red';
             resultMessageElem.className = 'lose';
-        } else if(userMoves !== pathList && points > 0){
+        } else if(userMoves !== pathList && points < totalAvailablePoints){
             resultMessageElem.innerText = 'Not quite there, but precision counts!';
             resultMessageElem.style.color = 'orange';
             resultMessageElem.className = 'lose';
-        } 
-        else if (userMoves === pathList) {
+        } else if (missedMoves < 2 && userMoves !== pathList) {
+            resultMessageElem.innerText = 'Congratulations!!!';
+            resultMessageElem.style.color = 'green';
+            resultMessageElem.className = 'win';
+        }
+        else if (userMoves === pathList && missedMoves === 0) {
             resultMessageElem.innerText = 'Congratulations!!!\nA Perfect Game! Lucky You!!';
             resultMessageElem.style.color = 'green';
             resultMessageElem.className = 'win';

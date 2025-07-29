@@ -18,7 +18,7 @@ def results(dif, path_list, missed, L, points, execute):
     print("Correct Path Length: ", len(path_list))
     print("Your Path: ", L)
     print("Your Path Length: ", len(L))
-    print("Number of Missed Spots: ",missed)
+    print("Number of Missed Player Moves: ",missed)
 
     # CALCULATING POINTS BASED ON DIFFICULTY
     if dif == "Easy":
@@ -46,7 +46,7 @@ def hardResults(dif, path_list, missed, L, points, execute):
     print("Correct Path Length: ", len(path_list))
     print("Your Move List: ", L)
     print("Your Path Length: ", len(L))
-    print("Number of Missed Spots: ",missed)
+    print("Number of Missed Player Moves: ",missed)
     print("Total Available Points: ", (len(path_list)*5))
     # If no points were earned, display 0 not a negative number
     if points <= 0:

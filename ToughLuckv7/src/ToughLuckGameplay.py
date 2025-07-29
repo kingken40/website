@@ -44,7 +44,7 @@ def start(moves, mode, path_list, current_position, move, points, missed, chance
         if current_position > moves:
             win = True
     else:
-        missed += 1
+        missed += 1  # Count every wrong move
         attempts_for_current_position += 1
         
         # Handle different game modes
@@ -81,7 +81,7 @@ def start(moves, mode, path_list, current_position, move, points, missed, chance
         'GameOver': game_over,
         'MoveToNext': move_to_next,
         'pathList': path_list,
-        'Missed': missed,
+        'MissedPlayerMoves': missed,
         'Chances': chances,
         'AttemptsForCurrentPosition': attempts_for_current_position
     }
@@ -115,7 +115,7 @@ def get_results(path_list, user_moves, points, missed, moves, dif, time_elapsed)
         "PathListLength": len(path_list),
         "UserMoves": user_moves,
         "TotalPoints": points,
-        "MissedMoves": missed,
+        "MissedPlayerMoves": missed,
         "TotalMoves": moves,
         "TotalAvailablePoints": total_available_points,
         "TimeElapsed": time_elapsed,

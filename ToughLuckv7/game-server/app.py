@@ -36,7 +36,7 @@ def start_route():
         data = request.get_json()
         # Extract values from frontend, provide defaults if missing
         moves = int(data.get('totalMoves', 3))
-        dif = data.get('difficulty', 'e')
+        dif = data.get('mode', 'e')
         path_list = data.get('pathList', [])
         current_position = int(data.get('currentPosition', 1))
         move = int(data.get('move', 0))
