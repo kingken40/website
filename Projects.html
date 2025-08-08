@@ -94,10 +94,27 @@
 
                         <div class="game-item">
                             <div class="left-content">
+                                <h3 style="color: #fafdff;">Presentation Generator</h3>
+                                <div class="button-group">
+                                    <a
+                                        href="presentation_generator/public/pg_p1.html"
+                                        class="play-button">Try</a>
+                                    <button class="feedback-btn" onclick="openFeedback('Presentation Generator')">Feedback</button>
+                                </div>
+                            </div>
+                            <div class="right-content">
+                                <p style="color: #fafdff;">Create engaging, structured presentations for any educational topic! Generate complete slide presentations with customizable content, learning objectives, and educational activities tailored to specific grade levels.</p>
+                            </div>
+                        </div>
+
+                        <div class="game-item">
+                            <div class="left-content">
                                 <h3 style="color: #fafdff;">N/A</h3>
-                                <a
-                                    href="#"
-                                    class="play-button">N/A</a>
+                                <div class="button-group">
+                                    <a
+                                        href="#"
+                                        class="play-button">N/A</a>
+                                </div>
                             </div>
                             <div class="right-content">
                                 <p style="color: #fafdff;">N/A</p>
@@ -119,6 +136,31 @@
             </div>
 
             <style>
+                .game-container {
+                    max-height: 600px;
+                    overflow-y: auto;
+                    padding-right: 10px;
+                    margin-bottom: 20px;
+                }
+                
+                .game-container::-webkit-scrollbar {
+                    width: 8px;
+                }
+                
+                .game-container::-webkit-scrollbar-track {
+                    background: #f1f1f1;
+                    border-radius: 4px;
+                }
+                
+                .game-container::-webkit-scrollbar-thumb {
+                    background: #0078d4;
+                    border-radius: 4px;
+                }
+                
+                .game-container::-webkit-scrollbar-thumb:hover {
+                    background: #106ebe;
+                }
+                
                 .project-item {
                     margin-bottom: 32px;
                     padding: 16px;
@@ -200,6 +242,11 @@
             </style>
 
             <script>
+                
+                /**
+                 * Opens the feedback modal for the given project.
+                 * @param {string} project The name of the project to get feedback on.
+                 */
                 function openFeedback(project) {
                     document.getElementById('feedbackProjectTitle').innerText = `Feedback for "${project}"`;
                     document.getElementById('feedbackModal').style.display = 'flex';
@@ -229,6 +276,7 @@
                         });
                     };
                 }
+                // This JavaScript function hides the feedback modal and resets the feedback form when called.
                 function closeFeedback() {
                     document.getElementById('feedbackModal').style.display = 'none';
                     document.getElementById('feedbackForm').reset();

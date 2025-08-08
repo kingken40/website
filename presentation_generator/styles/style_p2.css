@@ -1,0 +1,257 @@
+/* 
+PRESENTATION GENERATOR - PAGE 2 STYLING (TEXT-BASED PRESENTATION)
+================================================================
+This CSS provides clean, readable styling for the text-based presentation output.
+Focus is on readability, simplicity, and professional appearance.
+
+DESIGN PRINCIPLES:
+1. Clean typography for easy reading
+2. Clear slide separation
+3. Professional appearance matching page 1
+4. Simple layout without visual distractions
+5. Easy scanning of presentation content
+*/
+
+/* 
+MAIN BODY STYLING - CONSISTENT WITH PAGE 1
+==========================================
+Maintains the same professional gradient background
+for brand consistency across the application.
+*/
+body {
+    font-family: 'Roboto', Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(135deg, #372a7b, #1e1e2f);
+    background-size: cover;
+    background-attachment: fixed;
+    color: #eee;
+    line-height: 1.6;
+}
+
+/* 
+MAIN CONTAINER
+==============
+Centers the presentation content with proper spacing
+and maintains consistency with the input form design.
+*/
+.container {
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+}
+
+/* 
+HEADER STYLING
+==============
+Clean, professional header for the generated presentation.
+*/
+header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 0.5rem;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+header p {
+    font-size: 1.1rem;
+    color: #ddd;
+    margin: 0;
+}
+
+/* 
+PRESENTATION CONTAINER
+======================
+Main container for the text-based presentation content.
+Simple, clean design focused on readability with proper text wrapping.
+*/
+#presentationContainer {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    padding: 2rem;
+    margin: 2rem 0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    font-family: 'Roboto', sans-serif;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.8;
+    font-size: 1.1rem;
+    color: #f0f0f0;
+    max-width: 100%;
+    overflow-x: auto;
+    box-sizing: border-box;
+}
+
+/* 
+SLIDE STYLING
+=============
+Each slide section is clearly separated and formatted
+for easy reading and scanning.
+*/
+.slide-section {
+    margin-bottom: 2.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.slide-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.slide-title {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 1rem;
+    padding: 0.5rem 0;
+    border-left: 4px solid #6366f1;
+    padding-left: 1rem;
+    background: rgba(99, 102, 241, 0.1);
+    border-radius: 5px;
+}
+
+.slide-content {
+    color: #e0e0e0;
+    margin-left: 1rem;
+    line-height: 1.7;
+}
+
+/* 
+DOWNLOAD BUTTONS
+================
+Professional styling for the download functionality buttons.
+*/
+.download-button-container {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin: 2rem 0;
+    flex-wrap: wrap;
+}
+
+.download-button-container button {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.download-button-container button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+}
+
+.download-button-container button:active {
+    transform: translateY(0);
+}
+
+/* 
+NAVIGATION BUTTONS
+==================
+Simple styling for the navigation back to create new presentation.
+*/
+.button-container {
+    text-align: center;
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.button-container button {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    padding: 12px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.button-container button:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* 
+RESPONSIVE DESIGN
+=================
+Ensures the presentation looks good on different screen sizes with proper text wrapping.
+*/
+@media (max-width: 768px) {
+    .container {
+        margin: 1rem;
+        padding: 1.5rem;
+        max-width: calc(100vw - 2rem);
+        box-sizing: border-box;
+    }
+    
+    header h1 {
+        font-size: 2rem;
+        word-wrap: break-word;
+    }
+    
+    #presentationContainer {
+        padding: 1.5rem;
+        font-size: 1rem;
+        margin: 1rem 0;
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+    
+    .download-button-container {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .download-button-container button {
+        width: 100%;
+        max-width: 250px;
+        margin: 0.5rem 0;
+    }
+}
+
+/* Additional responsive breakpoint for very small screens */
+@media (max-width: 480px) {
+    .container {
+        margin: 0.5rem;
+        padding: 1rem;
+    }
+    
+    header h1 {
+        font-size: 1.8rem;
+    }
+    
+    #presentationContainer {
+        padding: 1rem;
+        font-size: 0.95rem;
+        line-height: 1.6;
+    }
+    
+    .download-button-container button {
+        font-size: 0.9rem;
+        padding: 10px 20px;
+    }
+}

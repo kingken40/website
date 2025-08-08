@@ -143,13 +143,11 @@
             resultMessageElem.innerText = 'Congratulations!!!';
             resultMessageElem.style.color = 'green';
             resultMessageElem.className = 'win';
-        }
-        else if (userMoves === pathList && missedMoves === 0) {
+        } else if (userMoves === pathList && missedMoves === 0) {
             resultMessageElem.innerText = 'Congratulations!!!\nA Perfect Game! Lucky You!!';
             resultMessageElem.style.color = 'green';
             resultMessageElem.className = 'win';
-        }
-         else {
+        } else {
             resultMessageElem.innerText = 'Good Try!';
             resultMessageElem.style.color = 'orange';
             resultMessageElem.className = 'lose';

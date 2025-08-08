@@ -1,0 +1,106 @@
+{
+  "project_name": "Presentation Generator",
+  "version": "1.0.0",
+  "description": "AI-powered presentation generator for K-12 teachers, university professors, and education trainers. Creates engaging, tailored slide presentations based on specific topics, grade levels, and educational objectives.",
+  "target_audience": [
+    "K-12 teachers",
+    "University professors", 
+    "Education trainers",
+    "Tutors",
+    "Curriculum developers"
+  ],
+  "completion_date": "2025-08-14",
+  "purpose": "Help educators save time creating high-quality, topic-specific presentations aligned with educational standards",
+  "key_features": [
+    "Grade level customization (Pre-K to University)",
+    "Flexible slide count (1-10 slides)",
+    "Standards/objectives alignment",
+    "Multi-format file upload support",
+    "Customizable content generation",
+    "Export capability for sharing and editing"
+  ],
+  "input_fields": {
+    "grade_level": {
+      "type": "select",
+      "options": ["Pre-K", "Kindergarten", "1st-12th Grade", "University"],
+      "purpose": "Determines content complexity and pedagogical approach",
+      "required": true
+    },
+    "number_of_slides": {
+      "type": "select", 
+      "range": "1-10",
+      "purpose": "Controls presentation length and content distribution",
+      "required": true
+    },
+    "topic": {
+      "type": "text_input",
+      "purpose": "Core subject matter driving all content generation",
+      "required": true
+    },
+    "standards_objectives": {
+      "type": "textarea_with_upload",
+      "purpose": "Ensures curriculum alignment and learning outcomes",
+      "file_support": ["PDF", "DOC", "DOCX", "PPTX", "CSV"],
+      "required": false
+    },
+    "additional_customization": {
+      "type": "textarea_with_upload", 
+      "purpose": "Accommodates unique classroom needs and special requirements",
+      "file_support": ["PDF", "DOC", "DOCX", "PPTX", "CSV", "Google Sheets", "YouTube", "Websites"],
+      "required": false
+    }
+  },
+  "technical_specifications": {
+    "frontend": {
+      "html": "Semantic HTML5 with accessibility features",
+      "css": "Responsive design with dark theme and educational aesthetics",
+      "javascript": "Vanilla JS with form validation and file handling"
+    },
+    "file_uploads": {
+      "supported_formats": [".pdf", ".doc", ".docx", ".pptx", ".csv", ".txt"],
+      "external_links": ["Google Sheets", "YouTube videos", "Educational websites"]
+    },
+    "integration": {
+      "google_translate": "Multilingual support for diverse educators",
+      "responsive_design": "Mobile, tablet, and desktop compatibility"
+    }
+  },
+  "educational_benefits": {
+    "time_saving": "Reduces presentation creation time from hours to minutes",
+    "standards_alignment": "Ensures compliance with educational standards",
+    "differentiation": "Customizable for diverse learning needs",
+    "engagement": "AI-generated interactive elements and visual suggestions",
+    "accessibility": "Multiple input methods and multilingual support"
+  },
+  "workflow": {
+    "page_1": "Input form for collecting presentation requirements",
+    "page_2": "AI generation and presentation display (to be created)",
+    "export": "Download capability in standard presentation formats"
+  },
+  "similar_projects": [
+    "lesson_plan_generator",
+    "RealityAI_Lesson_Planner", 
+    "RealityAI_Rubric_Generator"
+  ],
+  "file_structure": {
+    "public/": "HTML pages and public assets",
+    "src/": "JavaScript functionality files", 
+    "styles/": "CSS styling files",
+    "metadata.json": "Project documentation and specifications"
+  },
+  "development_notes": {
+    "based_on": "lesson_plan_generator structure and design patterns",
+    "key_differences": [
+      "Added number_of_slides input field",
+      "Presentation-focused terminology and prompts",
+      "Slide-specific content generation logic",
+      "Visual element suggestions for presentations"
+    ],
+    "next_steps": [
+      "Create pg_p2.html for presentation generation and display",
+      "Implement AI integration for content generation", 
+      "Add export functionality for various presentation formats",
+      "Create backend integration for advanced features"
+    ]
+  }
+}

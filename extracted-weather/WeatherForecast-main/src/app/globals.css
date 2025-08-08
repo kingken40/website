@@ -1,0 +1,67 @@
+/* Root variables for light and dark themes */
+:root {
+    --background: #ffffff; /* Light background */
+    --foreground: #171717; /* Dark text color */
+}
+@media (prefers-color-scheme: dark) {
+    :root {
+        --background: #0a0a0a; /* Dark background */
+        --foreground: #ededed; /* Light text color */
+    }
+}
+/* Global styles */
+html,
+body {
+    max-width: 100vw; /* Prevent horizontal overflow */
+    overflow-x: hidden; /* Prevent horizontal scroll */
+}
+body {
+    color: var(--foreground); /* Text color */
+    background: var(--background); /* Background color */
+    font-family: Arial, Helvetica, sans-serif; /* Font family */
+    -webkit-font-smoothing: antialiased; /* Smoother fonts on WebKit browsers */
+    -moz-osx-font-smoothing: grayscale; /* Smoother fonts on macOS */
+}
+/* Universal selector for box-sizing, padding, and margin reset */
+* {
+    box-sizing: border-box; /* Include padding and border in element's total width and height */
+    padding: 0; /* Remove default padding */
+    margin: 0; /* Remove default margin */
+}
+/* Anchor link styles */
+a {
+    color: inherit; /* Inherit text color */
+    text-decoration: none; /* Remove underline */
+}
+a:hover {
+    text-decoration: underline; /* Underline on hover */
+}
+/* Button styles */
+button {
+    background-color: var(--foreground); /* Use foreground color for button background */
+    color: var(--background); /* Use background color for button text */
+    border: none; /* Remove default border */
+    border-radius: 4px; /* Rounded corners */
+    padding: 10px 15px; /* Padding for button */
+    cursor: pointer; /* Pointer cursor on hover */
+    transition: background-color 0.3s; /* Smooth transition for background color */
+}
+button:hover {
+    background-color: #333; /* Darker shade on hover */
+}
+/* Responsive typography */
+body {
+    font-size: 16px; /* Base font size */
+}
+h1 {
+    font-size: 2rem; /* Example for heading */
+}
+h2 {
+    font-size: 1.5rem; /* Example for subheading */
+}
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    html {
+        color-scheme: dark; /* Inform the browser that the page supports dark mode */
+    }
+}

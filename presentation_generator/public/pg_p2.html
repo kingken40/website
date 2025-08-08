@@ -1,0 +1,100 @@
+<!-- 
+PRESENTATION GENERATOR - PAGE 2 (TEXT-BASED PRESENTATION DISPLAY)
+================================================================
+This page displays generated presentations in a simple, clean text format.
+
+OUTPUT FORMAT:
+Presentations are displayed as structured text showing each slide's content:
+
+Slide 1:
+<content for slide 1>
+
+Slide 2: 
+<content for slide 2>
+
+etc.
+
+FEATURES:
+- Clean, readable text-based presentation format
+- Download functionality for PDF and PowerPoint formats
+- Simple navigation back to create new presentations
+- Professional styling matching the input form
+
+FUTURE ENHANCEMENTS:
+- Enhanced PowerPoint generation with better formatting
+- Additional export formats (Word, Google Slides)
+- Content customization and editing capabilities
+-->
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Generated Presentation - Text Format</title>
+        <!-- Google Font for consistency -->
+        <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
+        <!-- CSS file for text-based presentation styling -->
+        <link rel="stylesheet" href="../styles/style_p2.css">
+    </head>
+    <body>
+        <div class="container">
+            <header>
+                <h1>Generated Presentation</h1>
+                <p>Your presentation content is displayed below in text format</p>
+            </header>
+            
+            <!-- 
+            PRESENTATION CONTAINER - TEXT FORMAT
+            ====================================
+            This container will display the presentation content in the requested format:
+            
+            Slide 1:
+            <content>
+            
+            Slide 2:
+            <content>
+            
+            The content is generated dynamically based on the input from page 1.
+            -->
+            <div id="presentationContainer">
+                <!-- Text-based presentation content will be inserted here -->
+                <p style="text-align: center; color: #bbb; font-style: italic;">
+                    Loading your presentation...
+                </p>
+            </div>
+            
+            <!-- 
+            DOWNLOAD FUNCTIONALITY
+            ======================
+            Users can download their presentation in different formats:
+            - PDF: For easy sharing and printing
+            - PowerPoint: For editing and presenting with slides
+            
+            The download functions extract the text content and format it
+            appropriately for each output type.
+            -->
+            <div class="download-button-container">
+                <button type="button" id="downloadPdfBtn" onclick="downloadPDF()">Download PDF</button>
+                <button type="button" id="downloadPptxBtn" onclick="downloadPowerPoint()">Download PowerPoint</button>
+            </div>
+            
+            <!-- Navigation back to create new presentation -->
+            <div class="button-container">
+                <button type="button" id="newPresentationBtn" onclick="window.location.href='pg_p1.html'">Create New Presentation</button>
+            </div>
+        </div>
+
+        <!-- JavaScript for functionality -->
+        <script src="../src/pg_p2.js"></script>
+        
+        <!-- External libraries for download functionality -->
+        <!-- PDF Generation -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+        
+        <!-- PowerPoint Generation -->
+        <script src="https://unpkg.com/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+        
+        <!-- File Saving -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    </body>    
+</html>

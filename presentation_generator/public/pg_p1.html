@@ -1,0 +1,265 @@
+<!-- Presentation Generator - Input Form Page: Collects educator inputs for AI-generated presentations -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presentation Generator</title>
+    <!-- 
+    ===================================
+    PRESENTATION GENERATOR - PAGE 1 (INPUT FORM)
+    ===================================
+    This is the first page of the Presentation Generator application.
+    It provides a form for educators to input presentation details including:
+    
+    FIELD 1: GRADE LEVEL
+    - Purpose: Determines content complexity, vocabulary level, and pedagogical approach
+    - Range: Pre-K to University (covers entire educational spectrum)
+    - Impact: Controls language sophistication, concept depth, and engagement strategies
+    - Example: Pre-K = simple words, bright visuals vs University = technical terms, detailed analysis
+    
+    FIELD 2: NUMBER OF SLIDES (NEW - KEY DIFFERENTIATOR)
+    - Purpose: Allows precise control over presentation length and content distribution
+    - Range: 1-10 slides (optimal for classroom presentations)
+    - Impact: Determines content density per slide and overall presentation duration
+    - Educational value: 1-3 slides = quick review, 4-7 slides = standard lesson, 8-10 slides = comprehensive topic
+    
+    FIELD 3: TOPIC
+    - Purpose: The central subject matter that drives all content generation
+    - Type: Free text input for maximum flexibility
+    - Impact: Determines slide titles, content selection, visual suggestions, and learning activities
+    - Educational necessity: Everything revolves around this core concept
+    
+    FIELD 4: STANDARDS/OBJECTIVES
+    - Purpose: Ensures educational alignment with curriculum requirements
+    - Features: Direct text input + file upload capability
+    - Impact: Shapes content to meet specific learning outcomes and assessment criteria
+    - Educational compliance: Critical for meeting district/state educational standards
+    
+    FIELD 5: ADDITIONAL CUSTOMIZATION (OPTIONAL)
+    - Purpose: Accommodates unique classroom needs and special requirements
+    - Features: Text input + file upload for maximum flexibility
+    - Impact: Tailors presentation for specific student populations, time constraints, or resources
+    - Educational personalization: Addresses differentiated instruction needs
+    
+    File upload capabilities support:
+    - PDF, DOC, DOCX, PPTX (standard educational documents)
+    - CSV (data for charts/graphs)
+    - Google Sheets (collaborative data)
+    - YouTube videos (multimedia integration)
+    - Websites (additional resources)
+    
+    When submitted, the form data is passed to page 2 (pg_p2.html)
+    which generates and displays the structured presentation.
+    -->
+    
+    <!-- Google Font for professional appearance: Roboto -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
+    
+    <!-- External CSS file for styling -->
+    <link rel="stylesheet" href="../styles/style_p1.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Presentation Generator</h1>
+        <p>Create engaging, structured presentations for any educational topic!</p>
+
+        <!-- Main form for presentation input -->
+        <form id="presentationForm">
+            
+            <!-- 
+            FIELD 1: GRADE LEVEL SELECTION
+            ================================
+            WHY THIS FIELD IS CRITICAL:
+            - Determines cognitive development level of target audience
+            - Controls vocabulary complexity (Pre-K uses 200-word vocabulary vs University uses technical terminology)
+            - Influences visual design (bright colors/large fonts for younger vs professional design for older)
+            - Affects content depth (concrete examples for elementary vs abstract concepts for high school)
+            - Guides engagement strategies (songs/games for young vs debates/analysis for older)
+            
+            EDUCATIONAL IMPACT:
+            - Pre-K/K: Simple sentences, large visuals, interactive elements
+            - Elementary (1-5): Basic concepts, clear explanations, hands-on activities
+            - Middle School (6-8): More detail, beginning abstractions, group work
+            - High School (9-12): Complex analysis, critical thinking, independent work
+            - University: Advanced concepts, research-based, professional presentation style
+            -->
+            <div class="form-group">
+                <label for="gradeLevel">Grade Level</label>
+                <select id="gradeLevel" name="gradeLevel" required>
+                    <option value="" disabled selected>Select Target Grade Level</option>
+                    <option>Pre-K</option>
+                    <option>Kindergarten</option>
+                    <option>1st Grade</option>
+                    <option>2nd Grade</option>
+                    <option>3rd Grade</option>
+                    <option>4th Grade</option>
+                    <option>5th Grade</option>
+                    <option>6th Grade</option>
+                    <option>7th Grade</option>
+                    <option>8th Grade</option>
+                    <option>9th Grade</option>
+                    <option>10th Grade</option>
+                    <option>11th Grade</option>
+                    <option>12th Grade</option>
+                    <option>University</option>
+                </select>
+            </div>
+
+            <!-- 
+            FIELD 2: NUMBER OF SLIDES (NEW FEATURE)
+            ========================================
+            WHY THIS FIELD IS ESSENTIAL:
+            - Controls presentation duration (1 slide = 5 min vs 10 slides = 45+ min class)
+            - Determines content distribution strategy (more slides = detailed breakdown)
+            - Accommodates different lesson types:
+              * 1-2 slides: Quick review or warm-up
+              * 3-4 slides: Standard mini-lesson or concept introduction
+              * 5-7 slides: Full lesson with examples and practice
+              * 8-10 slides: Comprehensive unit introduction or complex topic
+            
+            EDUCATIONAL BENEFITS:
+            - Helps teachers plan for specific class periods
+            - Ensures appropriate pacing for student attention spans
+            - Allows for different presentation styles (brief vs comprehensive)
+            - Enables content chunking for better learning retention
+            -->
+            <div class="form-group">
+                <label for="numSlides">Number of Slides</label>
+                <select id="numSlides" name="numSlides" required>
+                    <option value="" disabled selected>Select Number of Slides</option>
+                    <option value="1">1 Slide (Quick Overview)</option>
+                    <option value="2">2 Slides (Brief Introduction)</option>
+                    <option value="3">3 Slides (Concept Explanation)</option>
+                    <option value="4">4 Slides (Standard Mini-Lesson)</option>
+                    <option value="5">5 Slides (Detailed Lesson)</option>
+                    <option value="6">6 Slides (Comprehensive Topic)</option>
+                    <option value="7">7 Slides (Full Lesson with Examples)</option>
+                    <option value="8">8 Slides (Extended Learning)</option>
+                    <option value="9">9 Slides (Complex Topic Coverage)</option>
+                    <option value="10">10 Slides (Complete Unit Introduction)</option>
+                </select>
+            </div>
+
+            <!-- 
+            FIELD 3: TOPIC INPUT
+            =====================
+            WHY THIS FIELD IS FUNDAMENTAL:
+            - The core subject that drives ALL content generation
+            - Determines slide titles, learning objectives, and content flow
+            - Influences visual elements and examples used
+            - Guides activity suggestions and assessment strategies
+            
+            EDUCATIONAL PURPOSE:
+            - Ensures focused, coherent presentation content
+            - Enables topic-specific vocabulary and terminology
+            - Allows for subject-appropriate teaching strategies
+            - Supports curriculum alignment and standards mapping
+            -->
+            <div class="form-group">
+                <label for="topic">Topic</label>
+                <input type="text" id="topic" name="topic" placeholder="Enter Presentation Topic (e.g., 'Photosynthesis', 'American Revolution', 'Fractions')" required>
+            </div>
+
+            <!-- 
+            FIELD 4: STANDARDS/OBJECTIVES WITH FILE UPLOAD
+            ===============================================
+            WHY THIS FIELD IS EDUCATIONALLY CRUCIAL:
+            - Ensures curriculum alignment and accountability
+            - Meets district/state educational requirements
+            - Provides measurable learning outcomes
+            - Guides assessment and evaluation strategies
+            
+            FILE UPLOAD CAPABILITY RATIONALE:
+            - Teachers often have standards documents in PDF/Word format
+            - Allows importing of district-specific curriculum guides
+            - Supports pasting from state education websites
+            - Enables collaboration through shared documents
+            
+            EDUCATIONAL COMPLIANCE:
+            - Common Core State Standards alignment
+            - Next Generation Science Standards (NGSS)
+            - State-specific educational standards
+            - District learning objectives and benchmarks
+            -->
+            <div class="form-group">
+                <label for="standards">Standards / Objectives</label>
+                <textarea id="standards" name="standards" placeholder="Enter educational standards, learning objectives, or curriculum requirements. You can also upload files with standards information."></textarea>
+                <button type="button" class="upload-btn" onclick="showFileUploadMenu('standards', event)">Upload Standards Files</button>
+            </div>
+
+            <!-- 
+            FIELD 5: ADDITIONAL CUSTOMIZATION (OPTIONAL BUT POWERFUL)
+            ==========================================================
+            WHY THIS FIELD ENHANCES EDUCATIONAL VALUE:
+            - Accommodates differentiated instruction needs
+            - Addresses diverse learning styles and abilities
+            - Allows for classroom-specific constraints and resources
+            - Enables special accommodations for students with needs
+            
+            CUSTOMIZATION EXAMPLES:
+            - "Include visual aids for ESL students"
+            - "Add hands-on activities for kinesthetic learners"
+            - "Simplify language for special needs students"
+            - "Include advanced extensions for gifted students"
+            - "Incorporate technology tools available in classroom"
+            - "Add assessment checkpoints throughout"
+            
+            FILE UPLOAD BENEFITS:
+            - Import existing resources and materials
+            - Use previous lesson plans as reference
+            - Include multimedia resources and links
+            - Share collaborative materials from other educators
+            -->
+            <div class="form-group">
+                <label for="customization">Additional Customization or Notes (Optional)</label>
+                <textarea id="customization" name="customization" placeholder="Enter any special requirements, teaching notes, student accommodations, available resources, or specific instructions for your presentation. You can also upload supporting materials."></textarea>
+                <button type="button" class="upload-btn" onclick="showFileUploadMenu('customization', event)">Upload Supporting Materials</button>
+            </div>
+
+            <!-- 
+            GENERATE BUTTON - THE ACTION TRIGGER
+            ====================================
+            This button collects all input data and passes it to the AI generation system.
+            The data is processed to create a structured, educational presentation
+            that meets the specified requirements and constraints.
+            -->
+            <button type="submit" id="generateBtn">Generate Presentation</button>
+            <br>
+
+            <!-- Back navigation to maintain project flow -->
+            <button type="button" id="backBtn" onclick="window.location.href='../../Projects.html'">Go Back to Projects</button>
+            
+        </form>
+
+        <!-- 
+        FILE UPLOAD MENU - MULTI-FORMAT SUPPORT
+        ========================================
+        This hidden menu appears when upload buttons are clicked.
+        It supports various educational file formats commonly used by educators:
+        
+        - PDF/DOC/DOCX/PPTX: Standard educational documents
+        - CSV: Data for charts, student rosters, assessment data
+        - Google Sheets: Collaborative data and planning documents
+        - YouTube: Educational videos for multimedia integration
+        - Websites: Online resources, articles, educational tools
+        -->
+        <div id="fileUploadMenu" class="file-upload-menu">
+            <button onclick="uploadFile('pdf')">Upload Documents (PDF, DOC, DOCX, PPTX)</button>
+            <button onclick="uploadFile('csv')">Upload Data (CSV File)</button>
+            <button onclick="handleUrlInput('Google Sheets')">Google Sheets Link</button>
+            <button onclick="handleUrlInput('YouTube')">YouTube Video Link</button>
+            <button onclick="handleUrlInput('Website')">Website/Resource Link</button>
+        </div>
+    </div>
+
+    <!-- Hidden file input element for file upload functionality -->
+    <input type="file" id="fileInput" style="display: none;" accept=".pdf,.doc,.docx,.pptx,.csv,.txt">
+
+    <!-- Google Translate integration for multilingual support -->
+    <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+    
+    <!-- External JavaScript file for functionality -->
+    <script src="../src/pg_p1.js"></script>
+</body>
+</html>

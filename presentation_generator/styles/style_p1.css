@@ -1,0 +1,373 @@
+/* 
+PRESENTATION GENERATOR - PAGE 1 STYLING
+========================================
+This CSS file provides professional, educational-focused styling for the
+Presentation Generator input form. The design prioritizes:
+
+1. ACCESSIBILITY: High contrast, clear fonts, appropriate sizing
+2. EDUCATIONAL AESTHETICS: Professional appearance suitable for educators
+3. USER EXPERIENCE: Intuitive layout, visual feedback, clear hierarchy
+4. RESPONSIVE DESIGN: Works across devices used in educational settings
+5. VISUAL CLARITY: Easy to read and navigate for busy educators
+
+COLOR SCHEME RATIONALE:
+- Deep purple gradient: Professional, calming, associated with education
+- Light purple accents: Maintains brand consistency, good contrast
+- Dark backgrounds: Reduces eye strain during extended use
+- White/light text: Excellent readability on dark backgrounds
+*/
+
+/* 
+MAIN BODY STYLING
+=================
+Creates a professional, educational environment with:
+- Roboto font: Clean, readable, professional appearance
+- Gradient background: Visually appealing without being distracting
+- Fixed attachment: Maintains visual consistency during scrolling
+*/
+body {
+    font-family: 'Roboto', Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(135deg, #372a7b, #1e1e2f); /* Professional purple gradient */
+    background-size: cover;
+    background-attachment: fixed;
+    color: #eee; /* Light text for good contrast */
+    line-height: 1.6; /* Improved readability */
+}
+
+/* 
+MAIN CONTAINER
+==============
+Centers and contains the form with:
+- Optimal width for readability (800px max)
+- Semi-transparent background for depth
+- Rounded corners for modern appearance
+- Box shadow for visual separation
+*/
+.container {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: rgba(42, 42, 64, 0.9); /* Semi-transparent for depth */
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* 
+HEADING STYLES
+==============
+Creates clear visual hierarchy:
+- Centered alignment for focus
+- Brand color for consistency
+- Appropriate sizing for importance
+*/
+h1 {
+    text-align: center; 
+    color: #a0a0ff; /* Brand purple-blue */
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+}
+
+/* Subtitle styling for additional context */
+.container p {
+    text-align: center;
+    color: #ccc;
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
+}
+
+/* 
+FORM GROUP STYLING
+==================
+Provides consistent spacing and organization:
+- Adequate spacing between form elements
+- Clear visual separation
+- Responsive layout considerations
+*/
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+/* 
+LABEL STYLING
+=============
+Ensures clear field identification:
+- Block display for proper spacing
+- Brand color for consistency
+- Adequate margin for visual separation
+- Font weight for emphasis
+*/
+label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #a0a0ff; /* Matches heading color */
+    font-weight: 500;
+    font-size: 1rem;
+}
+
+/* 
+FORM INPUT STYLING
+==================
+Creates consistent, accessible form elements:
+- Full width for easy interaction
+- Adequate padding for touch interfaces
+- Dark theme with good contrast
+- Border styling for visual definition
+- Smooth transitions for better UX
+*/
+input[type="text"], select, textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #555;
+    border-radius: 6px;
+    background: #1e1e2f; /* Dark background */
+    color: #eee; /* Light text */
+    font-size: 1rem;
+    font-family: inherit;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    box-sizing: border-box; /* Ensures consistent sizing */
+}
+
+/* Focus states for better accessibility */
+input[type="text"]:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: #6c63ff;
+    box-shadow: 0 0 0 2px rgba(108, 99, 255, 0.2);
+}
+
+/* 
+TEXTAREA SPECIFIC STYLING
+=========================
+Optimized for longer text input:
+- Minimum height for adequate space
+- Vertical resize only for better layout
+- Consistent styling with other inputs
+*/
+textarea {
+    min-height: 100px; 
+    resize: vertical; /* Allows vertical resize only */
+}
+
+/* 
+SELECT DROPDOWN STYLING
+=======================
+Special considerations for dropdowns:
+- Consistent appearance across browsers
+- Clear option visibility
+- Proper spacing and sizing
+*/
+select {
+    cursor: pointer;
+}
+
+select option {
+    background: #1e1e2f;
+    color: #eee;
+    padding: 0.5rem;
+}
+
+/* 
+UPLOAD BUTTON STYLING
+=====================
+Distinctive styling for file upload functionality:
+- Different color to distinguish from main actions
+- Inline display for positioning near textareas
+- Hover effects for better interaction feedback
+*/
+.upload-btn {
+    display: inline-block;
+    margin-top: 0.5rem;
+    padding: 0.5rem 1rem;
+    background-color: #4c51bf; /* Distinct color for secondary action */
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.3s ease;
+}
+
+.upload-btn:hover {
+    background-color: #3c41a3; /* Darker on hover */
+}
+
+/* 
+PRIMARY ACTION BUTTONS
+======================
+Main buttons for form submission and navigation:
+- Full width for easy clicking
+- Prominent styling to indicate importance
+- Smooth hover transitions
+- Proper spacing between buttons
+*/
+#generateBtn, #backBtn {
+    display: block;
+    width: 100%;
+    padding: 1rem;
+    background-color: #6c63ff; /* Primary brand color */
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 1.1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    margin-bottom: 10px;
+}
+
+#generateBtn:hover, #backBtn:hover {
+    background-color: #5a52cc; /* Darker shade on hover */
+}
+
+/* Disabled state for generate button during processing */
+#generateBtn:disabled {
+    background-color: #666;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* 
+FILE UPLOAD MENU STYLING
+========================
+Dropdown menu for file upload options:
+- Positioned absolutely for overlay display
+- Dark theme consistency
+- Clear button separation
+- Professional appearance
+*/
+.file-upload-menu {
+    display: none; /* Hidden by default */
+    position: absolute;
+    background-color: #2a2a40; /* Slightly lighter than main background */
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 0.5rem;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    z-index: 1000; /* Ensures it appears above other elements */
+    min-width: 200px;
+}
+
+.file-upload-menu button {
+    display: block;
+    width: 100%;
+    padding: 0.5rem;
+    margin-bottom: 0.5rem;
+    background-color: #4c51bf;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.3s ease;
+}
+
+.file-upload-menu button:last-child {
+    margin-bottom: 0; /* Remove margin from last button */
+}
+
+.file-upload-menu button:hover {
+    background-color: #3c41a3;
+}
+
+/* 
+RESPONSIVE DESIGN
+=================
+Ensures usability across different screen sizes:
+- Mobile-first approach
+- Tablet and desktop optimizations
+- Maintains readability and functionality
+*/
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+    .container {
+        margin: 1rem;
+        padding: 1.5rem;
+    }
+    
+    h1 {
+        font-size: 2rem;
+    }
+    
+    input[type="text"], select, textarea {
+        font-size: 1rem; /* Prevents zoom on iOS */
+    }
+    
+    .file-upload-menu {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        min-width: 250px;
+    }
+}
+
+/* Large screen optimizations */
+@media (min-width: 1200px) {
+    .container {
+        max-width: 900px;
+    }
+}
+
+/* 
+UTILITY CLASSES
+===============
+Additional helper classes for special cases:
+*/
+
+/* Loading state indicator */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Success state for form validation */
+.success-border {
+    border-color: #10b981 !important;
+}
+
+/* Error state for form validation */
+.error-border {
+    border-color: #ef4444 !important;
+}
+
+/* 
+ACCESSIBILITY ENHANCEMENTS
+==========================
+Additional styles for better accessibility:
+*/
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    body {
+        background: #000;
+        color: #fff;
+    }
+    
+    .container {
+        background: rgba(0, 0, 0, 0.9);
+        border: 2px solid #fff;
+    }
+    
+    input[type="text"], select, textarea {
+        background: #000;
+        border: 2px solid #fff;
+        color: #fff;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        transition: none !important;
+        animation: none !important;
+    }
+}
+
+/* Focus indicators for keyboard navigation */
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+    outline: 2px solid #6c63ff;
+    outline-offset: 2px;
+}
