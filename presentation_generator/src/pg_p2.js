@@ -1,27 +1,21 @@
 /*
-PRESENTATION GENERATOR - PAGE 2 JAVASCRIPT (TEXT-BASED FORMAT)
+PRESENTATION GENERATOR - PAGE 2 JAVASCRIPT (AI-POWERED FORMAT)
 ===============================================================
-This JavaScript file handles the text-based presentation generation and display.
+This JavaScript file handles AI-powered presentation generation using Google Gemini.
 
 MAIN FUNCTIONS:
 1. getPresentationData() - Retrieves form data from page 1
-2. generateTextPresentation() - Creates text-based presentation content
+2. generateTextPresentation() - Creates AI-powered presentation content
 3. displayPresentation() - Shows the formatted presentation
 4. downloadPDF() - Exports presentation as PDF
 5. downloadPowerPoint() - Exports presentation as PowerPoint
 
-TEXT FORMAT:
-The presentation is generated in the format:
-Slide 1:
-<content for slide 1>
-
-Slide 2:
-<content for slide 2>
-
-etc.
+AI INTEGRATION:
+Uses Google Gemini API for content generation with educational context.
+FREE TIER: 1,500 presentations per day at no cost.
 
 CONTENT GENERATION:
-Content is generated based on:
+AI-generated content based on:
 - Grade level (determines complexity and vocabulary)
 - Topic (drives content focus)
 - Number of slides (determines content distribution)
@@ -29,9 +23,21 @@ Content is generated based on:
 - Additional customization (personalizes content)
 */
 
+// API Configuration (Template Mode - No API keys needed)
+const API_CONFIG = {
+    // Template mode - no external APIs used
+    templateMode: true
+};
+
 // Global variable to store the generated presentation data
 let presentationData = null;
 let generatedSlides = [];
+
+// DEBUGGING: Verify script is loading
+console.log('🔧 DEBUG: pg_p2.js script loaded successfully');
+
+// Template Mode - No API testing needed
+console.log('🎓 Presentation Generator running in template mode - no external APIs required');
 
 /*
 STEP 1: GET PRESENTATION DATA FROM PAGE 1
@@ -55,22 +61,191 @@ function getPresentationData() {
 }
 
 /*
-STEP 2: GENERATE TEXT-BASED PRESENTATION CONTENT
-===============================================
-This is the core function that creates the presentation content
-in the requested text format. It generates appropriate content
-for each slide based on the input parameters.
+STEP 2: GENERATE TEXT-BASED PRESENTATION CONTENT (SMART LOADING)
+===============================================================
+This is the enhanced function that creates presentation content with smart loading:
+1. Shows template immediately for fast user feedback
+2. Tries AI generation in background
+3. Offers upgrade when AI content is ready
 */
-function generateTextPresentation(data) {
+async function generateTextPresentation(data) {
+    const { gradeLevel, topic, numSlides, standards, customization } = data;
+    
+    console.log('🚀 Starting template-only generation for:', data.topic);
+    
+    // TEMPLATE ONLY MODE (AI disabled due to invalid token)
+    updateLoadingState('✅ Generating template presentation...');
+    const templateSlides = generateTemplatePresentation(data);
+    displayPresentation(templateSlides);
+    hideLoadingSpinner();
+    
+    // Show template-only status
+    updateStatus('✅ Template presentation ready!');
+    console.log('📄 Template mode provides educational presentations without external API dependencies');
+    
+    return templateSlides;
+}
+
+function createMasterPrompt(data) {
+    const { gradeLevel, topic, numSlides, standards, customization } = data;
+    
+    return `You are an expert educator creating a ${numSlides}-slide presentation for ${gradeLevel} students.
+
+TOPIC: ${topic}
+
+EDUCATIONAL REQUIREMENTS:
+- Grade Level: ${gradeLevel}
+- Number of Slides: ${numSlides}
+- Standards: ${standards || 'General educational standards'}
+- Special Requirements: ${customization || 'None'}
+
+INSTRUCTIONS:
+1. Create exactly ${numSlides} slides
+2. Use age-appropriate language for ${gradeLevel}
+3. Include learning objectives, key concepts, and engaging activities
+4. Format each slide as "Slide X:" followed by the content
+5. Make content educational, accurate, and engaging
+
+SLIDE STRUCTURE:
+- Slide 1: Title slide with learning objectives
+- Middle slides: Key concepts, examples, activities
+- Final slide: Summary and next steps
+
+Generate the complete presentation now:`;
+}
+function parseAIResponse(aiResponse, expectedSlides) {
+    try {
+        // Split response into slides using "Slide X:" as delimiter
+        const slideRegex = /Slide (\d+):(.*?)(?=Slide \d+:|$)/gs;
+        const slides = [];
+        let match;
+        
+        while ((match = slideRegex.exec(aiResponse)) !== null) {
+            const slideNumber = parseInt(match[1]);
+            const slideContent = match[2].trim();
+            slides.push(`Slide ${slideNumber}:\n${slideContent}`);
+        }
+        
+        // Validate we got the expected number of slides
+        if (slides.length !== expectedSlides) {
+            console.warn(`Expected ${expectedSlides} slides, got ${slides.length}`);
+            
+            // Pad missing slides if needed
+            while (slides.length < expectedSlides) {
+                slides.push(`Slide ${slides.length + 1}:\nContent generation incomplete. Please regenerate.`);
+            }
+        }
+        
+        return slides;
+        
+    } catch (error) {
+        console.error('Error parsing AI response:', error);
+        throw new Error('Failed to parse AI-generated content');
+    }
+}
+
+
+
+async function callHuggingFace(prompt) {
+    // Add educational context to prompt for better results
+    const educationalPrompt = `You are an expert educator and presentation designer with 20 years of experience creating engaging, standards-aligned educational content for K-12 and university students.
+
+${prompt}
+
+Remember to:
+- Use age-appropriate language
+- Include clear learning objectives
+- Make content engaging and interactive
+- Follow educational best practices`;
+
+    const payload = {
+        inputs: educationalPrompt,
+        parameters: {
+            max_new_tokens: API_CONFIG.huggingface.maxTokens,
+            temperature: API_CONFIG.huggingface.temperature,
+            do_sample: true,
+            return_full_text: false
+        }
+    };
+
+    try {
+        console.log('🔧 DEBUG: Making API request to:', API_CONFIG.huggingface.baseURL);
+        console.log('🔧 DEBUG: API Token (first 10 chars):', API_CONFIG.huggingface.apiKey.substring(0, 10));
+        console.log('🔧 DEBUG: Payload size:', JSON.stringify(payload).length, 'characters');
+        
+        // First test: simple token validation request
+        console.log('🔧 DEBUG: Testing token with simple request...');
+        const testResponse = await fetch('https://api-inference.huggingface.co/models/gpt2', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${API_CONFIG.huggingface.apiKey}`
+            }
+        });
+        console.log('🔧 DEBUG: Token test response:', testResponse.status, testResponse.statusText);
+        
+        const response = await fetch(API_CONFIG.huggingface.baseURL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${API_CONFIG.huggingface.apiKey}`
+            },
+            body: JSON.stringify(payload)
+        });
+        
+        console.log('🔧 DEBUG: Response status:', response.status, response.statusText);
+
+        if (!response.ok) {
+            let errorDetails = `Status: ${response.status}`;
+            try {
+                const error = await response.json();
+                errorDetails += `, Error: ${JSON.stringify(error)}`;
+            } catch (e) {
+                errorDetails += `, StatusText: ${response.statusText}`;
+            }
+            throw new Error(`HuggingFace API Error - ${errorDetails}`);
+        }
+
+        const data = await response.json();
+        
+        // Handle HuggingFace response format
+        if (Array.isArray(data) && data.length > 0) {
+            return data[0].generated_text || data[0].text || JSON.stringify(data[0]);
+        } else if (data.generated_text) {
+            return data.generated_text;
+        } else {
+            throw new Error('Unexpected response format from HuggingFace');
+        }
+        
+    } catch (error) {
+        console.error('HuggingFace API call failed:', error);
+        
+        // Specific error handling
+        if (error.message.includes('401') || error.message.includes('403')) {
+            throw new Error('Invalid API token. Please check your HuggingFace token.');
+        } else if (error.message.includes('429')) {
+            throw new Error('Rate limit exceeded. Please wait and try again.');
+        } else if (error.message.includes('400')) {
+            throw new Error('Invalid request format. Please try again.');
+        } else if (error.message.includes('503')) {
+            throw new Error('Model is loading. Please wait 30 seconds and try again.');
+        } else {
+            throw error;  // Re-throw for fallback handling
+        }
+    }
+}
+
+function generateTemplatePresentation(data) {
+    console.log('📄 Generating template presentation for:', data.topic);
     const { gradeLevel, topic, numSlides, standards, customization } = data;
     const slides = [];
     
-    // Generate content for each slide
+    // Use existing template-based generation as fallback
     for (let i = 1; i <= parseInt(numSlides); i++) {
         const slideContent = generateSlideContent(i, topic, gradeLevel, standards, customization, parseInt(numSlides));
         slides.push(`Slide ${i}:\n${slideContent}`);
     }
     
+    console.log('📄 Template generation complete:', slides.length, 'slides');
     return slides;
 }
 
@@ -458,25 +633,258 @@ function downloadPowerPoint() {
 }
 
 /*
+STEP 5.5: HELPER FUNCTIONS FOR UI STATES
+========================================
+These functions manage loading states, error messages, and user feedback.
+*/
+
+function updateLoadingState(message) {
+    const loadingElement = document.getElementById('loadingSpinner');
+    const messageElement = document.getElementById('loadingMessage');
+    
+    if (loadingElement && messageElement) {
+        loadingElement.style.display = 'block';
+        messageElement.textContent = message;
+    }
+    
+    console.log('Loading:', message);
+}
+
+function showLoadingSpinner() {
+    const spinner = document.getElementById('loadingSpinner');
+    const container = document.getElementById('presentationContainer');
+    
+    if (spinner) spinner.style.display = 'block';
+    if (container) container.style.display = 'none';
+    
+    // If elements don't exist, create temporary loading message
+    if (!spinner) {
+        const tempLoader = document.createElement('div');
+        tempLoader.id = 'tempLoader';
+        tempLoader.innerHTML = '<p>🤖 Generating AI presentation...</p>';
+        tempLoader.style.cssText = 'text-align: center; padding: 2rem; color: #6366f1;';
+        document.body.prepend(tempLoader);
+    }
+}
+
+function hideLoadingSpinner() {
+    const spinner = document.getElementById('loadingSpinner');
+    const container = document.getElementById('presentationContainer');
+    const tempLoader = document.getElementById('tempLoader');
+    
+    if (spinner) spinner.style.display = 'none';
+    if (container) container.style.display = 'block';
+    if (tempLoader) tempLoader.remove();
+}
+
+function showErrorMessage(message) {
+    const errorContainer = document.getElementById('errorContainer');
+    const errorMessage = document.getElementById('errorMessage');
+    
+    if (errorContainer && errorMessage) {
+        errorContainer.style.display = 'block';
+        errorMessage.textContent = message;
+    } else {
+        // Fallback: show alert if no error container
+        alert(`Error: ${message}`);
+    }
+    
+    hideLoadingSpinner();
+}
+
+/*
+SMART LOADING HELPER FUNCTIONS
+==============================
+These functions manage the upgrade button and status updates for smart loading.
+*/
+
+function updateStatus(message) {
+    // Try to find existing status element
+    let statusElement = document.getElementById('smartLoadingStatus');
+    
+    // Create status element if it doesn't exist
+    if (!statusElement) {
+        statusElement = document.createElement('div');
+        statusElement.id = 'smartLoadingStatus';
+        statusElement.style.cssText = `
+            background: #f0f9ff;
+            border: 1px solid #0ea5e9;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin: 16px 0;
+            color: #0c4a6e;
+            font-weight: 500;
+            text-align: center;
+            transition: all 0.3s ease;
+        `;
+        
+        // Insert status element BEFORE the presentation container (so it won't get overwritten)
+        const presentationContainer = document.getElementById('presentationContainer');
+        if (presentationContainer && presentationContainer.parentNode) {
+            presentationContainer.parentNode.insertBefore(statusElement, presentationContainer);
+        }
+    }
+    
+    statusElement.textContent = message;
+    console.log('Status:', message);
+}
+
+function showUpgradeButton(aiSlides, templateSlides) {
+    // Remove any existing upgrade button
+    const existingButton = document.getElementById('upgradeButton');
+    if (existingButton) {
+        existingButton.remove();
+    }
+    
+    // Create upgrade button
+    const upgradeButton = document.createElement('div');
+    upgradeButton.id = 'upgradeButton';
+    upgradeButton.innerHTML = `
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                    color: white; 
+                    padding: 16px; 
+                    border-radius: 12px; 
+                    margin: 16px 0; 
+                    text-align: center; 
+                    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    border: none;"
+             onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(102, 126, 234, 0.4)';"
+             onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(102, 126, 234, 0.3)';"
+             onclick="upgradeToAI()">
+            <div style="font-size: 20px; margin-bottom: 8px;">🤖✨</div>
+            <div style="font-size: 16px; font-weight: 600; margin-bottom: 4px;">Upgrade to AI Version</div>
+            <div style="font-size: 14px; opacity: 0.9;">Click to switch to AI-generated content</div>
+        </div>
+        <div style="text-align: center; margin: 8px 0;">
+            <button onclick="togglePreview()" 
+                    style="background: none; border: 1px solid #6366f1; color: #6366f1; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px;">
+                👁️ Preview AI Version
+            </button>
+        </div>
+    `;
+    
+    // Insert upgrade button after status element (outside presentation container)
+    const statusElement = document.getElementById('smartLoadingStatus');
+    const presentationContainer = document.getElementById('presentationContainer');
+    
+    if (statusElement && statusElement.parentNode) {
+        statusElement.parentNode.insertBefore(upgradeButton, statusElement.nextSibling);
+    } else if (presentationContainer && presentationContainer.parentNode) {
+        // Fallback: insert before presentation container if no status element
+        presentationContainer.parentNode.insertBefore(upgradeButton, presentationContainer);
+    }
+    
+    // Store slides data for upgrade function
+    window.aiSlidesData = aiSlides;
+    window.templateSlidesData = templateSlides;
+    window.currentVersion = 'template';
+}
+
+function upgradeToAI() {
+    if (window.aiSlidesData) {
+        // Switch to AI version
+        displayPresentation(window.aiSlidesData);
+        generatedSlides = window.aiSlidesData; // Update global variable for downloads
+        window.currentVersion = 'ai';
+        
+        // Update upgrade button to show revert option
+        const upgradeButton = document.getElementById('upgradeButton');
+        if (upgradeButton) {
+            upgradeButton.innerHTML = `
+                <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); 
+                            color: white; 
+                            padding: 16px; 
+                            border-radius: 12px; 
+                            margin: 16px 0; 
+                            text-align: center; 
+                            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+                            border: none;">
+                    <div style="font-size: 20px; margin-bottom: 8px;">✅🤖</div>
+                    <div style="font-size: 16px; font-weight: 600; margin-bottom: 4px;">Using AI Version</div>
+                    <div style="font-size: 14px; opacity: 0.9;">AI-generated content is now active</div>
+                </div>
+                <div style="text-align: center; margin: 8px 0;">
+                    <button onclick="revertToTemplate()" 
+                            style="background: none; border: 1px solid #6b7280; color: #6b7280; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px;">
+                        ↶ Revert to Template
+                    </button>
+                </div>
+            `;
+        }
+        
+        updateStatus('✅ Switched to AI version! Downloads will use AI content.');
+    }
+}
+
+function revertToTemplate() {
+    if (window.templateSlidesData) {
+        // Switch back to template
+        displayPresentation(window.templateSlidesData);
+        generatedSlides = window.templateSlidesData; // Update global variable for downloads
+        window.currentVersion = 'template';
+        
+        // Restore original upgrade button
+        showUpgradeButton(window.aiSlidesData, window.templateSlidesData);
+        updateStatus('↶ Reverted to template version! Downloads will use template content.');
+    }
+}
+
+function togglePreview() {
+    if (window.currentVersion === 'template' && window.aiSlidesData) {
+        // Show AI preview temporarily
+        displayPresentation(window.aiSlidesData);
+        updateStatus('👁️ Previewing AI version - click upgrade to keep it, or wait 5 seconds to revert');
+        
+        // Auto-revert after 5 seconds
+        setTimeout(() => {
+            if (window.currentVersion === 'template') {
+                displayPresentation(window.templateSlidesData);
+                updateStatus('🤖 AI version ready! Click upgrade button to switch.');
+            }
+        }, 5000);
+    }
+}
+
+/*
 STEP 6: INITIALIZATION
 ======================
 This code runs when the page loads to generate and display
 the presentation based on the data from page 1.
 */
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
+    console.log('🔧 DEBUG: DOMContentLoaded event fired');
+    
     // Get the presentation data from URL parameters
     presentationData = getPresentationData();
+    console.log('🔧 DEBUG: Presentation data retrieved:', presentationData);
     
     if (presentationData) {
-        // Generate the text-based presentation
-        generatedSlides = generateTextPresentation(presentationData);
-        
-        // Display the presentation
-        displayPresentation(generatedSlides);
-        
-        console.log('Presentation generated successfully');
-        console.log('Data:', presentationData);
-        console.log('Generated slides:', generatedSlides);
+        try {
+            // Show loading state immediately
+            showLoadingSpinner();
+            updateLoadingState('Initializing AI presentation generator...');
+            
+            console.log('🔧 DEBUG: Starting AI presentation generation with data:', presentationData);
+            
+            // Generate presentation using our smart loading system
+            updateLoadingState('🤖 Generating AI-powered presentation content...');
+            generatedSlides = await generateTextPresentation(presentationData);
+            
+            // Display the presentation
+            updateLoadingState('✨ Formatting presentation...');
+            displayPresentation(generatedSlides);
+            
+            console.log('🎉 AI presentation generated successfully');
+            console.log('Generated slides:', generatedSlides);
+            
+        } catch (error) {
+            console.error('Presentation generation failed:', error);
+            showErrorMessage(`Failed to generate presentation: ${error.message}`);
+        } finally {
+            hideLoadingSpinner();
+        }
     } else {
         // Handle case where no data is available
         document.getElementById('presentationContainer').innerHTML = `

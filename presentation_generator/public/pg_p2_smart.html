@@ -1,4 +1,4 @@
-<!--
+<!-- 
 PRESENTATION GENERATOR - PAGE 2 (TEXT-BASED PRESENTATION DISPLAY)
 ================================================================
 This page displays generated presentations in a simple, clean text format.
@@ -37,19 +37,6 @@ FUTURE ENHANCEMENTS:
         <link rel="stylesheet" href="../styles/style_p2.css">
     </head>
     <body>
-        <!-- Loading Spinner -->
-        <div id="loadingSpinner" style="display: none; text-align: center; padding: 2rem;">
-            <div class="spinner"></div>
-            <p id="loadingMessage">Generating AI-powered presentation...</p>
-        </div>
-
-        <!-- Error Message Container -->
-        <div id="errorContainer" style="display: none; text-align: center; padding: 2rem; color: #ff6b6b;">
-            <h3>Generation Failed</h3>
-            <p id="errorMessage"></p>
-            <button onclick="location.reload()" style="margin-top: 1rem;">Try Again</button>
-        </div>
-
         <div class="container">
             <header>
                 <h1>Generated Presentation</h1>
@@ -109,9 +96,5 @@ FUTURE ENHANCEMENTS:
         
         <!-- File Saving -->
         <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-
-        <!-- Environment Variables Support (if using dotenv) -->
-        <script src="https://cdn.jsdelivr.net/npm/dotenv@16.3.1/lib/main.min.js"></script>
-
     </body>    
 </html>
