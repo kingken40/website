@@ -1,0 +1,142 @@
+/* AI Chat Bot v1 - Base Styling */
+
+p {
+  max-width: 800px;
+  margin: 8px auto;
+  padding: 10px 16px;
+  border-radius: 8px;
+}
+
+p,
+p[data-user="true"] {
+  background-color: #f4f4f4;
+  margin-left: auto;
+  margin-right: 0;
+}
+
+p:nth-child(odd) {
+  background-color: white;
+  margin-right: auto !important;
+  margin-left: 0 !important;
+}
+
+div {
+  padding: 16px;
+  max-width: 1200px;
+}
+
+img { 
+  max-width:300px;
+  max-height:300px;
+  display: block;
+}
+
+h3 {
+  margin: 24px 0 16px;
+}
+
+ul {
+  padding-bottom: 16px;
+  padding-left: 1.5em;
+}
+
+li {
+  padding: 16px 0;
+}
+
+input {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  padding: 0 24px;
+  bottom: 16px;
+  border: none;
+  background-color: #f4f4f4;
+  border-radius: 32px;
+  font-size: 24px;
+  outline: none;
+  height: 64px;
+}
+
+.char-counter {
+  position: fixed;
+  bottom: 88px;
+  right: 24px;
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 14px;
+  color: #666;
+  border: 1px solid #e0e0e0;
+  backdrop-filter: blur(5px);
+}
+
+button {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 48px;
+  height: 48px;
+  font-size: 24px;
+  background-color: black;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+button:hover {
+  background-color: #0f8e6c;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: white;
+  padding: 16px;
+  border-top: 1px solid white;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  padding: 0 16px;
+  margin: 0 auto;
+  font-size: 24px;
+  padding-bottom: 120px;
+}
+
+h1 {
+  text-align: center;
+  margin: 32px 0;
+  font-size: 52px;
+}
+
+.back-button {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  padding: 10px 20px;
+  border-radius: 25px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  z-index: 1000;
+}
+
+.back-button:hover {
+  background-color: rgba(0, 0, 0, 0.9);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}

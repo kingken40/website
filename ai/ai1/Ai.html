@@ -1,0 +1,168 @@
+
+  <style>
+  p {
+    max-width: 800px;
+    margin: 8px auto;
+    padding: 10px 16px;
+    border-radius: 8px;
+  }
+  
+  p,
+  p[data-user="true"] {
+    background-color: #f4f4f4;
+    margin-left: auto;
+    margin-right: 0;
+  }
+  
+  p:nth-child(odd) {
+    background-color: white;
+    margin-right: auto !important;
+    margin-left: 0 !important;
+  }
+  
+  div {
+    padding: 16px;
+    max-width: 1200px;
+  }
+  
+  img { 
+    max-width:300px;
+    max-height:300px;
+    display: block;
+  }
+  
+  h3 {
+    margin: 24px 0 16px;
+  }
+  
+  ul {
+    padding-bottom: 16px;
+    padding-left: 1.5em;
+  }
+  
+  li {
+    padding: 16px 0;
+  }
+  
+  input {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    padding: 0 24px;
+    bottom: 16px;
+    border: none;
+    background-color: #f4f4f4;
+    border-radius: 32px;
+    font-size: 24px;
+    outline: none;
+    height: 64px;
+  }
+  
+  button {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 48px;
+    height: 48px;
+    font-size: 24px;
+    background-color: black;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  button:hover {
+    background-color: #0f8e6c;
+  }
+  
+  body::before {
+    content: "";
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: white;
+    padding: 16px;
+    border-top: 1px solid white;
+  }
+  
+  body {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    padding: 0 16px;
+    margin: 0 auto;
+    font-size: 24px;
+    padding-bottom: 120px;
+  }
+  
+  h1 {
+    text-align: center;
+    margin: 32px 0;
+    font-size: 52px;
+  }
+  </style>
+  
+<h1>AI Chat Bot</h1>
+<p>Hello</p>
+<p>Hello, how can I help you today?</p>
+<input></input>
+<button>↑</button>
+
+
+<script>
+const handleMessage = async () => {
+const input = document.querySelector("input"),
+  button = document.querySelector("button"),
+  message = input.value.trim();
+
+if (!message) return;
+
+input.insertAdjacentHTML(
+"beforebegin",
+`<p data-user="true">${message}</p>`
+);
+input.value = "";
+
+try {
+const { reply, imageUrl } = await fetch(
+    "https://backend.fesinstitute.com/api/public/chat",
+    {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message, uid: "ULeh2kO9bHWVDunMs0hUw1Zl1rR2" }),
+    }
+).then((r) => r.json());
+
+const formattedText = reply
+    .replace(/###\s+(.*)/g, "<h3>$1</h3>")
+    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+    .replace(/^\s*-\s+(.+)/gm, "<li>$1</li>")
+    .replace(/^\s*\d+\.\s+(.+)/gm, "<li>$1</li>");
+
+input.insertAdjacentHTML(
+    "beforebegin",
+    `<div>${formattedText}` +
+    (imageUrl
+        ? `<img src="${imageUrl}"></div>`
+        : "</div>")
+);
+} catch {
+input.insertAdjacentHTML(
+    "beforebegin",
+    `<p>Bot: Something went wrong!</p>`
+);
+}
+};
+
+document.querySelector("button").onclick = handleMessage;
+
+document.querySelector("input").addEventListener("keypress", (e) => {
+if (e.key === "Enter") {
+e.preventDefault();
+handleMessage();
+}
+});
+</script>
