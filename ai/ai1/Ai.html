@@ -108,21 +108,54 @@
 <h1>AI Chat Bot</h1>
 <p>Hello</p>
 <p>Hello, how can I help you today?</p>
-<input placeholder="Type your message here..." title="Enter your message"></input>
+<input type="text" placeholder="Type your message here..." title="Enter your message" maxlength="500" autocomplete="off" spellcheck="true"></input>
 <button>↑</button>
 
 
 <script>
+// XSS Security Functions
+const escapeHtml = (text) => {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+};
+
+const isValidImageUrl = (url) => {
+    try {
+        const urlObj = new URL(url);
+        return urlObj.protocol === 'https:' && 
+               /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(urlObj.pathname) &&
+               urlObj.hostname !== 'localhost' && 
+               !urlObj.hostname.match(/^(10|172\.16|192\.168)\./);
+    } catch { 
+        return false; 
+    }
+};
+
+const sanitizeResponse = (text) => {
+    // First escape all HTML to prevent XSS
+    const escaped = escapeHtml(text);
+    
+    // Then safely apply formatting using escaped content
+    return escaped
+        .replace(/###\s+(.*)/g, "<h3>$1</h3>")
+        .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+        .replace(/^\s*-\s+(.+)/gm, "<li>$1</li>")
+        .replace(/^\s*\d+\.\s+(.+)/gm, "<li>$1</li>");
+};
+
 const handleMessage = async () => {
 const input = document.querySelector("input"),
   button = document.querySelector("button"),
   message = input.value.trim();
 
-if (!message) return;
+// Enhanced input validation
+if (!message || message.length > 500) return;
 
+// Securely insert user message with HTML escaping
 input.insertAdjacentHTML(
 "beforebegin",
-`<p data-user="true">${message}</p>`
+`<p data-user="true">${escapeHtml(message)}</p>`
 );
 input.value = "";
 
@@ -136,17 +169,17 @@ const { reply, imageUrl } = await fetch(
     }
 ).then((r) => r.json());
 
-const formattedText = reply
-    .replace(/###\s+(.*)/g, "<h3>$1</h3>")
-    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-    .replace(/^\s*-\s+(.+)/gm, "<li>$1</li>")
-    .replace(/^\s*\d+\.\s+(.+)/gm, "<li>$1</li>");
+// Sanitize server response to prevent XSS
+const formattedText = sanitizeResponse(reply || "");
+
+// Validate image URL before insertion
+const safeImageUrl = imageUrl && isValidImageUrl(imageUrl) ? imageUrl : null;
 
 input.insertAdjacentHTML(
     "beforebegin",
     `<div>${formattedText}` +
-    (imageUrl
-        ? `<img src="${imageUrl}"></div>`
+    (safeImageUrl
+        ? `<img src="${safeImageUrl}" alt="AI response image"></div>`
         : "</div>")
 );
 } catch {
