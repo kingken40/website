@@ -77,3 +77,20 @@ document.querySelector("input").addEventListener("input", updateCharCount);
 
 // Initialize character counter on page load
 document.addEventListener("DOMContentLoaded", updateCharCount);
+
+// Back button navigation function
+function navigateBack() {
+    // Try multiple methods to ensure navigation works
+    try {
+        // Method 1: Use history if available
+        if (window.history.length > 1) {
+            window.history.back();
+        } else {
+            // Method 2: Direct navigation
+            window.location.href = '../../../Games.html';
+        }
+    } catch (error) {
+        // Method 3: Fallback direct navigation
+        window.location.href = '../../../Games.html';
+    }
+}

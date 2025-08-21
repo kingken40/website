@@ -71,7 +71,7 @@ input {
   backdrop-filter: blur(5px);
 }
 
-button {
+button:not(.back-button) {
   position: fixed;
   bottom: 24px;
   right: 24px;
@@ -86,7 +86,7 @@ button {
   transition: background-color 0.2s;
 }
 
-button:hover {
+button:not(.back-button):hover {
   background-color: #0f8e6c;
 }
 
@@ -121,22 +121,47 @@ h1 {
   position: fixed;
   top: 20px;
   left: 20px;
-  background-color: rgba(0, 0, 0, 0.7);
+  background-color: rgba(0, 0, 0, 0.8);
   color: white;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  padding: 10px 20px;
-  border-radius: 25px;
-  font-size: 16px;
-  font-weight: 500;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  padding: 12px 24px;
+  border-radius: 30px;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
   backdrop-filter: blur(10px);
   z-index: 1000;
+  white-space: nowrap;
+  min-width: auto;
+  width: auto;
+  max-width: 200px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .back-button:hover {
-  background-color: rgba(0, 0, 0, 0.9);
-  border-color: rgba(255, 255, 255, 0.5);
+  background-color: rgba(0, 0, 0, 0.95);
+  border-color: rgba(255, 255, 255, 0.7);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+.back-button:active {
+  transform: translateY(0);
+}
+
+/* Ensure back button overrides general button styles */
+button.back-button {
+  position: fixed !important;
+  top: 20px !important;
+  left: 20px !important;
+  bottom: auto !important;
+  right: auto !important;
+  width: auto !important;
+  height: auto !important;
+  border-radius: 30px !important;
+  background-color: rgba(0, 0, 0, 0.8) !important;
+  font-size: 14px !important;
 }
