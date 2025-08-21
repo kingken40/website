@@ -62,8 +62,8 @@ const updateCharCount = () => {
     }
 };
 
-// Event Listeners
-document.querySelector("button").onclick = handleMessage;
+// Event Listeners  
+document.querySelector("button:not(.back-button)").onclick = handleMessage;
 
 document.querySelector("input").addEventListener("keypress", (e) => {
     if (e.key === "Enter") {
@@ -80,17 +80,15 @@ document.addEventListener("DOMContentLoaded", updateCharCount);
 
 // Back button navigation function
 function navigateBack() {
-    // Try multiple methods to ensure navigation works
+    console.log('Back button clicked!'); // Debug log
+    
+    // Simple direct navigation - most reliable method
     try {
-        // Method 1: Use history if available
-        if (window.history.length > 1) {
-            window.history.back();
-        } else {
-            // Method 2: Direct navigation
-            window.location.href = '../../../Games.html';
-        }
-    } catch (error) {
-        // Method 3: Fallback direct navigation
         window.location.href = '../../../Games.html';
+        console.log('Navigation attempted'); // Debug log
+    } catch (error) {
+        console.error('Navigation failed:', error);
+        // Alternative method using absolute path
+        window.location.href = '/Games.html';
     }
 }
