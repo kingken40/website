@@ -33,17 +33,18 @@ const sanitizeResponse = (text) => {
 
 const handleMessage = async () => {
 const input = document.querySelector("input"),
-  button = document.querySelector("button"),
+  chatContainer = document.getElementById("chat-container"),
   message = input.value.trim();
 
 // Enhanced input validation
 if (!message || message.length > 50) return;
 
 // Securely insert user message with HTML escaping
-input.insertAdjacentHTML(
-"beforebegin",
-`<p data-user="true">${escapeHtml(message)}</p>`
-);
+const userMessageDiv = document.createElement('div');
+userMessageDiv.className = 'user-message';
+userMessageDiv.textContent = message;
+chatContainer.appendChild(userMessageDiv);
+
 input.value = "";
 
 // Update character counter after clearing input
@@ -62,21 +63,26 @@ const { reply, imageUrl } = await fetch(
 // Sanitize server response to prevent XSS
 const formattedText = sanitizeResponse(reply || "");
 
+// Create AI message element
+const aiMessageDiv = document.createElement('div');
+aiMessageDiv.className = 'ai-message';
+
 // Validate image URL before insertion
 const safeImageUrl = imageUrl && isValidImageUrl(imageUrl) ? imageUrl : null;
 
-input.insertAdjacentHTML(
-    "beforebegin",
-    `<div>${formattedText}` +
-    (safeImageUrl
-        ? `<img src="${safeImageUrl}" alt="AI response image"></div>`
-        : "</div>")
-);
+aiMessageDiv.innerHTML = formattedText + 
+    (safeImageUrl ? `<img src="${safeImageUrl}" alt="AI response image">` : "");
+
+chatContainer.appendChild(aiMessageDiv);
+
+// Auto scroll to bottom
+chatContainer.scrollTop = chatContainer.scrollHeight;
+
 } catch {
-input.insertAdjacentHTML(
-    "beforebegin",
-    `<p>Bot: Something went wrong!</p>`
-);
+const errorDiv = document.createElement('div');
+errorDiv.className = 'ai-message';
+errorDiv.textContent = "Something went wrong! Please try again.";
+chatContainer.appendChild(errorDiv);
 }
 };
 
@@ -111,8 +117,17 @@ document.querySelector("input").addEventListener("keypress", (e) => {
 // Add character counter event listener
 document.querySelector("input").addEventListener("input", updateCharCount);
 
-// Initialize character counter on page load
-document.addEventListener("DOMContentLoaded", updateCharCount);
+// Initialize character counter and AI greeting on page load
+document.addEventListener("DOMContentLoaded", () => {
+    updateCharCount();
+    
+    // Add AI greeting message
+    const chatContainer = document.getElementById("chat-container");
+    const greetingDiv = document.createElement('div');
+    greetingDiv.className = 'ai-message';
+    greetingDiv.textContent = "Hello! How can I help you today?";
+    chatContainer.appendChild(greetingDiv);
+});
 
 // Back button navigation function
 function navigateBack() {

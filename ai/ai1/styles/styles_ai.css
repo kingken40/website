@@ -1,29 +1,49 @@
 /* AI Chat Bot v1 - Base Styling */
 
-p {
+#chat-container {
   max-width: 800px;
-  margin: 8px auto;
-  padding: 10px 16px;
-  border-radius: 8px;
-}
-
-p,
-p[data-user="true"] {
-  background-color: #f4f4f4;
-  margin-left: auto;
-  margin-right: 0;
-}
-
-p:nth-child(odd) {
-  background-color: white;
-  margin-right: auto !important;
-  margin-left: 0 !important;
-}
-
-div {
+  margin: 0 auto;
   padding: 16px;
-  max-width: 1200px;
+  padding-bottom: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: calc(100vh - 200px);
+  overflow-y: auto;
 }
+
+/* AI Messages - Left side, no bubble */
+.ai-message {
+  max-width: 80%;
+  margin-right: auto;
+  padding: 12px 0;
+  background: none;
+  color: #333;
+  text-align: left;
+}
+
+/* User Messages - Right side, bubble style */
+.user-message {
+  max-width: 80%;
+  margin-left: auto;
+  padding: 12px 16px;
+  background-color: #007AFF;
+  color: white;
+  border-radius: 18px;
+  text-align: left;
+  word-wrap: break-word;
+}
+
+/* Legacy support for any remaining p elements */
+p {
+  max-width: 80%;
+  margin: 8px auto;
+  padding: 12px 16px;
+  border-radius: 18px;
+  word-wrap: break-word;
+}
+
+/* AI response containers inherit ai-message styling */
 
 img { 
   max-width:300px;
@@ -53,7 +73,7 @@ input {
   border: none;
   background-color: #f4f4f4;
   border-radius: 32px;
-  font-size: 24px;
+  font-size: 16px;
   outline: none;
   height: 64px;
 }
@@ -103,19 +123,18 @@ body::before {
 }
 
 body {
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  padding: 0 16px;
-  margin: 0 auto;
-  font-size: 24px;
-  padding-bottom: 120px;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 16px;
+  background-color: #f8f9fa;
 }
 
 h1 {
   text-align: center;
   margin: 32px 0;
-  font-size: 52px;
+  font-size: 32px;
+  color: #333;
 }
 
 .back-button {
