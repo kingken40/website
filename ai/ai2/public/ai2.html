@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced AI Chat Bot</title>
+    <link rel="stylesheet" href="../styles/styles_ai2.css">
+</head>
+<body>
+    <h1>🤖 AI Chatbot</h1>
+    
+    <div class="chat-controls">
+        <button type="button" onclick="window.location.href='../../../Games.html'" class="control-btn">⬅ Back</button>
+        <button type="button" onclick="startNewChat()" class="control-btn">🆕 New Chat</button>
+        <button type="button" onclick="exportChat()" class="control-btn">💾 Export Chat</button>
+        <button type="button" onclick="toggleHistory()" class="control-btn">📋 Chat History</button>
+        <button type="button" onclick="clearChat()" class="control-btn">🗑️ Clear History</button>
+        <button type="button" onclick="toggleTheme()" class="control-btn">🎨 Theme</button>
+    </div>
+    
+    <!-- Initial messages -->
+    <div class="message bot-message">
+        <strong>Hello! 👋</strong><br>
+        I'm N.O.V.A, an AI assistant. I can help you with questions, provide information, and have engaging conversations.<br>
+        What would you like to talk about today?
+    </div>
+    
+    <div class="input-container">
+        <textarea class="chat-input" placeholder="Ask me anything..." maxlength="500" rows="3"></textarea>
+        <span id="charCounter" class="char-counter">💬</span>
+        <button class="send-btn" type="button"><span>.</span></button>
+    </div>
+
+    <!-- Chat History Panel -->
+    <div id="historyModal" class="history-modal">
+        <div class="history-content">
+            <div class="history-header">
+                <h2>📋 Chat History</h2>
+                <button class="history-close" onclick="toggleHistory()">✕</button>
+            </div>
+            <div class="history-body">
+                <div id="historyList" class="history-list">
+                    <!-- Chat sessions will be dynamically populated here -->
+                </div>
+            </div>
+            <div class="history-footer">
+                <button onclick="clearAllHistory()" class="history-btn danger">🗑️ Delete All History</button>
+                <button onclick="exportAllHistory()" class="history-btn">💾 Export All</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../scripts/ai2.js"></script>
+</body>
+</html>
