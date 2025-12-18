@@ -10,6 +10,10 @@
     {
       "src": "/api/chat",
       "dest": "ai/ai3/app.py"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
     }
   ]
 }
