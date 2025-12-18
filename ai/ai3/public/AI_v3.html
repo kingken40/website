@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced AI Chat Bot v3 - Unique Sessions</title>
+    <link rel="stylesheet" href="../styles/ai_v3_styles.css">
+    
+    <!-- File processing libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+    
+    <a href="../../../Projects.html" style="position: absolute; top: 20px; left: 20px; padding: 10px 20px; background-color: #0078d4; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">← Back to Projects</a>
+    
+    <h1>🤖 Enhanced AI Chat Bot</h1>
+
+    <div class="chat-controls">
+        <button class="control-btn new-chat-btn" onclick="startNewChat()">✨ New Chat</button>
+        <button class="control-btn" onclick="toggleHistory()">📚 History</button>
+        <button class="control-btn" onclick="exportChat()">💾 Export</button>
+        <button class="control-btn" onclick="clearCurrentChat()">🗑️ Clear Current</button>
+        <button class="control-btn theme-toggle" onclick="toggleTheme()">💡Theme</button>
+    </div>
+    
+    <!-- AI Personality Selector -->
+    <div class="personality-container">
+        <label class="personality-label">🎭 Choose AI Personality <button class="help-icon" onclick="togglePersonalityHelp(event)" title="What do these mean?">?</button></label>
+        <div class="personality-grid">
+            <button class="personality-option selected" data-personality="assistant">
+                <span class="personality-emoji">🤖</span>
+                <span class="personality-name">Assistant</span>
+            </button>
+            <button class="personality-option" data-personality="creative">
+                <span class="personality-emoji">💡</span>
+                <span class="personality-name">Creative</span>
+            </button>
+            <button class="personality-option" data-personality="coder">
+                <span class="personality-emoji">🧑‍💻</span>
+                <span class="personality-name">Coder</span>
+            </button>
+            <button class="personality-option" data-personality="teacher">
+                <span class="personality-emoji">🎓</span>
+                <span class="personality-name">Teacher</span>
+            </button>
+            <button class="personality-option" data-personality="funny">
+                <span class="personality-emoji">🎪</span>
+                <span class="personality-name">Funny</span>
+            </button>
+            <button class="personality-option" data-personality="scholar">
+                <span class="personality-emoji">📚</span>
+                <span class="personality-name">Scholar</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="chat-controls">
+        <button class="control-btn new-chat-btn" onclick="startNewChat()">✨ New Chat</button>
+        <button class="control-btn" onclick="toggleHistory()">📚 History</button>
+        <button class="control-btn" onclick="exportChat()">💾 Export</button>
+        <button class="control-btn" onclick="clearCurrentChat()">🗑️ Clear Current</button>
+    </div>
+
+    <!-- Chat messages will appear here -->
+    <div id="chatContainer"></div>
+    
+    <div class="input-container">
+        <div class="input-wrapper">
+            <textarea class="chat-input" placeholder="Type your message here..." rows="1"></textarea>
+            <button class="upload-btn" id="uploadBtn" onclick="showFileUploadMenu(event)">📎 Upload File</button>
+            <button class="send-btn" type="button">↑</button>
+        </div>
+    </div>
+    
+    <!-- File upload menu (hidden by default) -->
+    <div id="fileUploadMenu" class="file-upload-menu">
+        <button onclick="uploadFile('pdf')">📄 PDF/DOCX/PPTX</button>
+        <button onclick="uploadFile('csv')">📊 CSV File</button>
+        <button onclick="uploadFile('txt')">📝 Text File</button>
+        <button onclick="uploadFile('audio')">🎤 Audio File</button>
+        <button onclick="uploadFile('image')">🖼️ Image File</button>
+    </div>
+    
+    <!-- Hidden file input element -->
+    <input type="file" id="fileInput" style="display: none;" accept=".pdf,.doc,.docx,.txt,.csv,.pptx,.m4a,.mp3,.wav,.webm,.mp4,.jpg,.jpeg,.png,.gif,.bmp,.webp,.svg">
+
+    <!-- Chat History Panel -->
+    <div id="historyModal" class="history-modal">
+        <div class="history-panel">
+            <div class="history-header">
+                <div class="history-title">💬 Chat History</div>
+                <button class="close-btn" onclick="toggleHistory()">&times;</button>
+            </div>
+            <div id="historyList">
+                <!-- Chat sessions will be dynamically populated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Personality Help Modal -->
+    <div id="personalityHelp" class="help-modal" style="display:none;">
+        <div class="help-panel">
+            <div class="help-header">
+                <div class="help-title">🎭 Personalities</div>
+                <button class="close-btn" onclick="togglePersonalityHelp(event)">&times;</button>
+            </div>
+            <ul class="help-list">
+                <li><strong>Assistant</strong> — Clear, concise, and helpful by default. Great for quick answers, summaries, and action steps when you want straightforward guidance.</li>
+                <li><strong>Creative</strong> — Generates fresh ideas and variations. Use for brainstorming names, activities, stories, or alternative approaches when you’re stuck.</li>
+                <li><strong>Coder</strong> — Code‑first replies with runnable snippets and comments. Call this when you want examples, best practices, and notes on edge cases.</li>
+                <li><strong>Teacher</strong> — Breaks concepts down step‑by‑step with analogies. Ideal for learning new topics or teaching others with clear checkpoints.</li>
+                <li><strong>Funny</strong> — Light, friendly tone with mild humor or emojis. Good for casual chats; switch off for formal docs or professional emails.</li>
+                <li><strong>Scholar</strong> — Thorough, structured, and precise. Helpful for deeper dives, comparisons, and careful reasoning with caveats.</li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="../scripts/ai_v3_main.js"></script>
+</body>
+</html>
