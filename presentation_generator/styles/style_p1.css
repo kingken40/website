@@ -371,3 +371,94 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
     outline: 2px solid #6c63ff;
     outline-offset: 2px;
 }
+
+/* 
+GENERATION OPTIONS BUTTONS
+===========================
+Side-by-side button layout for Template vs AI generation:
+- Flexbox layout for equal spacing
+- Professional styling consistent with brand
+- Visual distinction between options
+*/
+.generation-options {
+    display: flex;
+    gap: 1rem;
+    margin: 2rem 0;
+    justify-content: center;
+}
+
+.generation-options button {
+    flex: 1;
+    max-width: 200px;
+    padding: 1rem 1.5rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Template button - reliable, fast option */
+#generateTemplateBtn {
+    background: linear-gradient(135deg, #4a90e2, #357abd);
+    color: white;
+    box-shadow: 0 4px 15px rgba(74, 144, 226, 0.3);
+}
+
+#generateTemplateBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(74, 144, 226, 0.4);
+    background: linear-gradient(135deg, #357abd, #2868a0);
+}
+
+/* AI button - premium, advanced option */
+#generateAIBtn {
+    background: linear-gradient(135deg, #6c63ff, #5a52d5);
+    color: white;
+    box-shadow: 0 4px 15px rgba(108, 99, 255, 0.3);
+    border: 2px solid #8b82ff;
+}
+
+#generateAIBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(108, 99, 255, 0.4);
+    background: linear-gradient(135deg, #5a52d5, #4a42c7);
+    border-color: #9c94ff;
+}
+
+/* Back button styling */
+#backBtn {
+    display: block;
+    margin: 1.5rem auto 0;
+    padding: 0.75rem 1.5rem;
+    background: rgba(255, 255, 255, 0.1);
+    color: #ccc;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 1rem;
+}
+
+#backBtn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 600px) {
+    .generation-options {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .generation-options button {
+        max-width: none;
+        font-size: 1rem;
+        padding: 0.875rem 1.25rem;
+    }
+}

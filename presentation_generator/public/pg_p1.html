@@ -218,15 +218,17 @@
             </div>
 
             <!-- 
-            GENERATE BUTTON - THE ACTION TRIGGER
-            ====================================
-            This button collects all input data and passes it to the AI generation system.
-            The data is processed to create a structured, educational presentation
-            that meets the specified requirements and constraints.
+            GENERATION OPTIONS - TEMPLATE VS AI
+            ===================================
+            Two options for presentation generation:
+            1. Template Mode: Fast, reliable, no API costs
+            2. AI Mode: Advanced, personalized, requires OpenAI
             -->
-            <button type="submit" id="generateBtn">Generate Presentation</button>
-            <br>
-
+            <div class="generation-options">
+                <button type="button" id="generateTemplateBtn" onclick="generateWithTemplate()">Generate (Template)</button>
+                <button type="button" id="generateAIBtn" onclick="generateWithAI()">Generate with AI</button>
+            </div>
+            
             <!-- Back navigation to maintain project flow -->
             <button type="button" id="backBtn" onclick="window.location.href='../../Projects.html'">Go Back to Projects</button>
             

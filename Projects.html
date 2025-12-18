@@ -13,7 +13,7 @@
     </head>
     <body>
         <div id="wrapper">
-            <h2 style="text-align: center;">
+            <h2 id="page-title" style="text-align: center; user-select: none;">
                 Personal Projects & Tools
             </h2>
             <!-- For Loading the navbar -->
@@ -111,22 +111,39 @@
                 <div class="game-item">
                     <div class="left-content">
                         <h3>Simple AI Chatbot</h3>
-                        <a href="ai/ai1/public/ai.html" class="play-button">Try</a>
-                        <button class="feedback-btn" onclick="openFeedback('AI Chatbot')">Feedback</button>
+                        <div class="button-group">
+                            <a href="ai/ai1/public/ai.html" class="play-button">Try</a>
+                            <button class="feedback-btn" onclick="openFeedback('AI Chatbot')">Feedback</button>
+                        </div>
                     </div>
                     <div class="right-content">
                         <p>Chat with a simple AI assistant. Type a short message (up to 50 characters) and get instant replies.</p>
                     </div>
                 </div>
 
-                <div class="game-item">
+                <div class="game-item private-link">
                     <div class="left-content">
                         <h3>Enhanced AI Chatbot</h3>
-                        <!-- Play button removed for now -->
-                        <!-- <button class="feedback-btn" onclick="openFeedback('AI Chatbot v2')">Feedback</button> -->
+                        <div class="button-group">
+                            <a href="ai/ai3/public/AI_v3.html" class="play-button">Try</a>
+                            <button class="feedback-btn" onclick="openFeedback('Enhanced AI Chatbot')">Feedback</button>
+                        </div>
                     </div>
                     <div class="right-content">
                         <p>Enhanced chatbot with chat sessions, chat history, theme toggle, and chat export.</p>
+                    </div>
+                </div>
+
+                <div class="game-item private-link">
+                    <div class="left-content">
+                        <h3>JARVIS AI Assistant</h3>
+                        <div class="button-group">
+                            <a href="ai/ai5/public/AI_v5_JARVIS.html" class="play-button">Try</a>
+                            <button class="feedback-btn" onclick="openFeedback('JARVIS AI Assistant')">Feedback</button>
+                        </div>
+                    </div>
+                    <div class="right-content">
+                        <p>Voice-enabled AI assistant with JARVIS-themed interface. Features voice commands, visual effects, and advanced conversation capabilities.</p>
                     </div>
                 </div>
                         <div class="game-item">
@@ -240,6 +257,12 @@
                 .feedback-btn:hover {
                     background-color: #ffa500;
                 }
+                .private-link {
+                    display: none !important;
+                }
+                .private-link.unlocked {
+                    display: flex !important;
+                }
             </style>
         
             <!-- Feedback Modal HTML -->
@@ -303,6 +326,26 @@
                     document.getElementById('feedbackModal').style.display = 'none';
                     document.getElementById('feedbackForm').reset();
                 }
+
+                let clickCount = 0;
+                let clickTimer = null;
+                document.getElementById('page-title').addEventListener('click', function() {
+                    clickCount++;
+                    if (clickCount === 1) {
+                        clickTimer = setTimeout(() => {
+                            clickCount = 0;
+                        }, 500);
+                    } else if (clickCount === 3) {
+                        clearTimeout(clickTimer);
+                        clickCount = 0;
+                        const password = prompt('Enter password:');
+                        if (password === 'icanbe23') {
+                            document.querySelectorAll('.private-link').forEach(el => {
+                                el.classList.add('unlocked');
+                            });
+                        }
+                    }
+                });
             </script>
     </body>
 </html>

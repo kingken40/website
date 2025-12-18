@@ -169,68 +169,67 @@ function validateFormData() {
 }
 
 /**
- * FUNCTION: generatePresentation
+ * FUNCTION: generateWithTemplate
  * ==============================
- * PURPOSE: Main function to collect form data and initiate presentation generation
- * 
- * EDUCATIONAL WORKFLOW:
- * 1. Validates all input data for completeness
- * 2. Collects grade level for appropriate content complexity
- * 3. Gathers number of slides for structure planning
- * 4. Captures topic for content focus
- * 5. Includes standards for educational alignment
- * 6. Incorporates customization for personalization
- * 7. Passes data to AI generation system (page 2)
- * 
- * DATA PROCESSING:
- * - Grade Level: Determines vocabulary, complexity, engagement strategies
- * - Number of Slides: Controls content distribution and presentation length
- * - Topic: Drives all content selection and organization
- * - Standards: Ensures curriculum alignment and learning objectives
- * - Customization: Personalizes for specific classroom needs
+ * PURPOSE: Generate presentation using template mode (fast, reliable)
  */
-function generatePresentation() {
+function generateWithTemplate() {
     // Validate form data before proceeding
     if (!validateFormData()) {
         return;
     }
     
-    const generateBtn = document.getElementById('generateBtn');
-    const originalBtnText = generateBtn.textContent;
+    const formData = collectFormData();
     
-    // Update button state to show processing - important UX feedback
-    generateBtn.textContent = 'Generating Presentation...';
-    generateBtn.disabled = true;
+    // Redirect to template generation page (pg_p2.html)
+    window.location.href = `pg_p2.html?presentationData=${encodeURIComponent(JSON.stringify(formData))}`;
+}
 
-    try {
-        // Collect all form data into a structured object
-        // This data will be used by the AI to generate educational content
-        const formData = {
-            gradeLevel: document.getElementById('gradeLevel').value,
-            numSlides: parseInt(document.getElementById('numSlides').value), // Convert to number for processing
-            topic: document.getElementById('topic').value.trim(),
-            standards: document.getElementById('standards').value.trim(),
-            customization: document.getElementById('customization').value.trim()
-        };
-
-        // Add timestamp for tracking and debugging
-        formData.timestamp = new Date().toISOString();
-        
-        // Log data for debugging (can be removed in production)
-        console.log('Presentation Generation Data:', formData);
-
-        // Redirect to page 2 with the form data as a URL parameter
-        // This maintains the educational workflow and data persistence
-        window.location.href = `pg_p2.html?presentationData=${encodeURIComponent(JSON.stringify(formData))}`;
-        
-    } catch (error) {
-        console.error('Error in presentation generation:', error);
-        alert('An unexpected error occurred while preparing your presentation. Please check your inputs and try again.');
-    } finally {
-        // Reset button state (though this won't execute if redirect is successful)
-        generateBtn.textContent = originalBtnText;
-        generateBtn.disabled = false;
+/**
+ * FUNCTION: generateWithAI  
+ * =========================
+ * PURPOSE: Generate presentation using AI mode (advanced, personalized)
+ */
+function generateWithAI() {
+    // Validate form data before proceeding
+    if (!validateFormData()) {
+        return;
     }
+    
+    const formData = collectFormData();
+    
+    // Redirect to AI generation page (pg_p3.html)
+    window.location.href = `pg_p3.html?presentationData=${encodeURIComponent(JSON.stringify(formData))}`;
+}
+
+/**
+ * FUNCTION: collectFormData
+ * =========================
+ * PURPOSE: Collect and structure form data for presentation generation
+ */
+function collectFormData() {
+    const formData = {
+        gradeLevel: document.getElementById('gradeLevel').value,
+        numSlides: parseInt(document.getElementById('numSlides').value),
+        topic: document.getElementById('topic').value.trim(),
+        standards: document.getElementById('standards').value.trim(),
+        customization: document.getElementById('customization').value.trim()
+    };
+
+    // Add timestamp for tracking and debugging
+    formData.timestamp = new Date().toISOString();
+    
+    console.log('Presentation Generation Data:', formData);
+    return formData;
+}
+
+/**
+ * LEGACY FUNCTION: generatePresentation
+ * =====================================
+ * Maintained for backwards compatibility
+ */
+function generatePresentation() {
+    generateWithTemplate();
 }
 
 /**
