@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JARVIS Voice Checker</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #0a0a0a; color: #00ff41; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .voice-item { background: #1a1a1a; margin: 10px 0; padding: 15px; border-left: 4px solid #00ff41; }
+        .voice-name { font-weight: bold; color: #ffffff; }
+        .voice-details { color: #888; font-size: 0.9em; }
+        .test-btn { background: #00ff41; color: #000; border: none; padding: 8px 15px; margin: 5px; cursor: pointer; }
+        .test-btn:hover { background: #00cc33; }
+        .british { border-left-color: #ff6b35; background: #2a1a1a; }
+        .jarvis-suitable { border-left-color: #4a90e2; background: #1a2a3a; }
+        .premium { border-left-color: #ffd700; background: #2a2a1a; }
+        .section { margin: 30px 0; }
+        .section h2 { color: #00ff41; border-bottom: 2px solid #00ff41; padding-bottom: 10px; }
+        .legend { background: #1a1a1a; padding: 15px; margin: 20px 0; }
+        .legend-item { display: inline-block; margin: 5px 15px; }
+        .legend-color { width: 20px; height: 20px; display: inline-block; margin-right: 8px; vertical-align: middle; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 JARVIS Voice System Analysis</h1>
+        
+        <div class="legend">
+            <h3>Legend:</h3>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ff6b35;"></div>British Voices (Best for JARVIS)
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #4a90e2;"></div>JARVIS-Suitable Voices
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ffd700;"></div>Premium Quality
+            </div>
+            <div class="legend-item">🎯 = Local Voice | ☁️ = Online Voice</div>
+        </div>
+
+        <div class="section">
+            <h2>🎯 Premium JARVIS Voices (British + Masculine)</h2>
+            <div id="premiumVoices">Scanning...</div>
+        </div>
+
+        <div class="section">
+            <h2>🇬🇧 British Voices</h2>
+            <div id="britishVoices">Scanning...</div>
+        </div>
+
+        <div class="section">
+            <h2>🤖 JARVIS-Suitable Voices</h2>
+            <div id="jarvisSuitableVoices">Scanning...</div>
+        </div>
+
+        <div class="section">
+            <h2>📋 All Available Voices</h2>
+            <div id="allVoices">Scanning...</div>
+        </div>
+
+        <div class="section">
+            <h2>🎵 Voice Testing</h2>
+            <button class="test-btn" onclick="testCurrentVoice()">Test Current JARVIS Voice</button>
+            <button class="test-btn" onclick="stopAllSpeech()">Stop All Speech</button>
+        </div>
+    </div>
+
+    <script>
+        let voices = [];
+        let currentTestVoice = null;
+
+        function loadVoices() {
+            voices = speechSynthesis.getVoices();
+            if (voices.length === 0) {
+                setTimeout(loadVoices, 100);
+                return;
+            }
+            categorizeVoices();
+        }
+
+        function categorizeVoices() {
+            // British voices
+            const britishVoices = voices.filter(voice => 
+                voice.lang.includes('GB') || voice.lang.includes('UK') ||
+                voice.name.toLowerCase().includes('british') ||
+                voice.name.toLowerCase().includes('england') ||
+                voice.name.toLowerCase().includes('daniel') ||
+                voice.name.toLowerCase().includes('oliver') ||
+                voice.name.toLowerCase().includes('arthur') ||
+                voice.name.toLowerCase().includes('thomas') ||
+                voice.name.toLowerCase().includes('george') ||
+                voice.name.toLowerCase().includes('hazel')
+            );
+
+            // JARVIS-suitable voices (masculine characteristics)
+            const jarvisSuitableVoices = voices.filter(voice => {
+                const name = voice.name.toLowerCase();
+                return (
+                    name.includes('male') || 
+                    name.includes('david') ||
+                    name.includes('daniel') ||
+                    name.includes('alex') ||
+                    name.includes('thomas') ||
+                    name.includes('oliver') ||
+                    name.includes('arthur') ||
+                    name.includes('james') ||
+                    name.includes('william') ||
+                    name.includes('george') ||
+                    name.includes('mark') ||
+                    name.includes('paul') ||
+                    name.includes('ryan') ||
+                    voice.localService
+                ) && !name.includes('female') && !name.includes('compact') && voice.lang.startsWith('en');
+            });
+
+            // Premium voices (British + JARVIS-suitable)
+            const premiumVoices = jarvisSuitableVoices.filter(voice => 
+                britishVoices.includes(voice) || voice.lang.includes('GB')
+            );
+
+            displayVoices('premiumVoices', premiumVoices, 'premium');
+            displayVoices('britishVoices', britishVoices, 'british');
+            displayVoices('jarvisSuitableVoices', jarvisSuitableVoices, 'jarvis-suitable');
+            displayVoices('allVoices', voices, '');
+        }
+
+        function displayVoices(containerId, voiceList, className) {
+            const container = document.getElementById(containerId);
+            
+            if (voiceList.length === 0) {
+                container.innerHTML = '<div class="voice-item">❌ No voices found in this category</div>';
+                return;
+            }
+
+            let html = '';
+            voiceList.forEach((voice, index) => {
+                const indicator = voice.localService ? '🎯 Local' : '☁️ Online';
+                const quality = voice.localService ? 'High Quality' : 'Standard Quality';
+                
+                html += `
+                    <div class="voice-item ${className}">
+                        <div class="voice-name">${voice.name}</div>
+                        <div class="voice-details">
+                            Language: ${voice.lang} | ${indicator} | ${quality}
+                        </div>
+                        <button class="test-btn" onclick="testVoice('${voice.name.replace(/'/g, "\\'")}')">
+                            🎵 Test Voice
+                        </button>
+                        <button class="test-btn" onclick="setAsJarvisVoice('${voice.name.replace(/'/g, "\\'")}')">
+                            ⭐ Set as JARVIS Voice
+                        </button>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        function testVoice(voiceName) {
+            stopAllSpeech();
+            
+            const voice = voices.find(v => v.name === voiceName);
+            if (!voice) return;
+
+            currentTestVoice = voice;
+            
+            const testPhrase = `Greetings, sir. This is ${voice.name} speaking. J.A.R.V.I.S systems are online and ready for deployment.`;
+            
+            const utterance = new SpeechSynthesisUtterance(testPhrase);
+            utterance.voice = voice;
+            utterance.rate = 0.85;
+            utterance.pitch = 0.75;
+            utterance.volume = 0.8;
+            
+            console.log('Testing voice:', voice.name);
+            speechSynthesis.speak(utterance);
+        }
+
+        function setAsJarvisVoice(voiceName) {
+            const voice = voices.find(v => v.name === voiceName);
+            if (!voice) return;
+
+            // Save to localStorage
+            const voicePreference = {
+                name: voice.name,
+                lang: voice.lang
+            };
+            localStorage.setItem('jarvisVoicePreference', JSON.stringify(voicePreference));
+            
+            console.log('JARVIS voice set to:', voice.name);
+            alert(`✅ JARVIS voice set to: ${voice.name}\n\nThis voice will now be used in your main JARVIS interface.`);
+            
+            // Test confirmation
+            const confirmPhrase = `Voice successfully updated, sir. J.A.R.V.I.S is now using ${voice.name}.`;
+            const utterance = new SpeechSynthesisUtterance(confirmPhrase);
+            utterance.voice = voice;
+            utterance.rate = 0.85;
+            utterance.pitch = 0.75;
+            utterance.volume = 0.8;
+            speechSynthesis.speak(utterance);
+        }
+
+        function testCurrentVoice() {
+            const testPhrase = "Good evening, sir. All systems are operational. J.A.R.V.I.S is online and ready to assist with any requests you may have.";
+            const utterance = new SpeechSynthesisUtterance(testPhrase);
+            utterance.rate = 0.85;
+            utterance.pitch = 0.75;
+            utterance.volume = 0.8;
+            speechSynthesis.speak(utterance);
+        }
+
+        function stopAllSpeech() {
+            speechSynthesis.cancel();
+        }
+
+        // Initialize when page loads
+        if (speechSynthesis.onvoiceschanged !== undefined) {
+            speechSynthesis.onvoiceschanged = loadVoices;
+        }
+        loadVoices();
+    </script>
+</body>
+</html>

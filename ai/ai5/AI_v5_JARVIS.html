@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>J.A.R.V.I.S - AI Professor v5 | Voice-Enabled Assistant</title>
+    <link rel="stylesheet" href="styles/jarvis_styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Background Animation -->
+    <div class="jarvis-background">
+        <div class="circuit-lines"></div>
+        <div class="arc-reactor-bg"></div>
+    </div>
+
+    <!-- Header Section -->
+    <header class="jarvis-header">
+        <div class="arc-reactor">
+            <div class="arc-core"></div>
+            <div class="arc-ring arc-ring-1"></div>
+            <div class="arc-ring arc-ring-2"></div>
+            <div class="arc-ring arc-ring-3"></div>
+        </div>
+        <h1 class="jarvis-title">J.A.R.V.I.S</h1>
+        <p class="jarvis-subtitle">Just A Rather Very Intelligent System</p>
+        <div class="system-status">
+            <span class="status-indicator online"></span>
+            <span class="status-text">SYSTEM ONLINE</span>
+        </div>
+    </header>
+
+    <!-- Voice Control Interface -->
+    <div class="voice-interface">
+        <div class="voice-visualizer">
+            <div class="voice-circle voice-circle-1"></div>
+            <div class="voice-circle voice-circle-2"></div>
+            <div class="voice-circle voice-circle-3"></div>
+        </div>
+        
+        <div class="voice-controls">
+            <button class="voice-btn" id="voiceBtn" type="button" title="Press and hold to speak">
+                <i class="fas fa-microphone"></i>
+                <span class="sr-only">Activate voice recognition</span>
+            </button>
+            
+            <button class="wake-toggle-btn" id="wakeToggleBtn" type="button" title='"Hey Jarvis" wake word DISABLED - Click to enable'>
+                <i class="fas fa-volume-mute"></i>
+                <span class="sr-only">Toggle "Hey Jarvis" wake word</span>
+            </button>
+        </div>
+
+        <div class="voice-status">
+            <span class="voice-status-text">Press and hold microphone to speak</span>
+            <span class="hotkey-indicator" id="hotkeyIndicator" style="display: none; margin-left: 1rem; padding: 0.3rem 0.6rem; background: rgba(0, 170, 255, 0.2); border: 1px solid rgba(0, 170, 255, 0.4); border-radius: 5px; font-size: 0.85rem; color: #00aaff;">Hotkey: <strong id="hotkeyDisplay">None</strong></span>
+        </div>
+    </div>
+
+    <!-- Mode Selection -->
+    <div class="mode-selector">
+        <div class="mode-title">Select AI Mode</div>
+        <div class="mode-grid">
+            <div class="mode-card" data-personality="jarvis">
+                <div class="mode-icon">🤖</div>
+                <div class="mode-name">J.A.R.V.I.S</div>
+                <div class="mode-desc">Sophisticated AI Assistant</div>
+            </div>
+            <div class="mode-card" data-personality="genius">
+                <div class="mode-icon">🧠</div>
+                <div class="mode-name">Genius Mode</div>
+                <div class="mode-desc">Advanced Problem Solving</div>
+            </div>
+            <div class="mode-card" data-personality="professor">
+                <div class="mode-icon">🎓</div>
+                <div class="mode-name">Professor</div>
+                <div class="mode-desc">Educational Teaching</div>
+            </div>
+            <div class="mode-card" data-personality="analyst">
+                <div class="mode-icon">📊</div>
+                <div class="mode-name">Data Analyst</div>
+                <div class="mode-desc">Research & Analysis</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Interface -->
+    <div class="chat-container">
+        <div class="chat-header">
+            <div class="chat-title">
+                <span class="current-mode">J.A.R.V.I.S Mode</span>
+                <span class="chat-status">Ready</span>
+            </div>
+            <div class="chat-controls">
+                <button class="control-btn" id="clearChat" title="Clear Chat">
+                    <i class="fas fa-trash"></i>
+                </button>
+                <button class="control-btn" id="exportChat" title="Export Chat">
+                    <i class="fas fa-download"></i>
+                </button>
+                <button class="control-btn" id="settingsBtn" title="Settings">
+                    <i class="fas fa-cog"></i>
+                </button>
+            </div>
+        </div>
+        <div class="chat-messages" id="chatMessages"></div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="input-container">
+        <div class="input-wrapper">
+            <button class="input-btn" id="attachBtn" type="button" title="Attach File">
+                <i class="fas fa-paperclip"></i>
+            </button>
+            <!-- <button class="voice-btn" id="voiceBtn" type="button">
+                <i class="fas fa-paperclip"></i>
+                <span class="sr-only">Activated</span>
+            </button> -->
+
+            <input type="text" 
+                   id="messageInput" 
+                   placeholder="Ask J.A.R.V.I.S anything... or hold microphone to speak"
+                   autocomplete="off">
+            <button class="input-btn voice-input-btn" id="voiceInputBtn" type="button" title="Voice Input">
+                <i class="fas fa-microphone"></i>
+            </button>
+            <button class="send-btn" id="sendBtn" type="button" title="Send Message">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+        <div class="quick-actions">
+            <button class="quick-action" data-command="explain quantum physics">Explain Physics</button>
+            <button class="quick-action" data-command="help me with math">Math Help</button>
+            <button class="quick-action" data-command="analyze this data">Data Analysis</button>
+            <button class="quick-action" data-command="create a lesson plan">Lesson Plan</button>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>J.A.R.V.I.S Settings</h3>
+                <button class="modal-close" id="closeSettings">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="setting-group">
+                    <label for="voiceEnabled">Voice Recognition</label>
+                    <input type="checkbox" id="voiceEnabled" checked>
+                </div>
+                <div class="setting-group">
+                    <label for="voiceResponse">Voice Responses</label>
+                    <input type="checkbox" id="voiceResponse" checked>
+                </div>
+                <div class="setting-group">
+                    <label for="voiceVolume">Voice Volume</label>
+                    <input type="range" id="voiceVolume" min="0" max="1" step="0.1" value="0.85">
+                </div>
+                <div class="setting-group">
+                    <label for="voiceSpeed">Voice Speed</label>
+                    <input type="range" id="voiceSpeed" min="0.5" max="2" step="0.1" value="0.9">
+                </div>
+                <div class="setting-group">
+                    <label for="voicePitch">Voice Pitch (0.9 = Paul Bettany)</label>
+                    <input type="range" id="voicePitch" min="0.5" max="2" step="0.05" value="0.9">
+                </div>
+                <div class="setting-group">
+                    <label for="wakePhraseEnabled">Wake Phrase ("Hey Jarvis")</label>
+                    <input type="checkbox" id="wakePhraseEnabled" checked>
+                </div>
+                <div class="setting-group">
+                    <label for="animationsEnabled">UI Animations</label>
+                    <input type="checkbox" id="animationsEnabled" checked>
+                </div>
+                <div class="setting-group">
+                    <label for="hotkeyEnabled">Push-to-Talk Hotkey</label>
+                    <input type="checkbox" id="hotkeyEnabled">
+                </div>
+                <div class="setting-group">
+                    <label for="hotkeyInput">Hotkey Configuration</label>
+                    <input type="text" id="hotkeyInput" placeholder="Press keys..." readonly style="cursor: pointer; background: rgba(0, 170, 255, 0.1); border: 1px solid rgba(0, 170, 255, 0.3); padding: 0.5rem; border-radius: 5px; color: #00aaff;">
+                    <small style="display: block; margin-top: 0.5rem; color: rgba(255, 255, 255, 0.6);">Click and press your desired key combination</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- File Upload Menu -->
+    <div class="file-menu" id="fileMenu">
+        <button class="file-option" data-type="text">
+            <i class="fas fa-file-text"></i> Text File
+        </button>
+        <button class="file-option" data-type="image">
+            <i class="fas fa-image"></i> Image
+        </button>
+        <button class="file-option" data-type="pdf">
+            <i class="fas fa-file-pdf"></i> PDF Document
+        </button>
+        <button class="file-option" data-type="code">
+            <i class="fas fa-code"></i> Code File
+        </button>
+    </div>
+
+    <!-- Hidden file inputs -->
+    <input type="file" id="textFileInput" accept=".txt,.md,.json,.csv" style="display: none;">
+    <input type="file" id="imageFileInput" accept="image/*" style="display: none;">
+    <input type="file" id="pdfFileInput" accept=".pdf" style="display: none;">
+    <input type="file" id="codeFileInput" accept=".js,.py,.html,.css,.java,.cpp,.c" style="display: none;">
+
+    <!-- Notification System -->
+    <div class="notification" id="notification"></div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner">
+            <div class="arc-loader">
+                <div class="arc-segment"></div>
+                <div class="arc-segment"></div>
+                <div class="arc-segment"></div>
+            </div>
+        </div>
+        <div class="loading-text">J.A.R.V.I.S is processing...</div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="scripts/jarvis_voice.js"></script>
+    <script src="scripts/jarvis_main.js"></script>
+    <script>
+        // ========================================
+        // J.A.R.V.I.S AI PROFESSOR v5
+        // Voice-Enabled Intelligent Assistant
+        // ========================================
+
+        // Global Variables (shared with jarvis_main.js)
+        // currentPersonality and personalities are defined in jarvis_main.js
+        let isVoiceEnabled = true;
+        let chatHistory = [];
+        let isProcessing = false;
+        
+        // Hotkey configuration (HTML-specific)
+        let hotkeyEnabled = false;
+        let currentHotkey = null;
+        let hotkeyPressed = false;
+
+        // Initialize J.A.R.V.I.S
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeJarvis();
+            setupEventListeners();
+            showWelcomeMessage();
+        });
+
+        // initializeJarvis is now in jarvis_main.js
+
+        function setupEventListeners() {
+            console.log('🔧 Setting up event listeners...');
+            
+            // Voice buttons are now handled by setupVoiceButtons() in jarvis_voice.js
+            // They use push-to-talk (mousedown/mouseup) instead of click
+            
+            // Send message
+            document.getElementById('sendBtn').addEventListener('click', sendMessage);
+            document.getElementById('messageInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+            
+            // Mode selection - with enhanced debug logging
+            const modeCards = document.querySelectorAll('.mode-card');
+            console.log('🎯 Found', modeCards.length, 'mode cards');
+            
+            modeCards.forEach((card, index) => {
+                const personality = card.dataset.personality;
+                console.log(`🎯 Setting up mode card ${index + 1}:`, personality, card);
+                
+                card.addEventListener('click', function(e) {
+                    console.log('🎯 Mode card CLICKED:', personality);
+                    console.log('🎯 Event:', e);
+                    console.log('🎯 Target:', e.target);
+                    console.log('🎯 Current target:', e.currentTarget);
+                    selectPersonality(personality);
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
+                
+                // Add a test click handler to make sure events work at all
+                card.addEventListener('mousedown', function() {
+                    console.log('🎯 Mode card MOUSEDOWN:', personality);
+                });
+            });
+            
+            // Quick actions
+            document.querySelectorAll('.quick-action').forEach(action => {
+                action.addEventListener('click', function() {
+                    const command = this.dataset.command;
+                    document.getElementById('messageInput').value = command;
+                    sendMessage();
+                });
+            });
+            
+            // Settings
+            document.getElementById('settingsBtn').addEventListener('click', openSettings);
+            document.getElementById('closeSettings').addEventListener('click', closeSettings);
+            
+            // Chat controls
+            document.getElementById('clearChat').addEventListener('click', clearChat);
+            document.getElementById('exportChat').addEventListener('click', exportChat);
+            
+            // File upload
+            document.getElementById('attachBtn').addEventListener('click', toggleFileMenu);
+            
+            // File options
+            document.querySelectorAll('.file-option').forEach(option => {
+                option.addEventListener('click', function() {
+                    const type = this.dataset.type;
+                    document.getElementById(`${type}FileInput`).click();
+                    hideFileMenu();
+                });
+            });
+            
+            // File inputs
+            document.getElementById('textFileInput').addEventListener('change', handleFileUpload);
+            document.getElementById('imageFileInput').addEventListener('change', handleFileUpload);
+            document.getElementById('pdfFileInput').addEventListener('change', handleFileUpload);
+            document.getElementById('codeFileInput').addEventListener('change', handleFileUpload);
+            
+            // Settings controls
+            document.getElementById('voiceEnabled').addEventListener('change', function() {
+                isVoiceEnabled = this.checked;
+                updateVoiceStatus();
+            });
+            
+            document.getElementById('voiceResponse').addEventListener('change', function() {
+                isVoiceResponseEnabled = this.checked;
+            });
+            
+            document.getElementById('voiceVolume').addEventListener('input', function() {
+                if (typeof setVoiceVolume === 'function') {
+                    setVoiceVolume(this.value);
+                }
+            });
+            
+            document.getElementById('voiceSpeed').addEventListener('input', function() {
+                if (typeof setVoiceSpeed === 'function') {
+                    setVoiceSpeed(this.value);
+                }
+            });
+            
+            document.getElementById('voicePitch').addEventListener('input', function() {
+                if (typeof setVoicePitch === 'function') {
+                    setVoicePitch(this.value);
+                }
+            });
+            
+            document.getElementById('wakePhraseEnabled').addEventListener('change', function() {
+                if (typeof enableWakeListening === 'function') {
+                    enableWakeListening(this.checked);
+                }
+            });
+            
+            document.getElementById('animationsEnabled').addEventListener('change', function() {
+                document.body.classList.toggle('no-animations', !this.checked);
+            });
+            
+            // Hotkey settings
+            setupHotkeyListeners();
+            
+            // Close modals on outside click
+            window.addEventListener('click', function(e) {
+                if (e.target.classList.contains('modal')) {
+                    closeSettings();
+                }
+                if (!e.target.closest('.file-menu') && !e.target.closest('#attachBtn')) {
+                    hideFileMenu();
+                }
+            });
+        }
+
+        // selectPersonality is now in jarvis_main.js
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            // Clear input
+            input.value = '';
+            
+            // Use processUserMessage from jarvis_main.js which handles OpenAI integration
+            if (typeof processUserMessage === 'function') {
+                processUserMessage(message);
+            } else {
+                console.error('processUserMessage function not found');
+                addMessage(message, 'user');
+                addMessage('System error: AI integration not loaded properly. Please refresh the page.', 'jarvis');
+            }
+        }
+
+        // addMessage is now in jarvis_main.js with better formatting
+        
+        // Voice System Integration Functions
+        function addMessageToChat(text, sender) {
+            // Directly call addMessage from jarvis_main.js (no conversion needed)
+            if (typeof addMessage === 'function') {
+                addMessage(text, sender);
+            } else {
+                console.error('addMessage function not found from jarvis_main.js');
+            }
+        }
+
+        // processUserMessage is now defined in jarvis_main.js with OpenAI integration
+
+        function showWelcomeMessage() {
+            setTimeout(() => {
+                const welcomeMessage = "Good day! J.A.R.V.I.S systems are now online and ready to assist. Click the microphone button to enable voice recognition, or type your message below. How may I help you today?";
+                addMessage(welcomeMessage, 'jarvis');
+                
+                // Don't speak welcome message automatically - let user enable voice first
+            }, 1000);
+        }
+        
+        function showVoiceEnabledMessage() {
+            const voiceMessage = "Voice recognition activated, sir. Say 'Hey Jarvis' to begin or speak directly. I am ready to assist you with any questions.";
+            addMessage(voiceMessage, 'jarvis');
+            if (typeof speakText === 'function') {
+                speakText(voiceMessage);
+            }
+        }
+
+        // Function to update voice visualizer
+        function updateVoiceVisualizer(active) {
+            const visualizer = document.querySelector('.voice-visualizer');
+            if (visualizer) {
+                if (active) {
+                    visualizer.classList.add('active');
+                } else {
+                    visualizer.classList.remove('active');
+                }
+            }
+        }
+
+        function showProcessing() {
+            isProcessing = true;
+            document.getElementById('loadingOverlay').classList.add('active');
+            document.querySelector('.chat-status').textContent = 'Processing...';
+        }
+
+        function hideProcessing() {
+            isProcessing = false;
+            document.getElementById('loadingOverlay').classList.remove('active');
+            document.querySelector('.chat-status').textContent = 'Ready';
+        }
+
+        function clearChat() {
+            if (confirm('Clear all chat history?')) {
+                document.getElementById('chatMessages').innerHTML = '';
+                chatHistory = [];
+                showNotification('Chat cleared', 2000);
+            }
+        }
+
+        function exportChat() {
+            if (chatHistory.length === 0) {
+                showNotification('No chat history to export', 2000);
+                return;
+            }
+            
+            const chatText = chatHistory.map(msg => 
+                `${msg.isUser ? 'User' : 'J.A.R.V.I.S'} (${new Date(msg.timestamp).toLocaleString()}): ${msg.text}`
+            ).join('\n\n');
+            
+            const blob = new Blob([chatText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `jarvis-chat-${new Date().toISOString().slice(0,10)}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            showNotification('Chat exported successfully', 2000);
+        }
+
+        function openSettings() {
+            document.getElementById('settingsModal').classList.add('active');
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsModal').classList.remove('active');
+        }
+
+        function toggleFileMenu() {
+            const menu = document.getElementById('fileMenu');
+            menu.classList.toggle('active');
+        }
+
+        function hideFileMenu() {
+            document.getElementById('fileMenu').classList.remove('active');
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            showNotification(`Uploaded: ${file.name}`, 3000);
+            
+            // Add file upload message
+            addMessage(`📎 Uploaded file: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`, 'user');
+            
+            // Process file (implement actual file processing logic)
+            setTimeout(() => {
+                addMessage(`I've received your file "${file.name}". How would you like me to analyze or process it?`, 'jarvis');
+            }, 1000);
+        }
+
+        function showNotification(message, duration = 3000) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, duration);
+        }
+
+        function startSystemAnimations() {
+            // Animate arc reactor
+            const arcRings = document.querySelectorAll('.arc-ring');
+            arcRings.forEach((ring, index) => {
+                ring.style.animationDelay = `${index * 0.3}s`;
+            });
+            
+            // Animate voice circles
+            const voiceCircles = document.querySelectorAll('.voice-circle');
+            voiceCircles.forEach((circle, index) => {
+                circle.style.animationDelay = `${index * 0.2}s`;
+            });
+        }
+
+        function updateVoiceStatus() {
+            const statusText = document.querySelector('.voice-status-text');
+            if (isVoiceEnabled) {
+                statusText.textContent = 'Press and hold microphone to speak';
+            } else {
+                statusText.textContent = 'Voice recognition disabled';
+            }
+        }
+
+        // Voice control functions are implemented in jarvis_voice.js
+
+        // Hotkey Management
+        function setupHotkeyListeners() {
+            const hotkeyCheckbox = document.getElementById('hotkeyEnabled');
+            const hotkeyInput = document.getElementById('hotkeyInput');
+            const hotkeyIndicator = document.getElementById('hotkeyIndicator');
+            const hotkeyDisplay = document.getElementById('hotkeyDisplay');
+            
+            // Load saved hotkey settings
+            const savedHotkey = localStorage.getItem('jarvis_hotkey');
+            const savedEnabled = localStorage.getItem('jarvis_hotkey_enabled') === 'true';
+            
+            if (savedHotkey) {
+                currentHotkey = JSON.parse(savedHotkey);
+                hotkeyInput.value = formatHotkey(currentHotkey);
+                hotkeyDisplay.textContent = formatHotkey(currentHotkey);
+            }
+            
+            if (savedEnabled) {
+                hotkeyEnabled = true;
+                hotkeyCheckbox.checked = true;
+                hotkeyIndicator.style.display = 'inline-block';
+            }
+            
+            // Hotkey enabled/disabled toggle
+            hotkeyCheckbox.addEventListener('change', function() {
+                hotkeyEnabled = this.checked;
+                localStorage.setItem('jarvis_hotkey_enabled', hotkeyEnabled);
+                
+                if (hotkeyEnabled && currentHotkey) {
+                    hotkeyIndicator.style.display = 'inline-block';
+                    showNotification('Push-to-Talk hotkey enabled: ' + formatHotkey(currentHotkey), 3000);
+                } else {
+                    hotkeyIndicator.style.display = 'none';
+                    showNotification('Push-to-Talk hotkey disabled', 2000);
+                }
+                
+                console.log('🔑 Hotkey', hotkeyEnabled ? 'enabled' : 'disabled');
+            });
+            
+            // Hotkey capture
+            hotkeyInput.addEventListener('click', function() {
+                this.value = 'Press your hotkey...';
+                this.style.background = 'rgba(0, 170, 255, 0.3)';
+            });
+            
+            hotkeyInput.addEventListener('keydown', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const hotkey = {
+                    key: e.key,
+                    code: e.code,
+                    ctrl: e.ctrlKey,
+                    alt: e.altKey,
+                    shift: e.shiftKey,
+                    meta: e.metaKey
+                };
+                
+                // Don't allow modifier keys alone
+                if (['Control', 'Alt', 'Shift', 'Meta'].includes(e.key)) {
+                    return;
+                }
+                
+                currentHotkey = hotkey;
+                const formatted = formatHotkey(hotkey);
+                this.value = formatted;
+                hotkeyDisplay.textContent = formatted;
+                this.style.background = 'rgba(0, 170, 255, 0.1)';
+                
+                // Save to localStorage
+                localStorage.setItem('jarvis_hotkey', JSON.stringify(hotkey));
+                
+                showNotification('Hotkey set to: ' + formatted, 2000);
+                console.log('🔑 Hotkey configured:', hotkey);
+                
+                // Auto-enable if not already enabled
+                if (!hotkeyEnabled) {
+                    hotkeyCheckbox.checked = true;
+                    hotkeyCheckbox.dispatchEvent(new Event('change'));
+                }
+            });
+            
+            // Global hotkey listener
+            document.addEventListener('keydown', handleHotkeyPress);
+            document.addEventListener('keyup', handleHotkeyRelease);
+        }
+        
+        function formatHotkey(hotkey) {
+            if (!hotkey) return 'None';
+            
+            const parts = [];
+            if (hotkey.ctrl) parts.push('Ctrl');
+            if (hotkey.alt) parts.push('Alt');
+            if (hotkey.shift) parts.push('Shift');
+            if (hotkey.meta) parts.push('Win');
+            
+            // Format the key name
+            let keyName = hotkey.key;
+            if (keyName === ' ') keyName = 'Space';
+            else if (keyName.length === 1) keyName = keyName.toUpperCase();
+            
+            parts.push(keyName);
+            return parts.join('+');
+        }
+        
+        async function handleHotkeyPress(e) {
+            if (!hotkeyEnabled || !currentHotkey || hotkeyPressed) return;
+            
+            // Check if the pressed key matches the configured hotkey
+            if (e.code === currentHotkey.code &&
+                e.ctrlKey === currentHotkey.ctrl &&
+                e.altKey === currentHotkey.alt &&
+                e.shiftKey === currentHotkey.shift &&
+                e.metaKey === currentHotkey.meta) {
+                
+                e.preventDefault();
+                e.stopPropagation();
+                
+                hotkeyPressed = true;
+                console.log('🔑 Hotkey pressed - starting voice recognition');
+                
+                // Start voice recognition
+                if (typeof startVoiceRecognition === 'function') {
+                    if (!window.hasVoicePermission) {
+                        const granted = await window.requestVoicePermission();
+                        if (!granted) {
+                            hotkeyPressed = false;
+                            return;
+                        }
+                    }
+                    
+                    startVoiceRecognition();
+                    const voiceBtn = document.getElementById('voiceBtn');
+                    if (voiceBtn) {
+                        voiceBtn.classList.add('recording');
+                    }
+                    updateVoiceStatus('Hotkey active - Release to stop');
+                }
+            }
+        }
+        
+        function handleHotkeyRelease(e) {
+            if (!hotkeyEnabled || !currentHotkey || !hotkeyPressed) return;
+            
+            // Check if the released key matches the configured hotkey
+            if (e.code === currentHotkey.code) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                hotkeyPressed = false;
+                console.log('🔑 Hotkey released - stopping voice recognition');
+                
+                // Stop voice recognition
+                if (window.recognition && window.isListening) {
+                    window.recognition.stop();
+                }
+                
+                const voiceBtn = document.getElementById('voiceBtn');
+                if (voiceBtn) {
+                    voiceBtn.classList.remove('recording');
+                }
+                updateVoiceStatus('Ready - Press and hold to speak');
+            }
+        }
+        
+        function updateVoiceStatus(text) {
+            const statusText = document.querySelector('.voice-status-text');
+            if (statusText) {
+                statusText.textContent = text;
+            }
+        }
+
+        // Export functions for voice module
+        window.jarvisInterface = {
+            sendMessage: function(text) {
+                document.getElementById('messageInput').value = text;
+                sendMessage();
+            },
+            addMessage,
+            showNotification,
+            currentPersonality,
+            personalities,
+            isVoiceEnabled,
+            isVoiceResponseEnabled,
+            processUserMessage,
+            generateResponse,
+            showVoiceEnabledMessage,
+            updateVoiceVisualizer
+        };
+
+        // Make key functions globally available
+        window.processUserMessage = processUserMessage;
+        window.generateResponse = generateResponse;
+        window.showVoiceEnabledMessage = showVoiceEnabledMessage;
+        window.updateVoiceVisualizer = updateVoiceVisualizer;
+
+        // Add a backup testSpeech function in case the other one doesn't load
+        window.testSpeechBackup = function() {
+            console.log('🔊 Backup speech test...');
+            console.log('🔊 speakText available:', typeof window.speakText);
+            if (typeof window.speakText === 'function') {
+                window.speakText('Testing speech from backup function, sir.');
+            } else {
+                console.error('🔊 speakText not available');
+            }
+        };
+
+        // Add debug function to test mode cards manually
+        window.testModeClick = function(personality) {
+            console.log('🎯 Manual test - selecting personality:', personality);
+            selectPersonality(personality || 'genius');
+        };
+
+        // Debug function to check mode cards
+        window.checkModeCards = function() {
+            const cards = document.querySelectorAll('.mode-card');
+            console.log('🎯 Found', cards.length, 'mode cards:');
+            cards.forEach((card, i) => {
+                console.log(`Card ${i + 1}:`, card.dataset.personality, 'clickable?', window.getComputedStyle(card).pointerEvents);
+                console.log('Position:', card.getBoundingClientRect());
+            });
+        };
+
+        console.log('🚀 J.A.R.V.I.S v5 loaded successfully');
+        console.log('🚀 Available test functions:');
+        console.log('  - testSpeech() - Main speech test');
+        console.log('  - testSpeechBackup() - Backup speech test');
+        console.log('  - testModeClick("genius") - Test mode selection');
+        console.log('  - checkModeCards() - Check mode card status');
+        console.log('🚀 Main functions loaded:', typeof testSpeech !== 'undefined' ? '✅' : '❌');
+    </script>
+</body>
+</html>
