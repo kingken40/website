@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>J.A.R.V.I.S - AI Professor v5 | Voice-Enabled Assistant</title>
+    <title>N.O.V.A - AI Professor v5 | Voice-Enabled Assistant</title>
     <link rel="stylesheet" href="styles/jarvis_styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
@@ -22,8 +22,8 @@
             <div class="arc-ring arc-ring-2"></div>
             <div class="arc-ring arc-ring-3"></div>
         </div>
-        <h1 class="jarvis-title">J.A.R.V.I.S</h1>
-        <p class="jarvis-subtitle">Just A Rather Very Intelligent System</p>
+        <h1 class="jarvis-title">N.O.V.A</h1>
+        <p class="jarvis-subtitle">Network Orthogonal Virtual Assistant</p>
         <div class="system-status">
             <span class="status-indicator online"></span>
             <span class="status-text">SYSTEM ONLINE</span>
@@ -44,10 +44,11 @@
                 <span class="sr-only">Activate voice recognition</span>
             </button>
             
-            <button class="wake-toggle-btn" id="wakeToggleBtn" type="button" title='"Hey Jarvis" wake word DISABLED - Click to enable'>
+            <!-- Wake word button - DISABLED/COMMENTED OUT -->
+            <!-- <button class="wake-toggle-btn" id="wakeToggleBtn" type="button" title='"Hey Nova" wake word DISABLED - Click to enable'>
                 <i class="fas fa-volume-mute"></i>
-                <span class="sr-only">Toggle "Hey Jarvis" wake word</span>
-            </button>
+                <span class="sr-only">Toggle "Hey Nova" wake word</span>
+            </button> -->
         </div>
 
         <div class="voice-status">
@@ -60,9 +61,9 @@
     <div class="mode-selector">
         <div class="mode-title">Select AI Mode</div>
         <div class="mode-grid">
-            <div class="mode-card" data-personality="jarvis">
+            <div class="mode-card" data-personality="Nova">
                 <div class="mode-icon">🤖</div>
-                <div class="mode-name">J.A.R.V.I.S</div>
+                <div class="mode-name">N.O.V.A</div>
                 <div class="mode-desc">Sophisticated AI Assistant</div>
             </div>
             <div class="mode-card" data-personality="genius">
@@ -87,7 +88,7 @@
     <div class="chat-container">
         <div class="chat-header">
             <div class="chat-title">
-                <span class="current-mode">J.A.R.V.I.S Mode</span>
+                <span class="current-mode">N.O.V.A Mode</span>
                 <span class="chat-status">Ready</span>
             </div>
             <div class="chat-controls">
@@ -118,7 +119,7 @@
 
             <input type="text" 
                    id="messageInput" 
-                   placeholder="Ask J.A.R.V.I.S anything... or hold microphone to speak"
+                   placeholder="Ask N.O.V.A anything... or hold microphone to speak"
                    autocomplete="off">
             <button class="input-btn voice-input-btn" id="voiceInputBtn" type="button" title="Voice Input">
                 <i class="fas fa-microphone"></i>
@@ -139,7 +140,7 @@
     <div class="modal" id="settingsModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>J.A.R.V.I.S Settings</h3>
+                <h3>N.O.V.A Settings</h3>
                 <button class="modal-close" id="closeSettings">&times;</button>
             </div>
             <div class="modal-body">
@@ -163,10 +164,11 @@
                     <label for="voicePitch">Voice Pitch (0.9 = Paul Bettany)</label>
                     <input type="range" id="voicePitch" min="0.5" max="2" step="0.05" value="0.9">
                 </div>
-                <div class="setting-group">
-                    <label for="wakePhraseEnabled">Wake Phrase ("Hey Jarvis")</label>
+                <!-- Wake phrase settings - DISABLED/COMMENTED OUT -->
+                <!-- <div class="setting-group">
+                    <label for="wakePhraseEnabled">Wake Phrase ("Hey Nova")</label>
                     <input type="checkbox" id="wakePhraseEnabled" checked>
-                </div>
+                </div> -->
                 <div class="setting-group">
                     <label for="animationsEnabled">UI Animations</label>
                     <input type="checkbox" id="animationsEnabled" checked>
@@ -218,7 +220,7 @@
                 <div class="arc-segment"></div>
             </div>
         </div>
-        <div class="loading-text">J.A.R.V.I.S is processing...</div>
+        <div class="loading-text">N.O.V.A is processing...</div>
     </div>
 
     <!-- Scripts -->
@@ -226,7 +228,7 @@
     <script src="scripts/jarvis_main.js"></script>
     <script>
         // ========================================
-        // J.A.R.V.I.S AI PROFESSOR v5
+        // N.O.V.A AI PROFESSOR v5
         // Voice-Enabled Intelligent Assistant
         // ========================================
 
@@ -241,14 +243,14 @@
         let currentHotkey = null;
         let hotkeyPressed = false;
 
-        // Initialize J.A.R.V.I.S
+        // Initialize N.O.V.A
         document.addEventListener('DOMContentLoaded', function() {
-            initializeJarvis();
+            initializeNova();
             setupEventListeners();
             showWelcomeMessage();
         });
 
-        // initializeJarvis is now in jarvis_main.js
+        // initializeNova is now in jarvis_main.js
 
         function setupEventListeners() {
             console.log('🔧 Setting up event listeners...');
@@ -381,18 +383,25 @@
             const input = document.getElementById('messageInput');
             const message = input.value.trim();
             
-            if (!message) return;
+            console.log('📤 sendMessage called with:', message);
+            
+            if (!message) {
+                console.log('📤 Empty message, ignoring');
+                return;
+            }
             
             // Clear input
             input.value = '';
+            console.log('📤 Input cleared, calling processUserMessage...');
             
             // Use processUserMessage from jarvis_main.js which handles OpenAI integration
             if (typeof processUserMessage === 'function') {
+                console.log('📤 processUserMessage called successfully');
                 processUserMessage(message);
             } else {
-                console.error('processUserMessage function not found');
+                console.error('❌ processUserMessage function not found!');
                 addMessage(message, 'user');
-                addMessage('System error: AI integration not loaded properly. Please refresh the page.', 'jarvis');
+                addMessage('System error: AI integration not loaded properly. Please refresh the page.', 'Nova');
             }
         }
 
@@ -412,16 +421,16 @@
 
         function showWelcomeMessage() {
             setTimeout(() => {
-                const welcomeMessage = "Good day! J.A.R.V.I.S systems are now online and ready to assist. Click the microphone button to enable voice recognition, or type your message below. How may I help you today?";
-                addMessage(welcomeMessage, 'jarvis');
+                const welcomeMessage = "Good day! N.O.V.A systems are now online and ready to assist. Click the microphone button to enable voice recognition, or type your message below. How may I help you today?";
+                addMessage(welcomeMessage, 'Nova');
                 
                 // Don't speak welcome message automatically - let user enable voice first
             }, 1000);
         }
         
         function showVoiceEnabledMessage() {
-            const voiceMessage = "Voice recognition activated, sir. Say 'Hey Jarvis' to begin or speak directly. I am ready to assist you with any questions.";
-            addMessage(voiceMessage, 'jarvis');
+            const voiceMessage = "Voice recognition activated, sir. Say 'Hey Nova' to begin or speak directly. I am ready to assist you with any questions.";
+            addMessage(voiceMessage, 'Nova');
             if (typeof speakText === 'function') {
                 speakText(voiceMessage);
             }
@@ -466,7 +475,7 @@
             }
             
             const chatText = chatHistory.map(msg => 
-                `${msg.isUser ? 'User' : 'J.A.R.V.I.S'} (${new Date(msg.timestamp).toLocaleString()}): ${msg.text}`
+                `${msg.isUser ? 'User' : 'N.O.V.A'} (${new Date(msg.timestamp).toLocaleString()}): ${msg.text}`
             ).join('\n\n');
             
             const blob = new Blob([chatText], { type: 'text/plain' });
@@ -508,7 +517,7 @@
             
             // Process file (implement actual file processing logic)
             setTimeout(() => {
-                addMessage(`I've received your file "${file.name}". How would you like me to analyze or process it?`, 'jarvis');
+                addMessage(`I've received your file "${file.name}". How would you like me to analyze or process it?`, 'Nova');
             }, 1000);
         }
 
@@ -770,7 +779,7 @@
             });
         };
 
-        console.log('🚀 J.A.R.V.I.S v5 loaded successfully');
+        console.log('🚀 N.O.V.A v5 loaded successfully');
         console.log('🚀 Available test functions:');
         console.log('  - testSpeech() - Main speech test');
         console.log('  - testSpeechBackup() - Backup speech test');

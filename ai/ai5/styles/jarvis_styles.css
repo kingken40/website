@@ -1,5 +1,5 @@
 /* ========================================
-   J.A.R.V.I.S AI PROFESSOR v5 STYLES
+   N.O.V.A AI PROFESSOR v5 STYLES
    Blue Glowing Theme with Arc Reactor Design
 ======================================== */
 
@@ -404,7 +404,7 @@ body {
 
 .voice-status {
     position: absolute;
-    bottom: -40px;
+    bottom: 10px;
     left: 50%;
     transform: translateX(-50%);
     text-align: center;

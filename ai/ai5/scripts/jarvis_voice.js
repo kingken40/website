@@ -1,5 +1,5 @@
 /* ========================================
-   J.A.R.V.I.S VOICE RECOGNITION & SYNTHESIS
+   N.O.V.A VOICE RECOGNITION & SYNTHESIS
    Advanced Voice Control System
 ======================================== */
 
@@ -18,6 +18,7 @@ let hasVoicePermission = false;
 let voicePermissionRequested = false;
 let pendingTranscript = '';
 let wakeWordEnabled = false; // Controlled by toggle button
+let isWakeWordSession = false; // Track if current interaction is from wake word
 let currentVoiceSettings = {
     rate: 0.9,   // Measured, articulate pace - sophisticated yet natural
     pitch: 0.9,  // Mid-range British tone - authoritative without being too deep (like Paul Bettany)
@@ -25,10 +26,10 @@ let currentVoiceSettings = {
 };
 
 // Wake phrase detection
-const wakePhrases = ['hey jarvis', 'jarvis', 'hello jarvis'];
+const wakePhrases = ['Hey Nova', 'Nova', 'Hello Nova'];
 let wakeListeningTimeout = null;
 let restartPending = false; // Prevent multiple restart attempts
-let isSpeechOutputActive = false; // Track if JARVIS is currently speaking
+let isSpeechOutputActive = false; // Track if Nova is currently speaking
 
 // Voice command patterns
 const voiceCommands = {
@@ -64,7 +65,7 @@ async function requestVoicePermission() {
         
         // Update status in chat
         setTimeout(() => {
-            addMessageToChat('Microphone access granted, sir. Voice recognition is now ready. Press and hold the microphone button to speak.', 'jarvis');
+            addMessageToChat('Microphone access granted, sir. Voice recognition is now ready. Press and hold the microphone button to speak.', 'Nova');
         }, 500);
         
         return true;
@@ -76,12 +77,12 @@ async function requestVoicePermission() {
         if (error.name === 'NotAllowedError') {
             showVoiceNotification('Microphone access denied. Please enable it in browser settings.', 5000);
             setTimeout(() => {
-                addMessageToChat('Microphone access was denied, sir. Voice recognition will not function. You can still use text input below.', 'jarvis');
+                addMessageToChat('Microphone access was denied, sir. Voice recognition will not function. You can still use text input below.', 'Nova');
             }, 500);
         } else {
             showVoiceNotification('Microphone not available. Please check your device settings.', 5000);
             setTimeout(() => {
-                addMessageToChat('Microphone is not available, sir. Voice recognition will not function. You can still use text input below.', 'jarvis');
+                addMessageToChat('Microphone is not available, sir. Voice recognition will not function. You can still use text input below.', 'Nova');
             }, 500);
         }
         
@@ -97,7 +98,7 @@ function initializeVoice() {
         return;
     }
     
-    console.log('🎤 Initializing J.A.R.V.I.S voice systems...');
+    console.log('🎤 Initializing N.O.V.A voice systems...');
     
     // Check browser support
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
@@ -125,7 +126,7 @@ function initializeVoice() {
     // Voice system ready - user must press and hold button to speak
     console.log('✅ Voice system ready. Press and hold microphone button to speak.');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('🤖 J.A.R.V.I.S Voice System Initialized');
+    console.log('🤖 N.O.V.A Voice System Initialized');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 }
 
@@ -267,7 +268,7 @@ function startWakeListening() {
     
     // Check if speech is currently active
     if (window.speechSynthesis && (window.speechSynthesis.speaking || window.speechSynthesis.pending)) {
-        console.log('👂 Cannot start listening - JARVIS is currently speaking');
+        console.log('👂 Cannot start listening - Nova is currently speaking');
         setTimeout(() => {
             if (wakeWordEnabled && !window.speechSynthesis.speaking && !window.speechSynthesis.pending) {
                 startWakeListening();
@@ -292,7 +293,7 @@ function startWakeListening() {
     try {
         recognition.continuous = true;
         recognition.start();
-        updateVoiceStatus('Listening for "Hey Jarvis"...');
+        updateVoiceStatus('Listening for "Hey Nova"...');
         
         wakeListeningTimeout = setTimeout(() => {
             if (isWakeListening && isListening && wakeWordEnabled) {
@@ -339,6 +340,60 @@ function stopWakeListening() {
     console.log('👂 Wake phrase listening stopped');
 }
 
+// Function to restore wake listening after voice response completes
+function restoreWakeListeningAfterResponse() {
+    console.log('🔄 restoreWakeListeningAfterResponse called');
+    console.log('🔄 wakeWordEnabled:', wakeWordEnabled);
+    console.log('🔄 isWakeListening:', isWakeListening);
+    console.log('🔄 isListening:', isListening);
+    console.log('🔄 isWakeWordSession:', isWakeWordSession);
+    
+    if (!wakeWordEnabled) {
+        console.log('🔄 Wake word disabled - not restoring');
+        // Reset session flag
+        isWakeWordSession = false;
+        window.isWakeWordSession = false;
+        return;
+    }
+    
+    if (isWakeListening || isListening) {
+        console.log('🔄 Already listening - not restoring');
+        return;
+    }
+    
+    console.log('🔄 Restoring wake listening after response...');
+    
+    // Wait for any speech to fully complete
+    setTimeout(() => {
+        // Double check speech isn't active
+        if (window.speechSynthesis && (window.speechSynthesis.speaking || window.speechSynthesis.pending)) {
+            console.log('🔄 Speech still active, retrying in 500ms...');
+            setTimeout(restoreWakeListeningAfterResponse, 500);
+            return;
+        }
+        
+        // Reset wake word session flag
+        console.log('🔄 Resetting isWakeWordSession flag');
+        isWakeWordSession = false;
+        window.isWakeWordSession = false;
+        
+        // Restore handlers and start wake listening
+        console.log('🔄 Speech complete - restoring handlers and starting wake listening');
+        setupSpeechRecognition();
+        
+        setTimeout(() => {
+            if (wakeWordEnabled && !isWakeListening && !isListening) {
+                isWakeListening = true;
+                window.isWakeListening = true;
+                startWakeListening();
+            }
+        }, 300);
+    }, 500);
+}
+
+// Export for global use
+window.restoreWakeListeningAfterResponse = restoreWakeListeningAfterResponse;
+
 // Manual microphone control function for user
 function toggleMicrophone() {
     console.log('🎤 Push-to-talk mode enabled - press and hold microphone to speak');
@@ -353,7 +408,10 @@ function toggleMicrophone() {
 function handleWakePhrase() {
     console.log('🎯 Wake phrase detected - transitioning to command mode');
     isWakeListening = false;
-    isListening = false; // Stop current listening
+    isListening = false;
+    isWakeWordSession = true; // Mark this as wake word session
+    window.isWakeWordSession = true; // Also set global flag
+    console.log('🎯 ✅ isWakeWordSession = true');
     
     // Stop recognition cleanly
     if (recognition) {
@@ -365,8 +423,8 @@ function handleWakePhrase() {
     }
     
     // Visual feedback
-    updateVoiceStatus('J.A.R.V.I.S activated! Listening...');
-    showVoiceNotification('J.A.R.V.I.S listening...', 3000);
+    updateVoiceStatus('N.O.V.A activated! Listening...');
+    showVoiceNotification('N.O.V.A listening...', 3000);
     
     // Audio feedback with proper callback
     speakText('Yes, sir? How may I assist you?', () => {
@@ -378,7 +436,7 @@ function handleWakePhrase() {
     });
     
     // Visual activation effect
-    activateJarvisUI();
+    activateNovaUI();
 }
 
 function startCommandListening() {
@@ -387,15 +445,69 @@ function startCommandListening() {
     console.log('🎤 Starting command listening...');
     updateVoiceStatus('Ready for your command...');
     isListening = true;
+    window.isListening = true;
+    
+    let commandTranscript = '';
     
     // Set timeout for command listening
     const commandTimeout = setTimeout(() => {
         if (isListening) {
             console.log('🎤 Command timeout - no command received');
             recognition.stop();
-            speakText('I didn\'t catch that. Press and hold the microphone to try again.');
+            speakText('I didn\'t catch that, sir.', () => {
+                console.log('🎤 Timeout message complete - restoring wake listening');
+                if (wakeWordEnabled) {
+                    setupSpeechRecognition();
+                    setTimeout(() => {
+                        isWakeListening = true;
+                        window.isWakeListening = true;
+                        startWakeListening();
+                    }, 500);
+                }
+            });
         }
     }, 10000);
+    
+    // Override the onresult handler for command listening
+    recognition.onresult = function(event) {
+        let finalTranscript = '';
+        let interimTranscript = '';
+        
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript.trim();
+            
+            if (event.results[i].isFinal) {
+                finalTranscript += transcript;
+            } else {
+                interimTranscript += transcript;
+            }
+        }
+        
+        console.log('🎤 Command recognition - Final:', finalTranscript, 'Interim:', interimTranscript);
+        
+        if (finalTranscript) {
+            commandTranscript = finalTranscript;
+            console.log('🎤 ✅ COMMAND CAPTURED:', commandTranscript);
+            updateVoiceStatus(`Captured: "${commandTranscript}"`);
+            
+            // Process the command immediately
+            clearTimeout(commandTimeout);
+            recognition.stop();
+            
+            console.log('🎤 Recognition stopped, processing command in 500ms...');
+            // Process the command after recognition stops
+            setTimeout(() => {
+                if (commandTranscript) {
+                    console.log('🎤 ➡️ Calling processVoiceCommand with:', commandTranscript);
+                    processVoiceCommand(commandTranscript);
+                } else {
+                    console.error('🎤 ❌ commandTranscript is empty!');
+                }
+            }, 500);
+        } else if (interimTranscript) {
+            updateVoiceStatus(`Listening: "${interimTranscript}"`);
+        }
+    };
     
     // Override the onend handler for command listening
     recognition.onend = function() {
@@ -404,23 +516,25 @@ function startCommandListening() {
         updateVoiceUI(false);
         isListening = false;
         window.isListening = false;
+        isWakeListening = false;
         
-        // Return to wake listening if enabled
+        // Set a failsafe timeout - if wake listening hasn't restarted in 15 seconds, force restart
+        // This ensures we don't get stuck if something fails in the response chain
         if (wakeWordEnabled) {
-            console.log('🎤 Command complete - returning to wake listening...');
-            isWakeListening = true;
+            console.log('🎤 Setting failsafe timeout for wake listening restoration...');
             setTimeout(() => {
-                if (wakeWordEnabled && isWakeListening) {
-                    startWakeListening();
+                if (wakeWordEnabled && !isWakeListening && !isListening) {
+                    console.warn('⚠️ FAILSAFE: Wake listening not restored after 15s - forcing restart');
+                    restoreWakeListeningAfterResponse();
                 }
-            }, 1000);
-        } else {
-            isWakeListening = false;
-            window.isWakeListening = false;
+            }, 15000);
         }
+        
+        console.log('🎤 Command recognition ended - waiting for response to complete');
     };
     
     try {
+        recognition.continuous = false;
         recognition.start();
         console.log('🎤 Command listening started successfully');
     } catch (error) {
@@ -428,99 +542,173 @@ function startCommandListening() {
         clearTimeout(commandTimeout);
         updateVoiceUI(false);
         isListening = false;
+        window.isListening = false;
     }
 }
 
 function processVoiceCommand(transcript) {
-    const command = transcript.toLowerCase().trim();
-    console.log('Processing voice command:', command);
+    console.log('🗣️ ==========================================');
+    console.log('🗣️ PROCESSING VOICE COMMAND:', transcript);
+    console.log('🗣️ ==========================================');
     
-    // Handle specific voice commands through chat system
-    if (voiceCommands.greetings.some(greeting => command.includes(greeting))) {
-        // Add user message for specific commands we handle directly
-        addMessageToChat(transcript, 'user');
-        const greetingResponses = [
-            "At your service, sir.",
-            "Hello, sir. J.A.R.V.I.S at your service. How may I assist you today?",
-            "Good day, sir. At your service.",
-            "Greetings, sir. J.A.R.V.I.S at your service."
-        ];
-        const response = greetingResponses[Math.floor(Math.random() * greetingResponses.length)];
-        addMessageToChat(response, 'jarvis');
-        speakText(response);
+    try {
+        const command = transcript.toLowerCase().trim();
+        console.log('🗣️ Lowercase command:', command);
         
-    } else if (voiceCommands.help.some(help => command.includes(help))) {
-        addMessageToChat(transcript, 'user');
-        const response = 'I can help you with various tasks including answering questions, analyzing data, creating lesson plans, and more. You can also use voice commands by saying "Hey Jarvis".';
-        addMessageToChat(response, 'jarvis');
-        speakText(response);
-        
-    } else if (voiceCommands.clear.some(clear => command.includes(clear))) {
-        addMessageToChat(transcript, 'user');
-        clearChat();
-        const response = 'Chat history cleared, sir.';
-        addMessageToChat(response, 'jarvis');
-        speakText(response);
-        
-    } else if (command.includes('genius mode') || command.includes('switch to genius')) {
-        addMessageToChat(transcript, 'user');
-        const response = 'Switching to Genius Mode for advanced problem solving, sir.';
-        addMessageToChat(response, 'jarvis');
-        speakText(response);
-        
-    } else if (command.includes('professor mode') || command.includes('switch to professor')) {
-        addMessageToChat(transcript, 'user');
-        const response = 'Switching to Professor Mode for educational assistance, sir.';
-        addMessageToChat(response, 'jarvis');
-        speakText(response);
-        
-    } else if (command.includes('analyst mode') || command.includes('data analyst')) {
-        addMessageToChat(transcript, 'user');
-        const response = 'Switching to Data Analyst Mode for research and analysis, sir.';
-        addMessageToChat(response, 'jarvis');
-        speakText(response);
-        
-    } else if (command.includes('jarvis mode') || command.includes('switch to jarvis')) {
-        addMessageToChat(transcript, 'user');
-        const response = 'J.A.R.V.I.S Mode active. Sophisticated AI assistance engaged, sir.';
-        addMessageToChat(response, 'jarvis');
-        speakText(response);
-        
-    } else if (voiceCommands.status.some(status => command.includes(status))) {
-        addMessageToChat(transcript, 'user');
-        const response = 'All systems are operational. J.A.R.V.I.S is online and ready to assist, sir.';
-        addMessageToChat(response, 'jarvis');
-        speakText(response);
-        
-    } else if (voiceCommands.settings.some(setting => command.includes(setting))) {
-        addMessageToChat(transcript, 'user');
-        const settingsBtn = document.getElementById('settingsBtn');
-        if (settingsBtn) settingsBtn.click();
-        const response = 'Opening settings panel for you, sir.';
-        addMessageToChat(response, 'jarvis');
-        speakText(response);
-        
-    } else {
-        // Process through main interface with OpenAI API
-        // DON'T add message here - processUserMessage will do it
-        console.log('🗣️ Processing voice query through main interface:', transcript);
-        
-        // Use the main interface's processUserMessage function which calls OpenAI API
-        if (typeof window.processUserMessage === 'function') {
-            window.processUserMessage(transcript);
-        } else {
-            // Fallback - processUserMessage not available, handle manually
-            console.error('🗣️ processUserMessage not available, using fallback');
+        // Handle specific voice commands through chat system
+        if (voiceCommands.greetings.some(greeting => command.includes(greeting))) {
+            // Add user message for specific commands we handle directly
             addMessageToChat(transcript, 'user');
-            
-            // Call the main generateAIResponse function directly
-            if (typeof window.generateAIResponse === 'function') {
-                window.generateAIResponse(transcript, window.currentPersonality || 'jarvis');
+            const greetingResponses = [
+                "At your service, sir.",
+                "Hello, sir. N.O.V.A at your service. How may I assist you today?",
+                "Good day, sir. At your service.",
+                "Greetings, sir. N.O.V.A at your service."
+            ];
+            const response = greetingResponses[Math.floor(Math.random() * greetingResponses.length)];
+            addMessageToChat(response, 'Nova');
+            if (isWakeWordSession) {
+                speakText(response, restoreWakeListeningAfterResponse);
             } else {
-                console.error('🗣️ No AI processing function available');
-                const response = 'I received your query but there seems to be a system issue. Please try typing your request instead, sir.';
-                addMessageToChat(response, 'jarvis');
                 speakText(response);
+            }
+            
+        } else if (voiceCommands.help.some(help => command.includes(help))) {
+            addMessageToChat(transcript, 'user');
+            const response = 'I can help you with various tasks including answering questions, analyzing data, creating lesson plans, and more. You can also use voice commands by saying "Hey Nova".';
+            addMessageToChat(response, 'Nova');
+            if (isWakeWordSession) {
+                speakText(response, restoreWakeListeningAfterResponse);
+            } else {
+                speakText(response);
+            }
+            
+        } else if (voiceCommands.clear.some(clear => command.includes(clear))) {
+            addMessageToChat(transcript, 'user');
+            clearChat();
+            const response = 'Chat history cleared, sir.';
+            addMessageToChat(response, 'Nova');
+            if (isWakeWordSession) {
+                speakText(response, restoreWakeListeningAfterResponse);
+            } else {
+                speakText(response);
+            }
+            
+        } else if (command.includes('genius mode') || command.includes('switch to genius')) {
+            addMessageToChat(transcript, 'user');
+            const response = 'Switching to Genius Mode for advanced problem solving, sir.';
+            addMessageToChat(response, 'Nova');
+            if (isWakeWordSession) {
+                speakText(response, restoreWakeListeningAfterResponse);
+            } else {
+                speakText(response);
+            }
+            
+        } else if (command.includes('professor mode') || command.includes('switch to professor')) {
+            addMessageToChat(transcript, 'user');
+            const response = 'Switching to Professor Mode for educational assistance, sir.';
+            addMessageToChat(response, 'Nova');
+            if (isWakeWordSession) {
+                speakText(response, restoreWakeListeningAfterResponse);
+            } else {
+                speakText(response);
+            }
+            
+        } else if (command.includes('analyst mode') || command.includes('data analyst')) {
+            addMessageToChat(transcript, 'user');
+            const response = 'Switching to Data Analyst Mode for research and analysis, sir.';
+            addMessageToChat(response, 'Nova');
+            if (isWakeWordSession) {
+                speakText(response, restoreWakeListeningAfterResponse);
+            } else {
+                speakText(response);
+            }
+            
+        } else if (command.includes('Nova mode') || command.includes('switch to Nova')) {
+            addMessageToChat(transcript, 'user');
+            const response = 'N.O.V.A Mode active. Sophisticated AI assistance engaged, sir.';
+            addMessageToChat(response, 'Nova');
+            if (isWakeWordSession) {
+                speakText(response, restoreWakeListeningAfterResponse);
+            } else {
+                speakText(response);
+            }
+            
+        } else if (voiceCommands.status.some(status => command.includes(status))) {
+            addMessageToChat(transcript, 'user');
+            const response = 'All systems are operational. N.O.V.A is online and ready to assist, sir.';
+            addMessageToChat(response, 'Nova');
+            if (isWakeWordSession) {
+                speakText(response, restoreWakeListeningAfterResponse);
+            } else {
+                speakText(response);
+            }
+            
+        } else if (voiceCommands.settings.some(setting => command.includes(setting))) {
+            addMessageToChat(transcript, 'user');
+            const settingsBtn = document.getElementById('settingsBtn');
+            if (settingsBtn) settingsBtn.click();
+            const response = 'Opening settings panel for you, sir.';
+            addMessageToChat(response, 'Nova');
+            if (isWakeWordSession) {
+                speakText(response, restoreWakeListeningAfterResponse);
+            } else {
+                speakText(response);
+            }
+            
+        } else {
+            // Process through main interface with OpenAI API
+            console.log('🗣️ ==========================================');
+            console.log('🗣️ ➡️ No special command matched - routing to AI processing');
+            console.log('🗣️ Query:', transcript);
+            console.log('🗣️ isWakeWordSession:', isWakeWordSession);
+            console.log('🗣️ ==========================================');
+            
+            // Store wake word flag in window for generateAIResponse to use
+            window.isWakeWordSession = isWakeWordSession;
+            
+            // Use the main interface's processUserMessage function which calls OpenAI API
+            if (typeof window.processUserMessage === 'function') {
+                console.log('🗣️ ✅ window.processUserMessage found - calling it now...');
+                window.processUserMessage(transcript);
+                console.log('🗣️ ✅ window.processUserMessage called successfully');
+            } else {
+                // Fallback - processUserMessage not available, handle manually
+                console.error('🗣️ ❌ processUserMessage not available, using fallback');
+                addMessageToChat(transcript, 'user');
+                
+                // Call the main generateAIResponse function directly
+                if (typeof window.generateAIResponse === 'function') {
+                    console.log('🗣️ ⚠️ Using fallback - calling generateAIResponse directly');
+                    window.generateAIResponse(transcript, window.currentPersonality || 'Nova');
+                } else {
+                    console.error('🗣️ ❌ No AI processing function available');
+                    const response = 'I received your query but there seems to be a system issue. Please try typing your request instead, sir.';
+                    addMessageToChat(response, 'Nova');
+                    if (isWakeWordSession) {
+                        speakText(response, restoreWakeListeningAfterResponse);
+                    } else {
+                        speakText(response);
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        console.error('🗣️ ❌ Error in processVoiceCommand:', error);
+        const errorResponse = 'I encountered an error processing your command, sir. Please try again.';
+        try {
+            addMessageToChat(transcript, 'user');
+            addMessageToChat(errorResponse, 'Nova');
+            if (isWakeWordSession) {
+                speakText(errorResponse, restoreWakeListeningAfterResponse);
+            } else {
+                speakText(errorResponse);
+            }
+        } catch (e) {
+            console.error('🗣️ ❌ Critical error in error handler:', e);
+            // Last resort - just restore wake listening if in wake word mode
+            if (isWakeWordSession && typeof restoreWakeListeningAfterResponse === 'function') {
+                restoreWakeListeningAfterResponse();
             }
         }
     }
@@ -531,7 +719,7 @@ function switchVoiceMode(mode) {
     if (modeCard) {
         modeCard.click();
         const modeName = modeCard.querySelector('.mode-name').textContent;
-        speakText(`Switching to ${modeName}, sir.`);
+        speakText(`Switching to ${modeName}, sir.`, restoreWakeListeningAfterResponse);
     }
 }
 
@@ -549,34 +737,35 @@ function loadVoices() {
         return;
     }
     
-    console.log('🎤 Voices loaded successfully, selecting best JARVIS voice...');
-    // Select best voice for J.A.R.V.I.S
+    console.log('🎤 Voices loaded successfully, selecting best Nova voice...');
+    // Select best voice for N.O.V.A
     selectBestVoice(voices);
 }
 
 function selectBestVoice(voices) {
-    // Enhanced voice selection for J.A.R.V.I.S
-    const jarvisVoices = getJarvisLikeVoices(voices);
+    // Enhanced voice selection for N.O.V.A
+    const NovaVoices = getNovaLikeVoices(voices);
     
     // Store available voices for settings
-    window.availableJarvisVoices = jarvisVoices;
+    window.availableNovaVoices = NovaVoices;
     
-    if (jarvisVoices.length > 0) {
+    if (NovaVoices.length > 0) {
         // First try to load saved voice preference
         const savedVoice = loadSavedVoicePreference();
         if (savedVoice) {
-            console.log('🎯 Using saved JARVIS voice preference:', savedVoice.name);
+            console.log('🎯 Using saved Nova voice preference:', savedVoice.name);
             return savedVoice;
         }
         
         // Otherwise use the best scored voice
-        const bestVoice = jarvisVoices[0]; // Already sorted by preference
+        const bestVoice = NovaVoices[0]; // Already sorted by preference
         
         // Validate the voice object before using it
         if (bestVoice && bestVoice instanceof SpeechSynthesisVoice) {
             currentVoiceSettings.voice = bestVoice;
-            console.log('🎯 ✅ JARVIS VOICE SELECTED:', bestVoice.name);
-            console.log('   - Quality Score:', bestVoice.jarvisScore);
+            window.selectedVoice = bestVoice; // Sync with global voice system
+            console.log('🎯 ✅ Nova VOICE SELECTED:', bestVoice.name);
+            console.log('   - Quality Score:', bestVoice.NovaScore);
             console.log('   - Language:', bestVoice.lang);
             console.log('   - Voice Settings: Rate=' + currentVoiceSettings.rate + ', Pitch=' + currentVoiceSettings.pitch + ', Volume=' + currentVoiceSettings.volume);
             return bestVoice;
@@ -587,39 +776,58 @@ function selectBestVoice(voices) {
             return null;
         }
     } else {
-        console.warn('⚠️ No suitable JARVIS voices found, using default');
+        console.warn('⚠️ No suitable Nova voices found, using default');
         const fallback = voices.find(voice => voice.lang.startsWith('en'));
         if (fallback) {
             currentVoiceSettings.voice = fallback;
-            window.availableJarvisVoices = [fallback];
+            window.selectedVoice = fallback; // Sync with global voice system
+            window.availableNovaVoices = [fallback];
         }
         return fallback;
     }
 }
 
-function getJarvisLikeVoices(voices) {
-    // Enhanced voice filtering and ranking for JARVIS
-    const jarvisVoicePatterns = [
-        // Premium JARVIS-like voices (highest priority)
+function getNovaLikeVoices(voices) {
+    // Enhanced voice filtering and ranking for Nova
+    const NovaVoicePatterns = [
+        // JARVIS-specific voices (Paul Bettany style - highest priority)
+        { pattern: /liam.*(brit|united kingdom|uk|gb)/i, score: 115, name: 'Liam (British JARVIS)' },
+        { pattern: /paul.*(brit|united kingdom|uk|gb)/i, score: 114, name: 'Paul (British JARVIS)' },
+        
+        // Premium Nova-like voices (highest priority - British)
+        { pattern: /ryan.*(brit|united kingdom|uk|gb)/i, score: 110, name: 'Ryan (British)' },
+        { pattern: /george.*(brit|united kingdom|uk|gb)/i, score: 110, name: 'George (British)' },
+        { pattern: /oliver.*(brit|united kingdom|uk|gb)/i, score: 108, name: 'Oliver (British)' },
+        { pattern: /thomas.*(brit|united kingdom|uk|gb)/i, score: 108, name: 'Thomas (British)' },
+        { pattern: /hazel.*(brit|united kingdom|uk|gb)/i, score: 107, name: 'Hazel (British)' },
+        { pattern: /alfie.*(brit|united kingdom|uk|gb)/i, score: 109, name: 'Alfie (British)' },
+        { pattern: /liam/i, score: 105, name: 'Liam (JARVIS Voice)' },
         { pattern: /google.*uk.*male/i, score: 100, name: 'Google UK Male' },
         { pattern: /microsoft.*david/i, score: 95, name: 'Microsoft David' },
         { pattern: /alex/i, score: 90, name: 'Alex (macOS)' },
         { pattern: /google.*us.*male/i, score: 85, name: 'Google US Male' },
         
-        // Good JARVIS alternatives
+        // Good Nova alternatives
+        { pattern: /ryan/i, score: 82, name: 'Ryan Voice' },
+        { pattern: /george/i, score: 82, name: 'George Voice' },
         { pattern: /microsoft.*mark/i, score: 80, name: 'Microsoft Mark' },
         { pattern: /google.*en.*male/i, score: 75, name: 'Google English Male' },
+        { pattern: /oliver/i, score: 72, name: 'Oliver Voice' },
+        { pattern: /thomas/i, score: 72, name: 'Thomas Voice' },
+        { pattern: /alfie/i, score: 72, name: 'Alfie Voice' },
         { pattern: /microsoft.*.*male/i, score: 70, name: 'Microsoft Male Voice' },
+        { pattern: /arthur/i, score: 68, name: 'Arthur Voice' },
         
         // Acceptable alternatives
         { pattern: /daniel/i, score: 65, name: 'Daniel Voice' },
         { pattern: /james/i, score: 60, name: 'James Voice' },
         { pattern: /matthew/i, score: 55, name: 'Matthew Voice' },
+        { pattern: /william/i, score: 52, name: 'William Voice' },
         
         // Fallback male voices
         { pattern: /male/i, score: 30, name: 'Generic Male Voice' },
         
-        // Last resort (avoid female voices for JARVIS)
+        // Last resort (avoid female voices for Nova)
         { pattern: /.*/, score: 10, name: 'Any Voice' }
     ];
     
@@ -633,7 +841,7 @@ function getJarvisLikeVoices(voices) {
         let bestPattern = null;
         
         // Find the best matching pattern
-        for (const pattern of jarvisVoicePatterns) {
+        for (const pattern of NovaVoicePatterns) {
             if (pattern.pattern.test(voice.name)) {
                 if (pattern.score > bestScore) {
                     bestScore = pattern.score;
@@ -643,15 +851,23 @@ function getJarvisLikeVoices(voices) {
         }
         
         // Additional scoring factors
-        if (voice.name.toLowerCase().includes('british') || voice.name.toLowerCase().includes('uk')) {
-            bestScore += 10; // British accent bonus for JARVIS
+        if (voice.name.toLowerCase().includes('british') || 
+            voice.name.toLowerCase().includes('united kingdom') || 
+            voice.name.toLowerCase().includes('uk')) {
+            bestScore += 10; // British accent bonus for Nova
         }
         
-        if (voice.name.toLowerCase().includes('neural') || voice.name.toLowerCase().includes('premium')) {
+        if (voice.name.toLowerCase().includes('liam') || voice.lang.includes('CA')) {
+            bestScore += 12; // Canadian (Liam) accent bonus for JARVIS voice
+        }
+        
+        if (voice.name.toLowerCase().includes('neural') || 
+            voice.name.toLowerCase().includes('natural') || 
+            voice.name.toLowerCase().includes('premium')) {
             bestScore += 5; // Premium voice bonus
         }
         
-        // Penalty for female voices (JARVIS should be male)
+        // Penalty for female voices (Nova should be male)
         if (voice.name.toLowerCase().includes('female') || 
             voice.name.toLowerCase().includes('woman') ||
             voice.name.toLowerCase().includes('zira') ||
@@ -663,21 +879,21 @@ function getJarvisLikeVoices(voices) {
         if (bestScore > 15) { // Only include decent voices
             // Don't spread the voice object as it breaks SpeechSynthesisVoice
             // Instead, add properties directly to the original voice object
-            voice.jarvisScore = bestScore;
+            voice.NovaScore = bestScore;
             voice.patternMatch = bestPattern?.name || 'Unknown';
             rankedVoices.push(voice);
         }
     });
     
     // Sort by score (highest first)
-    rankedVoices.sort((a, b) => b.jarvisScore - a.jarvisScore);
+    rankedVoices.sort((a, b) => b.NovaScore - a.NovaScore);
     
-    console.log('🎤 Available JARVIS voices:', rankedVoices.map(v => `${v.name} (Score: ${v.jarvisScore})`));
+    console.log('🎤 Available Nova voices:', rankedVoices.map(v => `${v.name} (Score: ${v.NovaScore})`));
     
     if (rankedVoices.length > 0) {
-        console.log('🎯 Top 3 JARVIS voice recommendations:');
+        console.log('🎯 Top 3 Nova voice recommendations:');
         rankedVoices.slice(0, 3).forEach((v, i) => {
-            console.log(`  ${i + 1}. ${v.name} - Score: ${v.jarvisScore} (${v.lang})`);
+            console.log(`  ${i + 1}. ${v.name} - Score: ${v.NovaScore} (${v.lang})`);
         });
     }
     
@@ -741,7 +957,7 @@ function setupUtteranceAndSpeak(text, onEndCallback) {
         isSpeechOutputActive = true;
         window.isSpeechOutputActive = true;
         updateSpeakingUI(true);
-        console.log('🔊 J.A.R.V.I.S started speaking:', text);
+        console.log('🔊 N.O.V.A started speaking:', text);
     };
     
     utterance.onend = function() {
@@ -752,15 +968,9 @@ function setupUtteranceAndSpeak(text, onEndCallback) {
         updateSpeakingUI(false);
         console.log('🔊 Speech ended successfully');
         
-        // Call the provided callback
-        if (onEndCallback) onEndCallback();
-        
-        // Restart wake listening if enabled and not already listening
-        if (wakeWordEnabled && !isWakeListening && !isListening) {
-            console.log('🔊 Speech finished - restarting wake listening');
-            isWakeListening = true;
-            window.isWakeListening = true;
-            setTimeout(() => startWakeListening(), 1000);
+        // Call the provided callback - let the callback handle wake listening restart
+        if (onEndCallback) {
+            onEndCallback();
         }
     };
     
@@ -812,16 +1022,17 @@ function previewVoice(voice, sampleText = "Greetings, sir. This is how I sound. 
 }
 
 function selectVoiceById(voiceIndex) {
-    if (window.availableJarvisVoices && window.availableJarvisVoices[voiceIndex]) {
-        const selectedVoice = window.availableJarvisVoices[voiceIndex];
+    if (window.availableNovaVoices && window.availableNovaVoices[voiceIndex]) {
+        const selectedVoice = window.availableNovaVoices[voiceIndex];
         currentVoiceSettings.voice = selectedVoice;
+        window.selectedVoice = selectedVoice; // Sync with global voice system
         console.log('🎯 Voice manually selected:', selectedVoice.name);
         
         // Save preference
-        localStorage.setItem('jarvis_selected_voice', selectedVoice.name);
+        localStorage.setItem('Nova_selected_voice', selectedVoice.name);
         
         // Preview the selected voice
-        previewVoice(selectedVoice, "Voice selection updated, sir. This is your new J.A.R.V.I.S voice.");
+        previewVoice(selectedVoice, "Voice selection updated, sir. This is your new N.O.V.A voice.");
         
         return selectedVoice;
     }
@@ -829,17 +1040,17 @@ function selectVoiceById(voiceIndex) {
 }
 
 function getAvailableVoices() {
-    return window.availableJarvisVoices || [];
+    return window.availableNovaVoices || [];
 }
 
 function createVoiceSamplePhrase() {
     const phrases = [
         "At your service, sir.",
         "Good evening, sir. All systems are operational and ready for your commands.",
-        "J.A.R.V.I.S online. How may I assist you today, sir?",
+        "N.O.V.A online. How may I assist you today, sir?",
         "Systems check complete. All parameters are within normal limits.",
         "Standing by for your instructions, sir. All systems are green.",
-        "Good day, sir. J.A.R.V.I.S is at your service. What can I help you with?",
+        "Good day, sir. N.O.V.A is at your service. What can I help you with?",
         "At your service, sir. How may I be of assistance?",
         "Power levels optimal. All systems functioning normally, sir."
     ];
@@ -848,14 +1059,26 @@ function createVoiceSamplePhrase() {
 }
 
 function loadSavedVoicePreference() {
-    const savedVoiceName = localStorage.getItem('jarvis_selected_voice');
-    if (savedVoiceName && window.availableJarvisVoices) {
-        const savedVoice = window.availableJarvisVoices.find(v => v.name === savedVoiceName);
+    const savedVoiceName = localStorage.getItem('Nova_selected_voice');
+    console.log('🔍 Loading saved voice preference...');
+    console.log('🔍 Saved voice name from localStorage:', savedVoiceName);
+    console.log('🔍 Available voices count:', window.availableNovaVoices?.length);
+    
+    if (savedVoiceName && window.availableNovaVoices) {
+        console.log('🔍 Searching for voice:', savedVoiceName);
+        console.log('🔍 Available voice names:', window.availableNovaVoices.map(v => v.name));
+        
+        const savedVoice = window.availableNovaVoices.find(v => v.name === savedVoiceName);
         if (savedVoice) {
             currentVoiceSettings.voice = savedVoice;
-            console.log('🎯 Loaded saved voice preference:', savedVoice.name);
+            window.selectedVoice = savedVoice; // Sync with global voice system
+            console.log('🎯 ✅ Loaded saved voice preference:', savedVoice.name);
             return savedVoice;
+        } else {
+            console.warn('🎯 ⚠️ Saved voice not found in available voices:', savedVoiceName);
         }
+    } else {
+        console.log('🔍 No saved voice or available voices not ready');
     }
     return null;
 }
@@ -944,7 +1167,7 @@ function updateVoiceStatus(status) {
     console.log('🎤 Voice Status:', status);
 }
 
-function activateJarvisUI() {
+function activateNovaUI() {
     // Add activation animation to arc reactor
     const arcReactor = document.querySelector('.arc-reactor');
     if (arcReactor) {
@@ -966,8 +1189,8 @@ function activateJarvisUI() {
 }
 
 function showVoiceNotification(message, duration = 3000) {
-    if (window.jarvisInterface && window.jarvisInterface.showNotification) {
-        window.jarvisInterface.showNotification(message, duration);
+    if (window.NovaInterface && window.NovaInterface.showNotification) {
+        window.NovaInterface.showNotification(message, duration);
     } else {
         // Fallback notification
         console.log('Voice notification:', message);
@@ -1012,10 +1235,10 @@ function startVoiceRecognition() {
         return;
     }
     
-    // Don't start if JARVIS is currently speaking
+    // Don't start if Nova is currently speaking
     if (isSpeaking || isSpeechOutputActive) {
-        console.log('🎤 Cannot start recognition - JARVIS is speaking');
-        showVoiceNotification('Wait for JARVIS to finish speaking', 2000);
+        console.log('🎤 Cannot start recognition - Nova is speaking');
+        showVoiceNotification('Wait for Nova to finish speaking', 2000);
         return;
     }
     
@@ -1079,8 +1302,8 @@ async function enableWakeListening(enabled) {
         window.isWakeListening = true;
         
         console.log('🎤 Wake listening enabled - starting...');
-        showVoiceNotification('Wake word enabled - Say "Hey Jarvis"', 3000);
-        updateVoiceStatus('Listening for "Hey Jarvis"...');
+        showVoiceNotification('Wake word enabled - Say "Hey Nova"', 3000);
+        updateVoiceStatus('Listening for "Hey Nova"...');
         
         startWakeListening();
     } else {
@@ -1134,12 +1357,12 @@ window.createVoiceSamplePhrase = createVoiceSamplePhrase;
 // Voice Selection UI Functions
 function populateVoiceSelection() {
     const voiceSelect = document.getElementById('voiceSelection');
-    if (!voiceSelect || !window.availableJarvisVoices) return;
+    if (!voiceSelect || !window.availableNovaVoices) return;
     
     // Clear existing options
     voiceSelect.innerHTML = '';
     
-    const availableVoices = window.availableJarvisVoices;
+    const availableVoices = window.availableNovaVoices;
     
     if (availableVoices.length === 0) {
         voiceSelect.innerHTML = '<option value="">No voices available</option>';
@@ -1150,7 +1373,7 @@ function populateVoiceSelection() {
     availableVoices.forEach((voice, index) => {
         const option = document.createElement('option');
         option.value = index;
-        option.textContent = `${voice.name} (Score: ${voice.jarvisScore})`;
+        option.textContent = `${voice.name} (Score: ${voice.NovaScore})`;
         
         // Mark current voice as selected
         if (currentVoiceSettings.voice && voice.name === currentVoiceSettings.voice.name) {
@@ -1181,8 +1404,8 @@ function initializeVoiceSelectionUI() {
             const voiceSelect = document.getElementById('voiceSelection');
             const selectedIndex = parseInt(voiceSelect.value);
             
-            if (!isNaN(selectedIndex) && window.availableJarvisVoices && window.availableJarvisVoices[selectedIndex]) {
-                const selectedVoice = window.availableJarvisVoices[selectedIndex];
+            if (!isNaN(selectedIndex) && window.availableNovaVoices && window.availableNovaVoices[selectedIndex]) {
+                const selectedVoice = window.availableNovaVoices[selectedIndex];
                 const sampleText = createVoiceSamplePhrase();
                 previewVoice(selectedVoice, sampleText);
             } else {
@@ -1242,6 +1465,11 @@ function setupVoiceButtons() {
         const startListening = async function(e) {
             e.preventDefault();
             console.log('🎤 Voice button pressed - starting listening...');
+            
+            // Ensure this is NOT a wake word session (push-to-talk mode)
+            isWakeWordSession = false;
+            window.isWakeWordSession = false;
+            console.log('🎤 Push-to-talk mode - isWakeWordSession = false');
             
             if (!isVoiceSupported) {
                 showVoiceNotification('Voice recognition not supported in this browser', 3000);
@@ -1332,6 +1560,11 @@ function setupVoiceButtons() {
             e.preventDefault();
             console.log('🎤 Input voice button pressed - starting listening...');
             
+            // Ensure this is NOT a wake word session (push-to-talk mode)
+            isWakeWordSession = false;
+            window.isWakeWordSession = false;
+            console.log('🎤 Push-to-talk mode (input) - isWakeWordSession = false');
+            
             if (!isVoiceSupported) {
                 showVoiceNotification('Voice recognition not supported in this browser', 3000);
                 return;
@@ -1411,16 +1644,17 @@ function setupVoiceButtons() {
     }
     
     // Wake word toggle button
-    const wakeToggleBtn = document.getElementById('wakeToggleBtn');
+    // ====== WAKE WORD BUTTON - DISABLED/COMMENTED OUT ======
+    /*const wakeToggleBtn = document.getElementById('wakeToggleBtn');
     if (wakeToggleBtn) {
         // Load saved state
-        const savedState = localStorage.getItem('jarvis_wake_word_enabled');
+        const savedState = localStorage.getItem('Nova_wake_word_enabled');
         if (savedState === 'true') {
             wakeWordEnabled = true;
             wakeToggleBtn.classList.add('active');
             wakeToggleBtn.querySelector('i').classList.remove('fa-volume-mute');
             wakeToggleBtn.querySelector('i').classList.add('fa-volume-up');
-            wakeToggleBtn.title = '"Hey Jarvis" wake word ENABLED';
+            wakeToggleBtn.title = '"Hey Nova" wake word ENABLED';
             
             // Auto-start wake listening if permission is already granted
             setTimeout(() => {
@@ -1446,7 +1680,7 @@ function setupVoiceButtons() {
             
             // Toggle state
             wakeWordEnabled = !wakeWordEnabled;
-            localStorage.setItem('jarvis_wake_word_enabled', wakeWordEnabled);
+            localStorage.setItem('Nova_wake_word_enabled', wakeWordEnabled);
             
             const icon = this.querySelector('i');
             
@@ -1454,11 +1688,11 @@ function setupVoiceButtons() {
                 this.classList.add('active');
                 icon.classList.remove('fa-volume-mute');
                 icon.classList.add('fa-volume-up');
-                this.title = '"Hey Jarvis" wake word ENABLED';
+                this.title = '"Hey Nova" wake word ENABLED';
                 
                 console.log('🎤 Wake word enabled - starting wake listening');
-                showVoiceNotification('Wake word enabled - Say "Hey Jarvis"', 3000);
-                updateVoiceStatus('Say "Hey Jarvis" or press and hold microphone');
+                showVoiceNotification('Wake word enabled - Say "Hey Nova"', 3000);
+                updateVoiceStatus('Say "Hey Nova" or press and hold microphone');
                 
                 // Start wake listening
                 isWakeListening = true;
@@ -1468,7 +1702,7 @@ function setupVoiceButtons() {
                 this.classList.remove('active');
                 icon.classList.remove('fa-volume-up');
                 icon.classList.add('fa-volume-mute');
-                this.title = '"Hey Jarvis" wake word DISABLED';
+                this.title = '"Hey Nova" wake word DISABLED';
                 
                 console.log('🎤 Wake word disabled - stopping wake listening');
                 showVoiceNotification('Wake word disabled - Press and hold mic only', 3000);
@@ -1488,10 +1722,134 @@ function setupVoiceButtons() {
             window.isWakeListening = true;
             setTimeout(() => startWakeListening(), 1000);
         }
-    }
+    }*/
+    // ====== END WAKE WORD BUTTON - DISABLED ======
     
     console.log('🎤 Voice buttons initialized');
 }
+
+// ====== HOTKEY 'R' FOR PUSH-TO-TALK ======
+let hotkeyActive = false;
+let hotkeyListening = false;
+
+function setupPushToTalkHotkey() {
+    console.log('⌨️ Setting up push-to-talk hotkey (R)...');
+    
+    document.addEventListener('keydown', async function(e) {
+        // Ignore if user is typing in an input field
+        const target = e.target;
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+            return;
+        }
+        
+        // Check if 'R' key is pressed (case insensitive)
+        if (e.key.toLowerCase() === 'r' && !hotkeyActive) {
+            e.preventDefault();
+            hotkeyActive = true;
+            
+            console.log('⌨️ Hotkey R pressed - starting voice recognition...');
+            
+            // Ensure this is NOT a wake word session (push-to-talk mode)
+            isWakeWordSession = false;
+            window.isWakeWordSession = false;
+            console.log('⌨️ Push-to-talk hotkey mode - isWakeWordSession = false');
+            
+            if (!isVoiceSupported) {
+                showVoiceNotification('Voice recognition not supported in this browser', 3000);
+                return;
+            }
+            
+            if (!hasVoicePermission) {
+                console.log('⌨️ Requesting microphone permission...');
+                const granted = await requestVoicePermission();
+                if (!granted) {
+                    console.log('⌨️ Permission denied');
+                    hotkeyActive = false;
+                    return;
+                }
+                console.log('⌨️ Permission granted, ready to start listening');
+                showVoiceNotification('Microphone ready! Hold R to speak', 3000);
+                hotkeyActive = false;
+                return;
+            }
+            
+            // Visual feedback
+            updateVoiceStatus('Hold R to speak - Release when done');
+            showVoiceNotification('Listening...', 2000);
+            
+            // Add visual indicator to mic button if it exists
+            const voiceBtn = document.getElementById('voiceBtn');
+            if (voiceBtn) {
+                voiceBtn.classList.add('recording');
+            }
+            
+            // Start voice recognition
+            hotkeyListening = true;
+            startVoiceRecognition();
+        }
+    });
+    
+    document.addEventListener('keyup', function(e) {
+        // Ignore if user is typing in an input field
+        const target = e.target;
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+            return;
+        }
+        
+        // Check if 'R' key is released
+        if (e.key.toLowerCase() === 'r' && hotkeyActive) {
+            e.preventDefault();
+            hotkeyActive = false;
+            
+            console.log('⌨️ Hotkey R released - stopping voice recognition...');
+            
+            // Remove visual indicator
+            const voiceBtn = document.getElementById('voiceBtn');
+            if (voiceBtn) {
+                voiceBtn.classList.remove('recording');
+            }
+            
+            if (hotkeyListening && recognition) {
+                try {
+                    recognition.stop();
+                    console.log('⌨️ Recognition stopped - waiting for final results');
+                } catch (err) {
+                    console.log('⌨️ Recognition already stopped');
+                }
+                
+                // Process after recognition has time to finalize
+                setTimeout(() => {
+                    if (pendingTranscript) {
+                        const transcript = pendingTranscript;
+                        pendingTranscript = '';
+                        isListening = false;
+                        window.isListening = false;
+                        hotkeyListening = false;
+                        console.log('⌨️ Processing command on hotkey release:', transcript);
+                        updateVoiceStatus('Processing command...');
+                        processVoiceCommand(transcript);
+                    } else {
+                        console.log('⌨️ No transcript captured');
+                        isListening = false;
+                        window.isListening = false;
+                        hotkeyListening = false;
+                        updateVoiceStatus('Ready - Press and hold R to speak');
+                    }
+                }, 500);
+            }
+        }
+    });
+    
+    console.log('✅ Push-to-talk hotkey (R) initialized');
+}
+
+// Initialize hotkey on load
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupPushToTalkHotkey);
+} else {
+    setupPushToTalkHotkey();
+}
+// ====== END HOTKEY IMPLEMENTATION ======
 
 async function toggleVoiceListening() {
     if (!isVoiceSupported) {
@@ -1518,7 +1876,7 @@ async function toggleVoiceListening() {
             }
         }
         
-        updateVoiceStatus('Click microphone to enable "Hey Jarvis" listening');
+        updateVoiceStatus('Click microphone to enable "Hey Nova" listening');
         showVoiceNotification('Voice recognition disabled', 2000);
         
         // Hide visualizer when voice is disabled
@@ -1534,8 +1892,8 @@ async function toggleVoiceListening() {
         if (permissionGranted) {
             // Turn on wake listening
             startWakeListening();
-            updateVoiceStatus('Say "Hey Jarvis" to activate');
-            showVoiceNotification('Say "Hey Jarvis" to activate', 3000);
+            updateVoiceStatus('Say "Hey Nova" to activate');
+            showVoiceNotification('Say "Hey Nova" to activate', 3000);
             
             // Show voice enabled message and activate visualizer
             if (typeof showVoiceEnabledMessage === 'function') {
@@ -1545,7 +1903,7 @@ async function toggleVoiceListening() {
                 updateVoiceVisualizer(true);
             }
             
-            console.log('🎤 Wake listening enabled - say "Hey Jarvis"');
+            console.log('🎤 Wake listening enabled - say "Hey Nova"');
         } else {
             updateVoiceStatus('Microphone access required for voice recognition');
             console.log('🎤 Cannot start voice recognition - permission denied');
@@ -1580,7 +1938,7 @@ function setupChatSystem() {
     if (clearBtn) {
         clearBtn.addEventListener('click', function() {
             clearChat();
-            addMessageToChat('Chat history cleared, sir.', 'jarvis');
+            addMessageToChat('Chat history cleared, sir.', 'Nova');
         });
     }
     
@@ -1599,9 +1957,9 @@ function setupChatSystem() {
     // Add welcome message
     setTimeout(() => {
         if (isVoiceSupported) {
-            addMessageToChat('Good day, sir. J.A.R.V.I.S systems are online and ready. Press and hold the microphone button to speak, or type your message below.', 'jarvis');
+            addMessageToChat('Good day, sir. N.O.V.A systems are online and ready. Press and hold the microphone button to speak, or type your message below.', 'Nova');
         } else {
-            addMessageToChat('Good day, sir. J.A.R.V.I.S systems are online and ready. Voice recognition is not supported in this browser, but you can type your message below.', 'jarvis');
+            addMessageToChat('Good day, sir. N.O.V.A systems are online and ready. Voice recognition is not supported in this browser, but you can type your message below.', 'Nova');
         }
     }, 1000);
     
@@ -1652,16 +2010,16 @@ function addMessageToChat(message, sender = 'user') {
 // This function is now handled by the main interface with OpenAI API
 // Voice commands are routed through the main processUserMessage function
 
-function generateJarvisResponse(message) {
+function generateNovaResponse(message) {
     const lowerMessage = message.toLowerCase();
     
     // Greeting patterns
     if (lowerMessage.includes('hello') || lowerMessage.includes('hi') || lowerMessage.includes('hey')) {
         const greetingResponses = [
             "At your service, sir.",
-            "Good day, sir. J.A.R.V.I.S at your service. How may I assist you today?",
+            "Good day, sir. N.O.V.A at your service. How may I assist you today?",
             "Hello, sir. At your service.",
-            "Greetings, sir. J.A.R.V.I.S systems are online and ready."
+            "Greetings, sir. N.O.V.A systems are online and ready."
         ];
         return greetingResponses[Math.floor(Math.random() * greetingResponses.length)];
     }
@@ -1679,7 +2037,7 @@ function generateJarvisResponse(message) {
     
     // Help requests
     if (lowerMessage.includes('help') || lowerMessage.includes('assist') || lowerMessage.includes('what can you do')) {
-        return "I can assist with various tasks, sir. Try asking me about science, mathematics, analysis, or general information. You can also use voice commands by saying 'Hey Jarvis'.";
+        return "I can assist with various tasks, sir. Try asking me about science, mathematics, analysis, or general information. You can also use voice commands by saying 'Hey Nova'.";
     }
     
     // Chat management
@@ -1728,13 +2086,13 @@ function addThinkingIndicator() {
     if (!chatMessages) return;
     
     const thinkingDiv = document.createElement('div');
-    thinkingDiv.className = 'message jarvis-message thinking-indicator';
+    thinkingDiv.className = 'message Nova-message thinking-indicator';
     thinkingDiv.innerHTML = `
         <div class="message-content">
             <div class="thinking-dots">
                 <span></span><span></span><span></span>
             </div>
-            J.A.R.V.I.S is thinking...
+            N.O.V.A is thinking...
         </div>
     `;
     
@@ -1803,4 +2161,4 @@ Object.defineProperty(window, 'isListening', {
     get: function() { return isListening; }
 });
 
-console.log('🎤 J.A.R.V.I.S Voice System loaded successfully');
+console.log('🎤 N.O.V.A Voice System loaded successfully');

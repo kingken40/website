@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic-Tac-Toe AI</title>
+    <link rel="stylesheet" href="tictactoe.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Tic-Tac-Toe AI</h1>
+        
+        <div class="game-info">
+            <div class="status" id="status">Choose your side to start</div>
+            <div class="score">
+                <div class="score-item">
+                    <span class="label">You:</span>
+                    <span id="playerScore">0</span>
+                </div>
+                <div class="score-item">
+                    <span class="label">AI:</span>
+                    <span id="aiScore">0</span>
+                </div>
+                <div class="score-item">
+                    <span class="label">Draws:</span>
+                    <span id="drawScore">0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="side-selection" id="sideSelection">
+                <button class="btn btn-primary" onclick="chooseSide('X')">Play as X</button>
+                <button class="btn btn-primary" onclick="chooseSide('O')">Play as O</button>
+            </div>
+            
+            <div class="difficulty-selection" id="difficultySelection" style="display: none;">
+                <label>Difficulty:</label>
+                <select id="difficulty" onchange="changeDifficulty()">
+                    <option value="easy">Easy</option>
+                    <option value="medium">Medium</option>
+                    <option value="hard" selected>Hard (Unbeatable)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="board" id="board">
+            <div class="cell" data-index="0"></div>
+            <div class="cell" data-index="1"></div>
+            <div class="cell" data-index="2"></div>
+            <div class="cell" data-index="3"></div>
+            <div class="cell" data-index="4"></div>
+            <div class="cell" data-index="5"></div>
+            <div class="cell" data-index="6"></div>
+            <div class="cell" data-index="7"></div>
+            <div class="cell" data-index="8"></div>
+        </div>
+
+        <div class="game-controls">
+            <button class="btn btn-secondary" onclick="resetGame()">New Game</button>
+            <button class="btn btn-secondary" onclick="resetScores()">Reset Scores</button>
+            <button class="btn btn-secondary" onclick="goBack()">Back to Games</button>
+        </div>
+    </div>
+
+    <script src="tictactoe.js"></script>
+</body>
+</html>

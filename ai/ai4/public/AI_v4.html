@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Professor v4 - Advanced Teaching Assistant with Personalities</title>
+    <link rel="stylesheet" href="../styles/ai_v4_styles.css">
+    
+    <!-- Mermaid.js for diagram generation -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+    
+    <!-- File processing libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- JSZip for proper PowerPoint processing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body>
+    
+    <h1>🎓 AI Professor v4</h1>
+    <p class="professor-subtitle">Advanced Teaching Assistant with Multiple Personalities</p>
+    
+    <!-- AI Personality Selector -->
+    <div class="personality-container">
+        <div class="personality-header">
+            <label class="personality-label">🎭 Choose Professor Personality:</label>
+            <button class="help-btn" onclick="showPersonalityHelp()">❓</button>
+        </div>
+        <div class="personality-grid">
+            <div class="personality-option selected" data-personality="assistant">
+                <span class="personality-emoji">🤖</span>
+                <span class="personality-name">Professional Assistant</span>
+            </div>
+            <div class="personality-option" data-personality="coder">
+                <span class="personality-emoji">🧑‍💻</span>
+                <span class="personality-name">Programming Expert</span>
+            </div>
+            <div class="personality-option" data-personality="teacher">
+                <span class="personality-emoji">🎓</span>
+                <span class="personality-name">Patient Educator</span>
+            </div>
+            <div class="personality-option" data-personality="creative">
+                <span class="personality-emoji">💡</span>
+                <span class="personality-name">Creative Mentor</span>
+            </div>
+            <div class="personality-option" data-personality="funny">
+                <span class="personality-emoji">🎪</span>
+                <span class="personality-name">Humorous Tutor</span>
+            </div>
+            <div class="personality-option" data-personality="scholar">
+                <span class="personality-emoji">📚</span>
+                <span class="personality-name">Research Scholar</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Personality Help Modal -->
+    <div id="personalityHelpModal" class="help-modal">
+        <div class="help-content">
+            <div class="help-header">
+                <h3>🎭 Professor Personality Guide</h3>
+                <button class="close-help" onclick="hidePersonalityHelp()">✕</button>
+            </div>
+            <div class="help-body">
+                <div class="personality-help-item">
+                    <div class="help-personality">🤖 <strong>Professional Assistant</strong></div>
+                    <div class="help-description">
+                        Your reliable academic companion who delivers clear, accurate, and well-structured responses. This mode maintains professional standards while remaining approachable and friendly. Perfect for students who need straightforward explanations, research assistance, homework help, and formal academic guidance. Expect comprehensive answers with proper organization, relevant examples, and a focus on educational value without unnecessary complexity.
+                    </div>
+                </div>
+                <div class="personality-help-item">
+                    <div class="help-personality">🧑‍💻 <strong>Programming Expert</strong></div>
+                    <div class="help-description">
+                        Your dedicated coding mentor and software engineering professor. This mode provides practical, working code examples with clear explanations, debugging assistance, best practice recommendations, and step-by-step programming guidance. Perfect for computer science students, developers learning new languages, debugging issues, code reviews, and understanding complex algorithms. Expect detailed technical explanations, efficient solutions, and industry-standard approaches.
+                    </div>
+                </div>
+                <div class="personality-help-item">
+                    <div class="help-personality">🎓 <strong>Patient Educator</strong></div>
+                    <div class="help-description">
+                        A compassionate university professor who adapts to your learning pace and style. This personality excels at breaking down complex topics into digestible steps, using relatable analogies and real-world examples to make difficult concepts accessible. Ideal for struggling students, those learning new subjects, or anyone who needs extra support. Expect encouraging responses, guided questions that lead to understanding, and patient explanations that build confidence progressively.
+                    </div>
+                </div>
+                <div class="personality-help-item">
+                    <div class="help-personality">💡 <strong>Creative Mentor</strong></div>
+                    <div class="help-description">
+                        An inspiring guide who transforms learning into an artistic journey. This personality uses vivid language, powerful metaphors, and innovative thinking approaches to help you see subjects from fresh perspectives. Ideal for creative writing, brainstorming sessions, art discussions, design projects, and when you need to think outside the box. Expect expressive responses that spark imagination and encourage creative problem-solving with unconventional approaches.
+                    </div>
+                </div>
+                <div class="personality-help-item">
+                    <div class="help-personality">🎪 <strong>Humorous Tutor</strong></div>
+                    <div class="help-description">
+                        An entertaining educator who makes learning fun through wit and humor. This personality combines educational value with appropriate jokes, clever analogies, and light-hearted responses that keep you engaged. Perfect for students who learn better in relaxed environments, those who enjoy interactive learning, or when you need to make studying more enjoyable. Expect memorable explanations with humor that helps retention while maintaining academic integrity and educational goals.
+                    </div>
+                </div>
+                <div class="personality-help-item">
+                    <div class="help-personality">📚 <strong>Research Scholar</strong></div>
+                    <div class="help-description">
+                        A distinguished academic researcher who provides deep, scholarly insights with comprehensive analysis. This personality references relevant theories, historical context, peer-reviewed studies, and academic frameworks to give you university-level depth. Ideal for advanced students, research projects, thesis work, graduate-level discussions, and when you need authoritative academic perspectives. Expect detailed citations, theoretical foundations, and scholarly discourse that builds genuine expertise.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat History Modal -->
+    <div id="chatHistoryModal" class="help-modal">
+        <div class="help-content">
+            <div class="help-header">
+                <h3>📜 Chat History</h3>
+                <button class="close-help" onclick="hideChatHistory()">✕</button>
+            </div>
+            <div class="help-body" id="historyList">
+                <div class="no-history">No chat sessions found. Start a conversation to create your first session!</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Course Configuration Modal -->
+    <div id="courseConfigModal" class="help-modal">
+        <div class="help-content">
+            <div class="help-header">
+                <h3>📚 Course Configuration</h3>
+                <button class="close-help" onclick="hideCourseConfig()">✕</button>
+            </div>
+            <div class="help-body">
+                <div class="course-config-container">
+                    <div class="course-section">
+                        <div class="course-header">
+                            <h4>📖 Active Courses</h4>
+                            <button class="add-course-btn" onclick="addNewCourse()">➕ Add Course</button>
+                        </div>
+                        <div id="courseList">
+                            <div class="course-item" data-course-id="software-eng-practicum">
+                                <div class="course-info">
+                                    <label for="course-title-software-eng-practicum">Course Title:</label>
+                                    <input type="text" id="course-title-software-eng-practicum" class="course-title" value="Software Engineering Practicum" placeholder="Enter course title" title="Course title for this configuration" />
+                                    <label for="course-prompt-software-eng-practicum">Course Context Prompt:</label>
+                                    <textarea id="course-prompt-software-eng-practicum" class="course-prompt" rows="4" placeholder="Describe the course context and objectives" title="Course context prompt that will be used to provide AI with course-specific guidance">Capstone software project in which the student applies concepts learned in the program. The practicum can be completed in a course in which the instructor oversees teams of students, or through an arrangement with an industry partner in which a manager evaluates the work of a student on a particular project. The latter requires prior approval.</textarea>
+                                    <div class="course-actions">
+                                        <button class="save-course-btn" onclick="saveCourse('software-eng-practicum')">💾 Save</button>
+                                        <button class="delete-course-btn" onclick="deleteCourse('software-eng-practicum')">🗑️ Delete</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="course-item" data-course-id="computer-networks">
+                                <div class="course-info">
+                                    <label for="course-title-computer-networks">Course Title:</label>
+                                    <input type="text" id="course-title-computer-networks" class="course-title" value="Computer Networks" placeholder="Enter course title" title="Course title for this configuration" />
+                                    <label for="course-prompt-computer-networks">Course Context Prompt:</label>
+                                    <textarea id="course-prompt-computer-networks" class="course-prompt" rows="4" placeholder="Describe the course context and objectives" title="Course context prompt that will be used to provide AI with course-specific guidance">Introduction to network design and programming. The course covers topics such as data transmission, link control, encoding, network topologies, internetworking, address resolution, protocol layering, routing methods, network and data security, socket programming, and remote procedure calls.</textarea>
+                                    <div class="course-actions">
+                                        <button class="save-course-btn" onclick="saveCourse('computer-networks')">💾 Save</button>
+                                        <button class="delete-course-btn" onclick="deleteCourse('computer-networks')">🗑️ Delete</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Course Selector -->
+    <div class="course-selector-container">
+        <div class="course-selector-header">
+            <label id="courseSelectorLabel" class="course-selector-label">📚 Active Course Context:</label>
+        </div>
+        <div class="course-selector-wrapper">
+            <select id="activeCourseSelect" class="course-select" onchange="setActiveCourse()" aria-labelledby="courseSelectorLabel">
+                <option value="">🎭 General AI Professor (No Course Context)</option>
+                <option value="software-eng-practicum" selected>📖 Software Engineering Practicum</option>
+                <option value="computer-networks">🌐 Computer Networks</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="chat-controls">
+        <button class="control-btn new-chat-btn" onclick="startNewChat()">🆕 New Session</button>
+        <button class="control-btn history-btn" onclick="showChatHistory()">📜 Chat History</button>
+        <button class="control-btn config-btn" onclick="showCourseConfig()">⚙️ Configure Courses</button>
+        <button class="control-btn" onclick="exportChat()">💾 Export Chat</button>
+        <button class="control-btn" onclick="clearChat()">🗑️ Clear All</button>
+    </div>
+
+    <!-- Chat messages will appear here -->
+    <div id="chatContainer"></div>
+    
+    <!-- Input area -->
+    <div class="input-container">
+        <div class="input-wrapper">
+            <textarea id="messageInput" placeholder="Ask the AI Professor anything..." rows="1"></textarea>
+            <button class="upload-btn" id="uploadBtn" onclick="showFileUploadMenu(event)">📎 Upload File</button>
+            <button class="send-btn" id="sendBtn" onclick="sendMessage()">▶</button>
+        </div>
+    </div>
+    
+    <!-- File upload menu (hidden by default) -->
+    <div id="fileUploadMenu" class="file-upload-menu">
+        <button onclick="uploadFile('pdf')">📄 PDF/DOCX/PPTX</button>
+        <button onclick="uploadFile('csv')">📊 CSV File</button>
+        <button onclick="uploadFile('txt')">📝 Text File</button>
+        <button onclick="uploadFile('image')">🖼️ Image File</button>
+    </div>
+    
+    <!-- Hidden file input element -->
+    <input type="file" id="fileInput" style="display: none;" accept=".pdf,.doc,.docx,.txt,.csv,.pptx,.jpg,.jpeg,.png,.gif,.bmp,.webp">
+
+    <script src="../scripts/ai_v4_main.js"></script>
+</body>
+</html>

@@ -1,0 +1,154 @@
+<!--
+PRESENTATION GENERATOR - PAGE 3 (AI-POWERED PRESENTATION DISPLAY)
+================================================================
+This page displays AI-generated presentations using OpenAI's powerful language models.
+
+KEY FEATURES:
+- OpenAI GPT-4o-mini integration for advanced content generation
+- Educational context understanding and curriculum alignment  
+- Grade-level appropriate language and complexity
+- Interactive content suggestions and learning activities
+- Professional presentation formatting
+- Export capabilities (PDF, PowerPoint)
+
+AI ADVANTAGES OVER TEMPLATES:
+- Contextually aware content generation
+- Natural language understanding
+- Creative and varied presentation structures
+- Personalized educational approaches
+- Standards-aligned learning objectives
+- Dynamic content adaptation
+-->
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>AI-Generated Presentation - Advanced Mode</title>
+        <!-- Google Font for consistency -->
+        <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
+        <!-- CSS file for AI presentation styling -->
+        <link rel="stylesheet" href="../styles/style_p2.css">
+        <!-- Additional AI-specific styling -->
+        <style>
+            .ai-badge {
+                background: linear-gradient(135deg, #6c63ff, #5a52d5);
+                color: white;
+                padding: 0.5rem 1rem;
+                border-radius: 20px;
+                font-size: 0.9rem;
+                font-weight: 600;
+                display: inline-block;
+                margin-bottom: 1rem;
+                box-shadow: 0 2px 10px rgba(108, 99, 255, 0.3);
+            }
+            
+            .ai-status {
+                background: rgba(108, 99, 255, 0.1);
+                border: 1px solid rgba(108, 99, 255, 0.3);
+                padding: 1rem;
+                border-radius: 8px;
+                margin: 1rem 0;
+                color: #6c63ff;
+            }
+            
+            .generation-progress {
+                background: rgba(108, 99, 255, 0.05);
+                border-left: 4px solid #6c63ff;
+                padding: 1rem;
+                margin: 1rem 0;
+                border-radius: 0 8px 8px 0;
+            }
+            
+            .ai-content {
+                animation: fadeIn 0.5s ease-in;
+            }
+            
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(20px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+        </style>
+    </head>
+    <body>
+        <!-- AI Badge -->
+        <div style="text-align: center; padding: 1rem;">
+            <span class="ai-badge">🤖 AI-Powered Generation</span>
+        </div>
+        
+        <!-- Loading Spinner -->
+        <div id="loadingSpinner" style="display: none; text-align: center; padding: 2rem;">
+            <div class="spinner"></div>
+            <p id="loadingMessage">Initializing AI presentation generator...</p>
+            <div class="generation-progress">
+                <p id="progressDetails">Starting AI analysis of your educational requirements...</p>
+            </div>
+        </div>
+
+        <!-- Error Message Container -->
+        <div id="errorContainer" style="display: none; text-align: center; padding: 2rem; color: #ff6b6b;">
+            <h3>AI Generation Failed</h3>
+            <p id="errorMessage"></p>
+            <div style="margin-top: 1rem;">
+                <button onclick="location.reload()" style="margin-right: 1rem;">Try Again</button>
+                <button onclick="window.location.href='pg_p2.html' + window.location.search">Use Template Mode</button>
+            </div>
+        </div>
+
+        <div class="container">
+            <header>
+                <h1>🤖 AI-Generated Presentation</h1>
+                <p>Your personalized educational content powered by advanced AI</p>
+                <div class="ai-status" id="aiStatus">
+                    <strong>AI Status:</strong> <span id="statusText">Preparing...</span>
+                </div>
+            </header>
+            
+            <!-- 
+            AI PRESENTATION CONTAINER
+            =========================
+            This container displays AI-generated presentation content with:
+            - Contextually appropriate educational material
+            - Grade-level specific language and complexity
+            - Standards-aligned learning objectives
+            - Creative and engaging presentation structure
+            - Interactive elements and activities
+            -->
+            <div id="presentationContainer" class="ai-content">
+                <p style="text-align: center; color: #bbb; font-style: italic;">
+                    AI is analyzing your requirements and generating personalized content...
+                </p>
+            </div>
+            
+            <!-- 
+            ENHANCED DOWNLOAD FUNCTIONALITY
+            ===============================
+            AI-generated content with better formatting and structure
+            -->
+            <div class="download-button-container">
+                <button type="button" id="downloadPdfBtn" onclick="downloadPDF()">📄 Download PDF</button>
+                <button type="button" id="downloadPptxBtn" onclick="downloadPowerPoint()">🎯 Download PowerPoint</button>
+            </div>
+            
+            <!-- Navigation options -->
+            <div class="button-container">
+                <button type="button" id="newPresentationBtn" onclick="window.location.href='pg_p1.html'">Create New Presentation</button>
+                <button type="button" onclick="window.location.href='pg_p2.html' + window.location.search" style="margin-left: 1rem; background: #4a90e2;">Try Template Mode</button>
+            </div>
+        </div>
+
+        <!-- JavaScript for AI functionality -->
+        <script src="../src/pg_p3.js"></script>
+        
+        <!-- External libraries for download functionality -->
+        <!-- PDF Generation -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+        
+        <!-- PowerPoint Generation -->
+        <script src="https://unpkg.com/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+        
+        <!-- File Saving -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+    </body>    
+</html>

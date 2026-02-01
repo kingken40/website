@@ -29,7 +29,7 @@
         <div class="legend">
             <h3>Legend:</h3>
             <div class="legend-item">
-                <div class="legend-color" style="background: #ff6b35;"></div>British Voices (Best for JARVIS)
+                <div class="legend-color" style="background: #ff6b35;"></div>British & Canadian Voices (Best for JARVIS)
             </div>
             <div class="legend-item">
                 <div class="legend-color" style="background: #4a90e2;"></div>JARVIS-Suitable Voices
@@ -41,17 +41,17 @@
         </div>
 
         <div class="section">
-            <h2>🎯 Premium JARVIS Voices (British + Masculine)</h2>
+            <h2>🎯 Premium NOVA Voices (British + Masculine)</h2>
             <div id="premiumVoices">Scanning...</div>
         </div>
 
         <div class="section">
-            <h2>🇬🇧 British Voices</h2>
+            <h2>🇬🇧 British & Canadian Voices</h2>
             <div id="britishVoices">Scanning...</div>
         </div>
 
         <div class="section">
-            <h2>🤖 JARVIS-Suitable Voices</h2>
+            <h2>🤖 Nova-Suitable Voices</h2>
             <div id="jarvisSuitableVoices">Scanning...</div>
         </div>
 
@@ -62,7 +62,7 @@
 
         <div class="section">
             <h2>🎵 Voice Testing</h2>
-            <button class="test-btn" onclick="testCurrentVoice()">Test Current JARVIS Voice</button>
+            <button class="test-btn" onclick="testCurrentVoice()">Test Current NOVA Voice</button>
             <button class="test-btn" onclick="stopAllSpeech()">Stop All Speech</button>
         </div>
     </div>
@@ -81,36 +81,42 @@
         }
 
         function categorizeVoices() {
-            // British voices
+            // British and Canadian voices (Liam is Canadian)
             const britishVoices = voices.filter(voice => 
-                voice.lang.includes('GB') || voice.lang.includes('UK') ||
+                voice.lang.includes('GB') || voice.lang.includes('UK') || voice.lang.includes('CA') ||
                 voice.name.toLowerCase().includes('british') ||
                 voice.name.toLowerCase().includes('england') ||
+                voice.name.toLowerCase().includes('liam') ||
+                voice.name.toLowerCase().includes('ryan') ||
                 voice.name.toLowerCase().includes('daniel') ||
                 voice.name.toLowerCase().includes('oliver') ||
                 voice.name.toLowerCase().includes('arthur') ||
                 voice.name.toLowerCase().includes('thomas') ||
                 voice.name.toLowerCase().includes('george') ||
-                voice.name.toLowerCase().includes('hazel')
+                voice.name.toLowerCase().includes('hazel') ||
+                voice.name.toLowerCase().includes('william')
             );
 
             // JARVIS-suitable voices (masculine characteristics)
             const jarvisSuitableVoices = voices.filter(voice => {
                 const name = voice.name.toLowerCase();
                 return (
+                    name.includes('liam') ||
+                    name.includes('ryan') ||
+                    name.includes('george') ||
+                    name.includes('oliver') ||
+                    name.includes('thomas') ||
+                    name.includes('hazel') ||
                     name.includes('male') || 
                     name.includes('david') ||
                     name.includes('daniel') ||
                     name.includes('alex') ||
-                    name.includes('thomas') ||
-                    name.includes('oliver') ||
                     name.includes('arthur') ||
                     name.includes('james') ||
                     name.includes('william') ||
-                    name.includes('george') ||
                     name.includes('mark') ||
                     name.includes('paul') ||
-                    name.includes('ryan') ||
+                    name.includes('matthew') ||
                     voice.localService
                 ) && !name.includes('female') && !name.includes('compact') && voice.lang.startsWith('en');
             });
@@ -149,7 +155,7 @@
                             🎵 Test Voice
                         </button>
                         <button class="test-btn" onclick="setAsJarvisVoice('${voice.name.replace(/'/g, "\\'")}')">
-                            ⭐ Set as JARVIS Voice
+                            ⭐ Set as NOVA Voice
                         </button>
                     </div>
                 `;
@@ -182,15 +188,18 @@
             const voice = voices.find(v => v.name === voiceName);
             if (!voice) return;
 
-            // Save to localStorage
-            const voicePreference = {
-                name: voice.name,
-                lang: voice.lang
-            };
-            localStorage.setItem('jarvisVoicePreference', JSON.stringify(voicePreference));
+            // Save to localStorage using the same key as jarvis_voice.js
+            console.log('🔧 Saving voice to localStorage...');
+            console.log('🔧 Voice name:', voice.name);
+            localStorage.setItem('Nova_selected_voice', voice.name);
             
-            console.log('JARVIS voice set to:', voice.name);
-            alert(`✅ JARVIS voice set to: ${voice.name}\n\nThis voice will now be used in your main JARVIS interface.`);
+            // Verify it was saved
+            const saved = localStorage.getItem('Nova_selected_voice');
+            console.log('🔧 Verified saved value:', saved);
+            console.log('🔧 Match:', saved === voice.name);
+            
+            console.log('NOVA voice set to:', voice.name);
+            alert(`✅ NOVA voice set to: ${voice.name}\n\nThis voice will now be used in your main NOVA interface.\n\nPlease refresh the main NOVA page to apply the change.`);
             
             // Test confirmation
             const confirmPhrase = `Voice successfully updated, sir. J.A.R.V.I.S is now using ${voice.name}.`;

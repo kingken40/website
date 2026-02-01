@@ -1,26 +1,26 @@
-# J.A.R.V.I.S - AI Professor v5
+# N.O.V.A - AI Professor v5
 
-**Just A Rather Very Intelligent System**
-
+**Previously named J.A.R.V.I.S (Just A Rather Very Intelligent System)**
+**Now named N.O.V.A (Network Orthogonal Virtual Assistant)**
 ## Overview
-J.A.R.V.I.S v5 is an advanced voice-enabled AI assistant interface inspired by Tony Stark's AI system. It combines sophisticated visual design with voice recognition and speech synthesis capabilities.
+N.O.V.A is an advanced voice-enabled AI assistant interface inspired by Tony Stark's AI system. It combines sophisticated visual design with voice recognition and speech synthesis capabilities.
 
 ## Features
 
 ### 🎤 Voice Control
-- **Wake Phrase Detection**: Say "Hey Jarvis" or "Jarvis" to activate
+- **Wake Phrase Detection**: Say "Hey Nova" or "Nova" to activate
 - **Voice Commands**: Speak naturally to interact with the AI
-- **Text-to-Speech**: J.A.R.V.I.S responds with voice feedback
+- **Text-to-Speech**: N.O.V.A responds with voice feedback
 - **Continuous Listening**: Always ready for voice commands
 
 ### 🎨 Visual Design
 - **Arc Reactor Interface**: Animated central arc reactor design
 - **Blue Glowing Theme**: Futuristic blue and black color scheme
-- **Circular Elements**: UI components inspired by J.A.R.V.I.S interface
+- **Circular Elements**: UI components inspired by N.O.V.A interface
 - **Animated Effects**: Smooth transitions and glowing animations
 
 ### 🤖 AI Modes
-- **J.A.R.V.I.S Mode**: Sophisticated assistant with dry humor
+- **N.O.V.A Mode**: Sophisticated assistant with dry humor
 - **Genius Mode**: Advanced technical problem solving
 - **Professor Mode**: Educational teaching assistant
 - **Data Analyst Mode**: Research and analysis focus
@@ -34,8 +34,8 @@ J.A.R.V.I.S v5 is an advanced voice-enabled AI assistant interface inspired by T
 ## Voice Commands
 
 ### Basic Commands
-- "Hey Jarvis" - Activate voice listening
-- "Hello" / "Hi" - Greet J.A.R.V.I.S
+- "Hey Nova" - Activate voice listening
+- "Hello" / "Hi" - Greet N.O.V.A
 - "Help" - Get assistance information
 - "Clear chat" - Clear conversation history
 - "Settings" - Open settings panel
@@ -45,7 +45,7 @@ J.A.R.V.I.S v5 is an advanced voice-enabled AI assistant interface inspired by T
 - "Switch to genius mode"
 - "Switch to professor mode"
 - "Switch to analyst mode"
-- "Switch to Jarvis mode"
+- "Switch to Nova mode"
 
 ### Natural Language
 - "Explain quantum physics"
@@ -72,18 +72,18 @@ J.A.R.V.I.S v5 is an advanced voice-enabled AI assistant interface inspired by T
 - **Voice Responses**: Enable/disable speech output
 - **Voice Volume**: Adjust speech volume (0-100%)
 - **Voice Speed**: Adjust speech rate (0.5x-2x)
-- **Wake Phrase**: Enable/disable "Hey Jarvis" activation
+- **Wake Phrase**: Enable/disable "Hey Nova" activation
 
 ### UI Settings
 - **Animations**: Enable/disable visual effects
-- **Theme**: J.A.R.V.I.S blue theme (default)
+- **Theme**: N.O.V.A blue theme (default)
 
 ## Usage Tips
 
 ### Voice Recognition
 1. **Clear Speech**: Speak clearly and at normal pace
 2. **Quiet Environment**: Minimize background noise
-3. **Wake Phrase**: Wait for visual confirmation after "Hey Jarvis"
+3. **Wake Phrase**: Wait for visual confirmation after "Hey Nova"
 4. **Command Timeout**: Commands timeout after 10 seconds
 
 ### Best Practices
@@ -122,7 +122,7 @@ J.A.R.V.I.S v5 is an advanced voice-enabled AI assistant interface inspired by T
 ## File Structure
 ```
 ai5/
-├── AI_v5_JARVIS.html      # Main interface
+├── AI_v5_Jarvis.html      # Main interface
 ├── styles/
 │   └── jarvis_styles.css  # J.A.R.V.I.S styling
 ├── scripts/
@@ -135,7 +135,7 @@ ai5/
 1. Open `AI_v5_JARVIS.html` in a modern browser
 2. Allow microphone permissions when prompted
 3. Wait for "SYSTEM ONLINE" status
-4. Say "Hey Jarvis" or click the microphone button
+4. Say "Hey Nova" or click the microphone button
 5. Start interacting with your AI assistant!
 
 ---

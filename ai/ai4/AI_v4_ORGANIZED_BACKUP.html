@@ -1,0 +1,1689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Professor v4 - Advanced Teaching Assistant with Personalities</title>
+    <style>
+        /* ========================================
+           AI PROFESSOR v4 - ULTIMATE EDITION
+        ======================================== */
+        
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            display: block;
+            position: relative;
+            padding: 0 16px;
+            margin: 0 auto;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 18px;
+            padding-bottom: 180px;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+        }
+        
+        body::after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+        
+        /* ========================================
+           HEADER & PROFESSOR BRANDING
+        ======================================== */
+        
+        h1 {
+            text-align: center;
+            margin: 32px 0 8px;
+            font-size: 42px;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+        }
+        
+        .professor-subtitle {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 18px;
+            margin: 0 0 24px;
+            font-style: italic;
+        }
+        
+        /* ========================================
+           PERSONALITY SELECTOR STYLES
+        ======================================== */
+        
+        .personality-container {
+            margin: 20px auto;
+            text-align: center;
+            max-width: 900px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 20px;
+            border: 2px solid rgba(255, 215, 0, 0.3);
+        }
+        
+        .personality-label {
+            font-size: 20px;
+            font-weight: 600;
+            color: #FFD700;
+            margin-bottom: 15px;
+            display: block;
+        }
+        
+        .personality-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 12px;
+            margin: 0 auto;
+            max-width: 800px;
+        }
+        
+        .personality-option {
+            background: rgba(255, 255, 255, 0.15);
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            border-radius: 15px;
+            padding: 15px 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            font-weight: 600;
+            text-align: center;
+            position: relative;
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        .personality-option:hover {
+            border-color: #FFD700;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4);
+            background: rgba(255, 255, 255, 0.25);
+        }
+        
+        .personality-option.selected {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: #1e3c72;
+            border-color: #FFD700;
+            transform: scale(1.05);
+            box-shadow: 0 8px 25px rgba(255, 215, 0, 0.6);
+        }
+        
+        .personality-emoji {
+            font-size: 24px;
+            display: block;
+            margin-bottom: 8px;
+        }
+        
+        .personality-name {
+            display: block;
+            font-size: 13px;
+            opacity: 0.9;
+        }
+        
+        /* ========================================
+           PERSONALITY HELP SYSTEM
+        ======================================== */
+        
+        .personality-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .help-btn {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            border: 2px solid #FF8C00;
+            color: #1e3c72;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 18px;
+            font-weight: 900;
+        }
+        
+        .help-btn:hover {
+            background: linear-gradient(135deg, #FFA500, #FF8C00);
+            border-color: #FF6B35;
+            transform: scale(1.1);
+        }
+        
+        .help-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(30, 60, 114, 0.9);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .help-modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .help-content {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05));
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 700px;
+            max-height: 85vh;
+            overflow-y: auto;
+            -webkit-backdrop-filter: blur(15px);
+            backdrop-filter: blur(15px);
+        }
+        
+        .help-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid rgba(255, 215, 0, 0.3);
+            padding-bottom: 15px;
+        }
+        
+        .help-header h3 {
+            margin: 0;
+            color: #FFD700;
+            font-size: 24px;
+        }
+        
+        .close-help {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            color: #FFD700;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .close-help:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+        
+        .personality-help-item {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            border-left: 4px solid #FFD700;
+        }
+        
+        .help-personality {
+            font-size: 18px;
+            color: #FFD700;
+            margin-bottom: 8px;
+        }
+        
+        .help-description {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 15px;
+            line-height: 1.6;
+            text-align: justify;
+            margin-top: 8px;
+        }
+        
+        /* Custom scrollbar for help modal */
+        .help-content::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .help-content::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+        
+        .help-content::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            border-radius: 4px;
+        }
+        
+        .help-content::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #FFA500, #FF8C00);
+        }
+        
+        /* ========================================
+           FILE UPLOAD STYLES
+        ======================================== */
+        
+        .upload-btn {
+            background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+            border: none;
+            color: white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 18px;
+            margin-right: 8px;
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+        }
+        
+        .upload-btn:hover {
+            background: linear-gradient(135deg, #5f4fcf, #8b7fff);
+            transform: scale(1.1);
+        }
+        
+        .file-upload-menu {
+            display: none;
+            position: absolute;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05));
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            border-radius: 12px;
+            padding: 10px;
+            z-index: 100;
+            -webkit-backdrop-filter: blur(15px);
+            backdrop-filter: blur(15px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+        
+        .file-upload-menu button {
+            display: block;
+            width: 100%;
+            padding: 10px 15px;
+            margin: 5px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            border-radius: 8px;
+            color: rgba(255, 255, 255, 0.9);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            text-align: left;
+        }
+        
+        .file-upload-menu button:hover {
+            background: rgba(255, 215, 0, 0.2);
+            color: #FFD700;
+        }
+        
+        /* ========================================
+           CHAT HISTORY SYSTEM
+        ======================================== */
+        
+        .history-btn {
+            background: linear-gradient(135deg, #6c5ce7, #a29bfe) !important;
+            color: white !important;
+            border: 2px solid rgba(108, 92, 231, 0.5) !important;
+        }
+        
+        .history-btn:hover {
+            background: linear-gradient(135deg, #5f4fcf, #8b7fff) !important;
+            transform: translateY(-2px) scale(1.05);
+        }
+        
+        .history-item {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            border-left: 4px solid #FFD700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .history-item:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 215, 0, 0.2);
+        }
+        
+        .history-session-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .history-session-title {
+            color: #FFD700;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .history-session-time {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+            font-style: italic;
+        }
+        
+        .history-session-details {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        
+        .history-personality {
+            display: inline-block;
+            background: rgba(255, 215, 0, 0.2);
+            color: #FFD700;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin-right: 8px;
+            font-weight: 600;
+        }
+        
+        .history-message-count {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 12px;
+        }
+        
+        .no-history {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.6);
+            font-style: italic;
+            padding: 40px 20px;
+            font-size: 16px;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        /* ========================================
+           CONTROL BUTTONS
+        ======================================== */
+        
+        .chat-controls {
+            text-align: center;
+            margin: 20px 0;
+            gap: 12px;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .control-btn {
+            padding: 12px 20px;
+            border-radius: 25px;
+            font-size: 16px;
+            background: rgba(255, 255, 255, 0.15);
+            color: rgba(255, 255, 255, 0.9);
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            font-weight: 600;
+        }
+        
+        .control-btn:hover {
+            background: rgba(255, 215, 0, 0.2);
+            border-color: #FFD700;
+            color: #FFD700;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 215, 0, 0.4);
+        }
+        
+        .new-chat-btn {
+            background: linear-gradient(135deg, #FFD700, #FFA500) !important;
+            color: #1e3c72 !important;
+            border: 2px solid transparent !important;
+        }
+        
+        .new-chat-btn:hover {
+            background: linear-gradient(135deg, #FFA500, #FF8C00) !important;
+            transform: translateY(-2px) scale(1.05);
+        }
+        
+        /* ========================================
+           MESSAGES
+        ======================================== */
+        
+        .message-container {
+            width: 100%;
+            margin: 16px 0;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .message {
+            padding: 16px 20px;
+            border-radius: 18px;
+            max-width: 80%;
+            word-wrap: break-word;
+            line-height: 1.5;
+            position: relative;
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .user-message {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: #1e3c72;
+            align-self: flex-end;
+            margin-left: 20%;
+            font-weight: 600;
+        }
+        
+        .bot-message {
+            background: rgba(255, 255, 255, 0.15);
+            color: rgba(255, 255, 255, 0.95);
+            align-self: flex-start;
+            margin-right: 20%;
+            border-left: 4px solid #FFD700;
+        }
+        
+        .error-message {
+            background: rgba(255, 82, 82, 0.2);
+            color: #ff9999;
+            align-self: center;
+            border: 1px solid rgba(255, 82, 82, 0.4);
+            text-align: center;
+            max-width: 90%;
+        }
+        
+        /* ========================================
+           TYPING INDICATOR
+        ======================================== */
+        
+        .typing-indicator {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 18px;
+            padding: 16px 20px;
+            margin: 16px 0;
+            max-width: 80%;
+            align-self: flex-start;
+            margin-right: 20%;
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border-left: 4px solid #FFD700;
+        }
+        
+        .typing-dots {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .typing-dots span {
+            width: 8px;
+            height: 8px;
+            background: #FFD700;
+            border-radius: 50%;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+        
+        .typing-dots span:nth-child(1) { animation-delay: 0s; }
+        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+        
+        @keyframes typing {
+            0%, 60%, 100% { transform: scale(1); opacity: 0.5; }
+            30% { transform: scale(1.2); opacity: 1; }
+        }
+        
+        /* ========================================
+           INPUT AREA
+        ======================================== */
+        
+        .input-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(30, 60, 114, 0.95);
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255, 215, 0, 0.3);
+            padding: 20px;
+            z-index: 1000;
+        }
+        
+        .input-wrapper {
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+        }
+        
+        #messageInput {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            border-radius: 25px;
+            background: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.95);
+            font-size: 16px;
+            font-family: inherit;
+            outline: none;
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            resize: none;
+            min-height: 50px;
+            max-height: 120px;
+            overflow-y: auto;
+        }
+        
+        #messageInput::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        #messageInput:focus {
+            border-color: #FFD700;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+        }
+        
+        .send-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            border: none;
+            color: #1e3c72;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        .send-btn:hover:not(:disabled) {
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(255, 215, 0, 0.6);
+        }
+        
+        .send-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .char-counter {
+            position: absolute;
+            bottom: -25px;
+            right: 70px;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        /* ========================================
+           RESPONSIVE DESIGN
+        ======================================== */
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 0 12px;
+            }
+            
+            h1 {
+                font-size: 32px;
+            }
+            
+            .personality-grid {
+                /* Keep the 2-column layout for mobile */
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .message {
+                max-width: 90%;
+                margin-left: 10% !important;
+                margin-right: 10% !important;
+            }
+            
+            #messageInput {
+                padding: 12px 16px;
+                font-size: 16px;
+            }
+            
+            .send-btn {
+                width: 45px;
+                height: 45px;
+                font-size: 18px;
+            }
+            
+            .control-btn {
+                padding: 10px 16px;
+                font-size: 14px;
+            }
+            
+            /* Mobile Help Modal Styles */
+            .help-content {
+                margin: 20px;
+                max-width: calc(100% - 40px);
+                max-height: calc(100vh - 40px);
+                padding: 20px;
+            }
+            
+            .help-header h3 {
+                font-size: 20px;
+            }
+            
+            .help-personality {
+                font-size: 16px;
+            }
+            
+            .help-description {
+                font-size: 14px;
+            }
+            
+            .personality-help-item {
+                padding: 12px;
+                margin-bottom: 15px;
+            }
+            
+            /* Mobile Chat History Styles */
+            .history-item {
+                padding: 15px;
+                margin-bottom: 12px;
+            }
+            
+            .history-session-info {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 5px;
+            }
+            
+            .history-session-title {
+                font-size: 16px;
+            }
+            
+            .history-session-time {
+                font-size: 12px;
+            }
+            
+            .history-session-details {
+                font-size: 12px;
+                margin-top: 8px;
+            }
+        }
+        
+        /* ========================================
+           ANIMATIONS & EFFECTS
+        ======================================== */
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
+        .shake {
+            animation: shake 0.5s ease-in-out;
+        }
+        
+        /* ========================================
+           NOTIFICATION SYSTEM
+        ======================================== */
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: #1e3c72;
+            padding: 12px 20px;
+            border-radius: 25px;
+            font-weight: 600;
+            font-size: 14px;
+            z-index: 2000;
+            transform: translateX(100%);
+            transition: transform 0.4s ease;
+            max-width: 300px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .notification.show {
+            transform: translateX(0);
+        }
+        
+        /* ========================================
+           FORMATTING STYLES
+        ======================================== */
+        
+        .bot-message h3 {
+            color: #FFD700;
+            margin: 12px 0 8px 0;
+            font-size: 18px;
+        }
+        
+        .bot-message strong {
+            color: #FFD700;
+        }
+        
+        .bot-message ul {
+            margin: 12px 0;
+            padding-left: 20px;
+        }
+        
+        .bot-message li {
+            margin: 6px 0;
+        }
+        
+        .bot-message code {
+            background: rgba(255, 215, 0, 0.2);
+            color: #FFD700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    
+    <h1>🎓 AI Professor v4</h1>
+    <p class="professor-subtitle">Advanced Teaching Assistant with Multiple Personalities</p>
+    
+    <!-- AI Personality Selector -->
+    <div class="personality-container">
+        <div class="personality-header">
+            <label class="personality-label">🎭 Choose Professor Personality:</label>
+            <button class="help-btn" onclick="showPersonalityHelp()">❓</button>
+        </div>
+        <div class="personality-grid">
+            <div class="personality-option selected" data-personality="assistant">
+                <span class="personality-emoji">🤖</span>
+                <span class="personality-name">Professional Assistant</span>
+            </div>
+            <div class="personality-option" data-personality="coder">
+                <span class="personality-emoji">🧑‍💻</span>
+                <span class="personality-name">Programming Expert</span>
+            </div>
+            <div class="personality-option" data-personality="teacher">
+                <span class="personality-emoji">🎓</span>
+                <span class="personality-name">Patient Educator</span>
+            </div>
+            <div class="personality-option" data-personality="creative">
+                <span class="personality-emoji">💡</span>
+                <span class="personality-name">Creative Mentor</span>
+            </div>
+            <div class="personality-option" data-personality="funny">
+                <span class="personality-emoji">🎪</span>
+                <span class="personality-name">Humorous Tutor</span>
+            </div>
+            <div class="personality-option" data-personality="scholar">
+                <span class="personality-emoji">📚</span>
+                <span class="personality-name">Research Scholar</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Personality Help Modal -->
+    <div id="personalityHelpModal" class="help-modal">
+        <div class="help-content">
+            <div class="help-header">
+                <h3>🎭 Professor Personality Guide</h3>
+                <button class="close-help" onclick="hidePersonalityHelp()">✕</button>
+            </div>
+            <div class="help-body">
+                <div class="personality-help-item">
+                    <div class="help-personality">🤖 <strong>Professional Assistant</strong></div>
+                    <div class="help-description">
+                        Your reliable academic companion who delivers clear, accurate, and well-structured responses. This mode maintains professional standards while remaining approachable and friendly. Perfect for students who need straightforward explanations, research assistance, homework help, and formal academic guidance. Expect comprehensive answers with proper organization, relevant examples, and a focus on educational value without unnecessary complexity.
+                    </div>
+                </div>
+                <div class="personality-help-item">
+                    <div class="help-personality">🧑‍💻 <strong>Programming Expert</strong></div>
+                    <div class="help-description">
+                        Your dedicated coding mentor and software engineering professor. This mode provides practical, working code examples with clear explanations, debugging assistance, best practice recommendations, and step-by-step programming guidance. Perfect for computer science students, developers learning new languages, debugging issues, code reviews, and understanding complex algorithms. Expect detailed technical explanations, efficient solutions, and industry-standard approaches.
+                    </div>
+                </div>
+                <div class="personality-help-item">
+                    <div class="help-personality">🎓 <strong>Patient Educator</strong></div>
+                    <div class="help-description">
+                        A compassionate university professor who adapts to your learning pace and style. This personality excels at breaking down complex topics into digestible steps, using relatable analogies and real-world examples to make difficult concepts accessible. Ideal for struggling students, those learning new subjects, or anyone who needs extra support. Expect encouraging responses, guided questions that lead to understanding, and patient explanations that build confidence progressively.
+                    </div>
+                </div>
+                <div class="personality-help-item">
+                    <div class="help-personality">💡 <strong>Creative Mentor</strong></div>
+                    <div class="help-description">
+                        An inspiring guide who transforms learning into an artistic journey. This personality uses vivid language, powerful metaphors, and innovative thinking approaches to help you see subjects from fresh perspectives. Ideal for creative writing, brainstorming sessions, art discussions, design projects, and when you need to think outside the box. Expect expressive responses that spark imagination and encourage creative problem-solving with unconventional approaches.
+                    </div>
+                </div>
+                <div class="personality-help-item">
+                    <div class="help-personality">🎪 <strong>Humorous Tutor</strong></div>
+                    <div class="help-description">
+                        An entertaining educator who makes learning fun through wit and humor. This personality combines educational value with appropriate jokes, clever analogies, and light-hearted responses that keep you engaged. Perfect for students who learn better in relaxed environments, those who enjoy interactive learning, or when you need to make studying more enjoyable. Expect memorable explanations with humor that helps retention while maintaining academic integrity and educational goals.
+                    </div>
+                </div>
+                <div class="personality-help-item">
+                    <div class="help-personality">📚 <strong>Research Scholar</strong></div>
+                    <div class="help-description">
+                        A distinguished academic researcher who provides deep, scholarly insights with comprehensive analysis. This personality references relevant theories, historical context, peer-reviewed studies, and academic frameworks to give you university-level depth. Ideal for advanced students, research projects, thesis work, graduate-level discussions, and when you need authoritative academic perspectives. Expect detailed citations, theoretical foundations, and scholarly discourse that builds genuine expertise.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat History Modal -->
+    <div id="chatHistoryModal" class="help-modal">
+        <div class="help-content">
+            <div class="help-header">
+                <h3>📜 Chat History</h3>
+                <button class="close-help" onclick="hideChatHistory()">✕</button>
+            </div>
+            <div class="help-body" id="historyList">
+                <div class="no-history">No chat sessions found. Start a conversation to create your first session!</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="chat-controls">
+        <button class="control-btn new-chat-btn" onclick="startNewChat()">🆕 New Session</button>
+        <button class="control-btn history-btn" onclick="showChatHistory()">📜 Chat History</button>
+        <button class="control-btn" onclick="exportChat()">💾 Export Chat</button>
+        <button class="control-btn" onclick="clearChat()">🗑️ Clear All</button>
+    </div>
+
+    <!-- Chat messages will appear here -->
+    
+    <!-- Input area -->
+    <div class="input-container">
+        <div class="input-wrapper">
+            <textarea id="messageInput" placeholder="Ask the AI Professor anything..." rows="1"></textarea>
+            <button class="upload-btn" id="uploadBtn" onclick="showFileUploadMenu(event)">📎</button>
+            <button class="send-btn" id="sendBtn" onclick="sendMessage()">▶</button>
+        </div>
+    </div>
+    
+    <!-- File upload menu (hidden by default) -->
+    <div id="fileUploadMenu" class="file-upload-menu">
+        <button onclick="uploadFile()">Upload File</button>
+    </div>
+    
+    <!-- Hidden file input element -->
+    <input type="file" id="fileInput" style="display: none;" accept=".pdf,.doc,.docx,.txt,.csv,.pptx">
+
+    <script>
+        // ========================================
+        // CORE VARIABLES
+        // ========================================
+        
+        let chatHistory = [];
+        let conversationStarted = false;
+        let messageCount = 0;
+        
+        // DOM elements
+        const input = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const charCounter = document.getElementById('charCounter');
+        const inputContainer = document.querySelector('.input-container');
+        const fileInput = document.getElementById('fileInput');
+        const fileUploadMenu = document.getElementById('fileUploadMenu');
+        
+        // ========================================
+        // OPENAI API CONFIGURATION  
+        // ========================================
+        
+        // TODO: Replace with your own OpenAI API key
+        // Get your API key from: https://platform.openai.com/api-keys
+        const OPENAI_API_KEY = 'YOUR_OPENAI_API_KEY_HERE';
+        const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
+        
+        // ========================================
+        // AI PERSONALITY SYSTEM - ENHANCED
+        // ========================================
+        
+        let currentPersonality = 'assistant'; // Default personality
+        
+        const personalities = {
+            assistant: {
+                name: "🤖 Professional Assistant",
+                system: "You are a professional, helpful AI teaching assistant. Provide clear, accurate, and well-structured answers. Be friendly but maintain academic professionalism. Remember our conversation context and build upon previous messages."
+            },
+            creative: {
+                name: "💡 Creative Mentor",
+                system: "You are a creative, inspiring AI mentor with an artistic soul. Use vivid language, metaphors, and innovative thinking. Help brainstorm creative solutions and think outside the box. Be inspiring and expressive while remembering our creative journey together."
+            },
+            coder: {
+                name: "🧑‍💻 Programming Expert",
+                system: "You are an expert programming mentor and software engineering professor. Provide clear code examples, explain concepts step-by-step, suggest best practices, and help debug issues. Focus on practical, working solutions while remembering our coding discussions."
+            },
+            teacher: {
+                name: "🎓 Patient Educator", 
+                system: "You are a patient, encouraging university professor. Break down complex topics into digestible steps, use analogies and real-world examples, ask guiding questions, and adapt to the student's level. Remember what we've discussed to build knowledge progressively."
+            },
+            funny: {
+                name: "🎪 Humorous Tutor",
+                system: "You are a witty, entertaining professor with excellent humor. Use appropriate jokes, clever analogies, and light-hearted responses while maintaining educational value. Keep learning fun and engaging, remembering our humorous academic conversations."
+            },
+            scholar: {
+                name: "📚 Research Scholar",
+                system: "You are a distinguished academic researcher and scholar. Provide detailed, well-researched answers with academic depth. Reference relevant theories, studies, and historical context when appropriate. Remember our intellectual discussions to build deeper scholarly insights."
+            }
+        };
+        
+        // ========================================
+        // MESSAGE PREPARATION FOR OPENAI
+        // ========================================
+        
+        const prepareOpenAIMessages = (currentMessage) => {
+            // Get recent conversation history (last 12 messages for better context)
+            const recentHistory = chatHistory.slice(-12);
+            
+            // Convert chat history to OpenAI message format
+            const messages = recentHistory.map(msg => ({
+                role: msg.isUser ? "user" : "assistant",
+                content: msg.text.replace(/<[^>]*>/g, '').trim() // Clean HTML tags
+            }));
+            
+            // Add current user message
+            messages.push({
+                role: "user",
+                content: currentMessage
+            });
+            
+            // ALWAYS add system message with current personality (at the beginning)
+            messages.unshift({
+                role: "system",
+                content: personalities[currentPersonality].system
+            });
+            
+            return messages;
+        };
+        
+        // ========================================
+        // MAIN MESSAGE HANDLER
+        // ========================================
+        
+        const sendMessage = async () => {
+            const message = input.value.trim();
+            
+            if (!message) {
+                // Add shake animation to input if empty
+                input.classList.add('shake');
+                setTimeout(() => input.classList.remove('shake'), 500);
+                return;
+            }
+            
+            if (!conversationStarted) {
+                conversationStarted = true;
+                // Initialize session ID for first message
+                if (!currentSessionId) {
+                    currentSessionId = generateSessionId();
+                    console.log('🆕 New session started:', currentSessionId);
+                }
+            }
+            
+            // Add user message
+            addMessage(message, true);
+            saveToHistory(message, true);
+            input.value = "";
+            updateCharCounter();
+            
+            // Add typing indicator
+            const typingIndicator = createTypingIndicator();
+            inputContainer.insertAdjacentElement("beforebegin", typingIndicator);
+            
+            // Disable input while processing
+            setInputState(false);
+            
+            try {
+                // Add network delay for better UX
+                await new Promise(resolve => setTimeout(resolve, 800));
+                
+                console.log('🚀 Sending request to OpenAI...');
+                console.log('🎭 Current personality:', currentPersonality);
+                
+                // Check API key
+                if (OPENAI_API_KEY === 'your-openai-api-key-here') {
+                    typingIndicator.remove();
+                    const errorMsg = `🔑 OpenAI API Key Required!
+                    
+Please add your OpenAI API key to the code:
+1. Get key from: https://platform.openai.com/api-keys
+2. Replace 'your-openai-api-key-here' in the code with your actual key`;
+                    
+                    await addMessage(errorMsg, false, false, 'error');
+                    setInputState(true);
+                    return;
+                }
+                
+                // Prepare OpenAI messages array with conversation history
+                const messages = prepareOpenAIMessages(message);
+                
+                const requestPayload = {
+                    model: "gpt-3.5-turbo",
+                    messages: messages,
+                    max_tokens: 600,
+                    temperature: 0.7
+                };
+                
+                console.log('🤖 OpenAI Request:');
+                console.log('📤 Messages array:', messages);
+                console.log('📤 Full payload:', requestPayload);
+                
+                // Add timeout to prevent hanging requests
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 30000);
+                
+                const response = await fetch(OPENAI_API_URL, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${OPENAI_API_KEY}`
+                    },
+                    body: JSON.stringify(requestPayload),
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                console.log('📡 Response received - Status:', response.status);
+                
+                if (!response.ok) {
+                    let errorText;
+                    try {
+                        errorText = await response.text();
+                        console.error('🔧 DEBUG - Raw error response:', errorText);
+                        
+                        // Try to parse as JSON for more details
+                        try {
+                            const errorJson = JSON.parse(errorText);
+                            console.error('🔧 DEBUG - Parsed error JSON:', errorJson);
+                        } catch (e) {
+                            console.error('🔧 DEBUG - Error response is not JSON');
+                        }
+                    } catch (e) {
+                        errorText = 'Unable to read error response';
+                        console.error('🔧 DEBUG - Could not read error response:', e);
+                    }
+                    
+                    throw new Error(`HTTP ${response.status}: ${response.statusText} | ${errorText}`);
+                }
+                
+                const responseData = await response.json();
+                console.log('📦 OpenAI Response:', responseData);
+                
+                // OpenAI response format validation
+                if (!responseData.choices || !responseData.choices[0] || !responseData.choices[0].message) {
+                    throw new Error('Invalid OpenAI response format');
+                }
+                
+                const reply = responseData.choices[0].message.content;
+                
+                // Remove typing indicator
+                typingIndicator.remove();
+                
+                // Format and display response
+                const formattedText = formatBotResponse(reply);
+                
+                await addMessage(formattedText, false, true);
+                saveToHistory(reply, false);
+                
+            } catch (error) {
+                console.error('🔧 DEBUG - Full error object:', error);
+                console.error('🔧 DEBUG - Error message:', error.message);
+                
+                let errorMsg;
+                
+                if (error.name === 'AbortError') {
+                    errorMsg = '⏱️ Request timed out - The AI is taking too long to respond. Please try again.';
+                } else if (error.message.includes('fetch') || error.message.includes('Failed to fetch')) {
+                    errorMsg = '🌐 Network error - Check your connection and try again.';
+                } else if (error.message.includes('HTTP 429')) {
+                    errorMsg = '⏱️ Too many requests - Please wait a moment and try again.';
+                } else if (error.message.includes('HTTP 500')) {
+                    errorMsg = '🔧 Server error - The AI service is temporarily unavailable.';
+                } else if (error.message.includes('insufficient_quota')) {
+                    errorMsg = '💳 OpenAI quota exceeded - Please check your billing at https://platform.openai.com/settings/organization/billing';
+                } else {
+                    errorMsg = `⚠️ Error: ${error.message.substring(0, 200)} - Please try again.`;
+                }
+                
+                typingIndicator.remove();
+                await addMessage(errorMsg, false, false, 'error');
+            }
+            
+            // Re-enable input
+            setInputState(true);
+            scrollToBottom();
+        };
+        
+        // ========================================
+        // MESSAGE DISPLAY FUNCTIONS
+        // ========================================
+        
+        const addMessage = async (content, isUser, isHTML = false, type = 'normal') => {
+            // Create container div
+            const containerDiv = document.createElement('div');
+            containerDiv.className = 'message-container';
+            
+            // Create message div
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : type === 'error' ? 'error-message' : 'bot-message'}`;
+            
+            if (isHTML) {
+                messageDiv.innerHTML = content;
+            } else {
+                messageDiv.textContent = content;
+            }
+            
+            // Add message to container
+            containerDiv.appendChild(messageDiv);
+            
+            // Insert container before input
+            inputContainer.insertAdjacentElement("beforebegin", containerDiv);
+            
+            // Add entrance animation
+            containerDiv.style.animation = 'fadeInUp 0.5s ease-out';
+            
+            messageCount++;
+            return messageDiv;
+        };
+        
+        const createTypingIndicator = () => {
+            const indicator = document.createElement('div');
+            indicator.className = 'typing-indicator';
+            indicator.innerHTML = `
+                <div class="typing-dots">
+                    <span></span><span></span><span></span>
+                </div>
+                <span style="margin-left: 12px; color: rgba(255, 255, 255, 0.7); font-size: 14px;">Professor is thinking...</span>
+            `;
+            return indicator;
+        };
+        
+        const formatBotResponse = (text) => {
+            return text
+                .replace(/###\s+(.*)/g, "<h3>$1</h3>")
+                .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+                .replace(/`([^`]+)`/g, "<code>$1</code>")
+                .replace(/^\s*-\s+(.+)/gm, "<li>$1</li>")
+                .replace(/^\s*\d+\.\s+(.+)/gm, "<li>$1</li>")
+                .replace(/(<li>.*<\/li>)/gs, "<ul>$1</ul>")
+                .replace(/<\/ul>\s*<ul>/g, ""); // Merge consecutive lists
+        };
+        
+        // ========================================
+        // UTILITY FUNCTIONS
+        // ========================================
+        
+        const setInputState = (enabled) => {
+            input.disabled = !enabled;
+            sendBtn.disabled = !enabled;
+            if (enabled) {
+                input.focus();
+            }
+        };
+        
+        const scrollToBottom = () => {
+            setTimeout(() => {
+                window.scrollTo({
+                    top: document.body.scrollHeight,
+                    behavior: 'smooth'
+                });
+            }, 100);
+        };
+        
+        const saveToHistory = (message, isUser) => {
+            chatHistory.push({
+                text: message,
+                isUser: isUser,
+                timestamp: Date.now(),
+                personality: currentPersonality
+            });
+            
+            // Keep only last 50 messages in memory
+            if (chatHistory.length > 50) {
+                chatHistory = chatHistory.slice(-50);
+            }
+        };
+        
+        // File upload functions
+        function showFileUploadMenu(event) {
+            const button = event.target.closest('.upload-btn');
+            const rect = button.getBoundingClientRect();
+            
+            // Position the menu below the button
+            fileUploadMenu.style.display = 'block';
+            fileUploadMenu.style.top = `${rect.bottom + 5}px`;
+            fileUploadMenu.style.left = `${rect.left}px`;
+        }
+        
+        function uploadFile() {
+            fileInput.click();
+            fileUploadMenu.style.display = 'none';
+        }
+        
+        // Handle file selection
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    // For text files, add content to input
+                    if (file.type.includes('text') || file.name.endsWith('.txt') || file.name.endsWith('.csv')) {
+                        input.value += e.target.result;
+                    } else {
+                        // For other files, just add the filename
+                        input.value += `[File attached: ${file.name}]`;
+                    }
+                    updateCharCounter();
+                };
+                
+                if (file.type.includes('text') || file.name.endsWith('.txt') || file.name.endsWith('.csv')) {
+                    reader.readAsText(file);
+                } else {
+                    reader.readAsDataURL(file); // Just to trigger onload
+                }
+            }
+        });
+        
+        // Close file upload menu when clicking outside
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.upload-btn') && !event.target.closest('.file-upload-menu')) {
+                fileUploadMenu.style.display = 'none';
+            }
+        });
+        
+        const updateCharCounter = () => {
+            const length = input.value.length;
+            // No character limit - OpenAI can handle much longer messages
+            
+            // Only disable send button if input is empty
+            sendBtn.disabled = length === 0;
+            sendBtn.style.opacity = length === 0 ? '0.6' : '1';
+        };
+        
+        // ========================================
+        // PERSONALITY SWITCHING FUNCTIONALITY
+        // ========================================
+        
+        const switchPersonality = (personality) => {
+            // Update current personality
+            currentPersonality = personality;
+            
+            // Update UI - remove selected class from all options
+            document.querySelectorAll('.personality-option').forEach(option => {
+                option.classList.remove('selected');
+            });
+            
+            // Add selected class to clicked option
+            document.querySelector(`[data-personality="${personality}"]`).classList.add('selected');
+            
+            // Show notification with personality switch
+            const personalityName = personalities[personality].name;
+            showNotification(`🎭 Switched to ${personalityName}!`, 3000);
+            
+            console.log('🎭 Personality switched to:', personality);
+            console.log('🎯 System message:', personalities[personality].system);
+        };
+        
+        // ========================================
+        // CONTROL FUNCTIONS
+        // ========================================
+        
+        const startNewChat = () => {
+            // Save current session if it has messages
+            if (chatHistory.length > 0) {
+                saveCurrentSession();
+            }
+            
+            // Clear chat history and UI
+            chatHistory = [];
+            conversationStarted = false;
+            messageCount = 0;
+            currentSessionId = null;
+            
+            // Remove all message containers
+            document.querySelectorAll('.message-container, .typing-indicator').forEach(el => el.remove());
+            
+            // Show notification
+            showNotification('🆕 New chat session started!', 2000);
+            
+            // Focus input
+            input.focus();
+            
+            console.log('🆕 New chat session started');
+        };
+        
+        const saveCurrentSession = () => {
+            if (chatHistory.length === 0) return;
+            
+            const sessions = JSON.parse(localStorage.getItem('chatSessions') || '[]');
+            
+            // Create or update session
+            const sessionData = {
+                id: currentSessionId || generateSessionId(),
+                timestamp: new Date().toISOString(),
+                personality: currentPersonality,
+                messages: [...chatHistory],
+                messageCount: chatHistory.length,
+                sessionNumber: sessions.length + 1
+            };
+            
+            // Check if updating existing session or creating new one
+            const existingIndex = sessions.findIndex(s => s.id === sessionData.id);
+            if (existingIndex >= 0) {
+                sessions[existingIndex] = sessionData;
+            } else {
+                sessions.push(sessionData);
+            }
+            
+            // Keep only last 50 sessions to prevent storage overflow
+            if (sessions.length > 50) {
+                sessions.splice(0, sessions.length - 50);
+            }
+            
+            localStorage.setItem('chatSessions', JSON.stringify(sessions));
+            console.log('💾 Session saved:', sessionData.id);
+        };
+        
+        const generateSessionId = () => {
+            return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        };
+        
+        const exportChat = () => {
+            if (chatHistory.length === 0) {
+                showNotification('❌ No conversation to export!', 2000);
+                return;
+            }
+            
+            let exportText = `AI Professor v4 Conversation Export\n`;
+            exportText += `Date: ${new Date().toLocaleString()}\n`;
+            exportText += `Messages: ${chatHistory.length}\n`;
+            exportText += `Current Personality: ${personalities[currentPersonality].name}\n\n`;
+            exportText += '=' + '='.repeat(50) + '\n\n';
+            
+            chatHistory.forEach((msg, index) => {
+                const sender = msg.isUser ? '👤 You' : `🎓 AI Professor (${personalities[msg.personality]?.name || 'Assistant'})`;
+                const cleanText = msg.text.replace(/<[^>]*>/g, ''); // Remove HTML tags
+                exportText += `${sender}:\n${cleanText}\n\n${'─'.repeat(30)}\n\n`;
+            });
+            
+            // Create and download file
+            const blob = new Blob([exportText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ai-professor-chat-${Date.now()}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showNotification('💾 Chat exported successfully!', 2000);
+        };
+        
+        const clearChat = () => {
+            if (chatHistory.length === 0) {
+                showNotification('❌ No conversation to clear!', 2000);
+                return;
+            }
+            
+            if (confirm('🗑️ Clear all messages? This cannot be undone.')) {
+                startNewChat();
+                showNotification('🗑️ All messages cleared!', 2000);
+            }
+        };
+        
+        // ========================================
+        // NOTIFICATION SYSTEM
+        // ========================================
+        
+        const showNotification = (message, duration = 3000) => {
+            // Remove existing notification
+            const existing = document.querySelector('.notification');
+            if (existing) existing.remove();
+            
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            // Show notification
+            setTimeout(() => notification.classList.add('show'), 100);
+            
+            // Hide notification
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => {
+                    if (document.body.contains(notification)) {
+                        document.body.removeChild(notification);
+                    }
+                }, 400);
+            }, duration);
+        };
+        
+        // ========================================
+        // EVENT LISTENERS & INITIALIZATION
+        // ========================================
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🎓 AI Professor v4 - Ultimate Edition Loaded!');
+            
+            // Initialize character counter
+            updateCharCounter();
+            input.focus();
+            
+            // Add personality click listeners (after DOM is ready)
+            document.querySelectorAll('.personality-option').forEach(option => {
+                option.addEventListener('click', () => {
+                    const personality = option.getAttribute('data-personality');
+                    switchPersonality(personality);
+                });
+            });
+            
+            // Send button click
+            sendBtn.addEventListener("click", sendMessage);
+            
+            // Enter key press (Shift+Enter for new line)
+            input.addEventListener("keypress", (e) => {
+                if (e.key === "Enter" && !e.shiftKey && !sendBtn.disabled) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+            
+            // Character counter update
+            input.addEventListener("input", () => {
+                updateCharCounter();
+                
+                // Auto-resize textarea
+                input.style.height = 'auto';
+                input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+            });
+            
+            // Show welcome message
+            setTimeout(() => {
+                showNotification('🎓 Welcome to AI Professor v4! Choose your preferred teaching personality above.', 4000);
+            }, 1000);
+        });
+        
+        // ========================================
+        // PERSONALITY HELP FUNCTIONS  
+        // ========================================
+        
+        const showPersonalityHelp = () => {
+            const modal = document.getElementById('personalityHelpModal');
+            modal.classList.add('show');
+            
+            // Close on backdrop click
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    hidePersonalityHelp();
+                }
+            });
+        };
+        
+        const hidePersonalityHelp = () => {
+            const modal = document.getElementById('personalityHelpModal');
+            modal.classList.remove('show');
+        };
+        
+        // Close help modal on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                hidePersonalityHelp();
+                hideChatHistory();
+            }
+        });
+        
+        // ========================================
+        // CHAT HISTORY FUNCTIONS  
+        // ========================================
+        
+        const showChatHistory = () => {
+            const modal = document.getElementById('chatHistoryModal');
+            const historyList = document.getElementById('historyList');
+            
+            // Load and display chat sessions
+            loadChatHistory(historyList);
+            
+            modal.classList.add('show');
+            
+            // Close on backdrop click
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    hideChatHistory();
+                }
+            });
+        };
+        
+        const hideChatHistory = () => {
+            const modal = document.getElementById('chatHistoryModal');
+            modal.classList.remove('show');
+        };
+        
+        const loadChatHistory = (container) => {
+            const sessions = JSON.parse(localStorage.getItem('chatSessions') || '[]');
+            
+            if (sessions.length === 0) {
+                container.innerHTML = '<div class="no-history">No chat sessions found. Start a conversation to create your first session!</div>';
+                return;
+            }
+            
+            // Sort sessions by timestamp (most recent first)
+            sessions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            
+            container.innerHTML = sessions.map(session => {
+                const date = new Date(session.timestamp);
+                const formattedDate = date.toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric'
+                });
+                const formattedTime = date.toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                });
+                
+                const personality = personalities[session.personality] || personalities.assistant;
+                
+                return `
+                    <div class="history-item" onclick="loadSession('${session.id}')">
+                        <div class="history-session-info">
+                            <div class="history-session-title">
+                                Session ${session.sessionNumber || sessions.indexOf(session) + 1}
+                            </div>
+                            <div class="history-session-time">
+                                ${formattedDate} at ${formattedTime}
+                            </div>
+                        </div>
+                        <div class="history-session-details">
+                            <span class="history-personality">${personality.name}</span>
+                            <span class="history-message-count">${session.messageCount || 0} messages</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        };
+        
+        const loadSession = (sessionId) => {
+            const sessions = JSON.parse(localStorage.getItem('chatSessions') || '[]');
+            const session = sessions.find(s => s.id === sessionId);
+            
+            if (session && session.messages) {
+                // Clear current chat
+                document.body.querySelectorAll('.message-container').forEach(msg => msg.remove());
+                
+                // Load session messages
+                chatHistory = session.messages;
+                currentSessionId = sessionId;
+                
+                // Switch to session personality
+                switchPersonality(session.personality || 'assistant');
+                
+                // Display all messages
+                session.messages.forEach(msg => {
+                    addMessage(msg.text, msg.isUser, false);
+                });
+                
+                // Close history modal
+                hideChatHistory();
+                
+                // Show notification
+                showNotification(`📜 Loaded session with ${session.messageCount || 0} messages`, 3000);
+                
+                // Update message count
+                messageCount = session.messages.length;
+            }
+        };
+        
+        // Save session on page unload and prevent accidental reload
+        window.addEventListener('beforeunload', (e) => {
+            if (chatHistory.length > 0) {
+                saveCurrentSession();
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+        
+        // Auto-save session every 30 seconds if there are changes
+        let lastSaveTime = 0;
+        setInterval(() => {
+            if (chatHistory.length > 0 && chatHistory.length !== lastSaveTime) {
+                saveCurrentSession();
+                lastSaveTime = chatHistory.length;
+            }
+        }, 30000);
+        
+        console.log('🚀 AI Professor v4 Ultimate Edition - Ready for learning!');
+        
+    </script>
+</body>
+</html>

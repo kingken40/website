@@ -55,14 +55,15 @@ ai/ai2/scripts/ai2.js
 ai/ai2/Ai2_ORGANIZED_BACKUP.html 
 ai/ai2/Ai2_WORKING_BACKUP.html 
 ai/ai3/.env 
-ai/ai4/ 
+ai/ai6/ 
  
 # Excluded directories 
 website-recovery/ 
 website-mirror/ 
  
-# VS Code workspace settings 
-.vscode/ 
+# IDE workspace settings 
+.vscode/
+.zencoder/ 
  
 MyProject_ws.code-workspace
 ai/ai3/AI_v3_ORGANIZED_BACKUP.html  

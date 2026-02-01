@@ -1,13 +1,52 @@
-// J.A.R.V.I.S Main Interface v5 - Enhanced Debug Version
+// N.O.V.A Main Interface - Enhanced Debug Version
 
 // ========================================
-// OPENAI API CONFIGURATION
+// API CONFIGURATION - MULTI-PROVIDER SUPPORT
 // ========================================
-const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-    ? 'http://127.0.0.1:5001/api/chat' 
-    : '/api/chat';
+// TODO: Replace with your own API keys
+// Get your API keys from:
+// - OpenAI: https://platform.openai.com/api-keys
+// - Groq: https://console.groq.com/keys
+// - Cohere: https://dashboard.cohere.com/api-keys
+// - Gemini: https://makersuite.google.com/app/apikey
+// - Hugging Face: https://huggingface.co/settings/tokens
 
-let currentPersonality = 'jarvis';
+const OPENAI_API_KEY = 'YOUR_OPENAI_API_KEY_HERE';
+const GROQ_API_KEY = 'YOUR_GROQ_API_KEY_HERE';
+const COHERE_API_KEY = 'YOUR_COHERE_API_KEY_HERE';
+const GEMINI_API_KEY = 'YOUR_GEMINI_API_KEY_HERE';
+const HUGGINGFACE_API_KEY = 'YOUR_HUGGINGFACE_API_KEY_HERE';
+
+const API_URL = 'https://api.openai.com/v1/chat/completions';
+const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+
+// AI Provider Configuration
+let currentProvider = 'groq'; // Options: 'openai', 'groq', 'gemini' - Using Groq (FREE, fastest)
+let currentModel = 'llama-3.3-70b-versatile'; // Default model
+
+const providerConfig = {
+    openai: {
+        apiKey: OPENAI_API_KEY,
+        apiUrl: API_URL,
+        model: 'gpt-4o-mini',
+        maxTokens: 800
+    },
+    groq: {
+        apiKey: GROQ_API_KEY,
+        apiUrl: GROQ_API_URL,
+        model: 'llama-3.3-70b-versatile', // Fast and high quality (updated model)
+        maxTokens: 2048
+    },
+    gemini: {
+        apiKey: GEMINI_API_KEY,
+        apiUrl: GEMINI_API_URL,
+        model: 'gemini-pro',
+        maxTokens: 1024
+    }
+};
+
+let currentPersonality = 'Nova';
 
 // Initialize conversation history
 let conversationHistory = [];
@@ -25,8 +64,8 @@ if (typeof window.isVoiceEnabled === 'undefined') {
 
 // Personality configurations
 const personalities = {
-    jarvis: {
-        name: 'J.A.R.V.I.S',
+    Nova: {
+        name: 'N.O.V.A',
         greeting: null,
         style: 'British AI assistant with dry wit - conversational yet sophisticated, helpful and efficient',
         responsePrefix: 'Certainly, sir. '
@@ -51,13 +90,13 @@ const personalities = {
     }
 };
 
-function getRandomJarvisGreeting() {
+function getRandomNovaGreeting() {
     const greetings = [
         "At your service, sir.",
-        "Good day, sir. JARVIS at your service.",
+        "Good day, sir. Nova at your service.",
         "At your service, sir. How may I assist you today?",
         "Good day, sir. Systems are fully operational. We're online and ready",
-        "Greetings, sir. JARVIS at your service.",
+        "Greetings, sir. Nova at your service.",
         "At your service, sir. All systems online and ready.",
         "Good day, sir. How may I be of service?",
         "At your service, sir. What can I help you with today?"
@@ -68,11 +107,13 @@ function getRandomJarvisGreeting() {
 // Current chat history
 let chatHistory = [];
 
-function initializeJarvis() {
-    console.log('🤖 Initializing JARVIS systems...');
-    console.log('🔑 API Endpoint:', API_URL);
-    console.log('🧠 AI Model:', 'gpt-4o-mini');
-    console.log('💭 Max tokens:', '800');
+function initializeNova() {
+    console.log('🤖 Initializing Nova systems...');
+    const provider = providerConfig[currentProvider];
+    console.log('🔑 AI Provider:', currentProvider.toUpperCase(), '(FREE, Fastest)');
+    console.log('🔑 API Endpoint:', provider.apiUrl);
+    console.log('🧠 AI Model:', provider.model);
+    console.log('💭 Max tokens:', provider.maxTokens);
     
     // Fix voice integration issues
     if (typeof window.voiceIntegrationFix === 'function') {
@@ -93,7 +134,7 @@ function initializeJarvis() {
     }, 100);
     
     // Set default personality
-    selectPersonality('jarvis');
+    selectPersonality('Nova');
     
     // Start system animations
     startSystemAnimations();
@@ -125,7 +166,7 @@ function initializeJarvis() {
         console.log('  - processVoiceCommand:', typeof window.processVoiceCommand);
     }, 2000);
     
-    console.log('✅ J.A.R.V.I.S systems online');
+    console.log('✅ N.O.V.A systems online');
 }
 
 function selectPersonality(personalityType) {
@@ -152,8 +193,8 @@ function selectPersonality(personalityType) {
     }
     
     // Greet with new personality
-    const greeting = personalityType === 'jarvis' ? getRandomJarvisGreeting() : personalities[personalityType].greeting;
-    addMessage(greeting, 'jarvis');
+    const greeting = personalityType === 'Nova' ? getRandomNovaGreeting() : personalities[personalityType].greeting;
+    addMessage(greeting, 'Nova');
     
     // Speak greeting if voice is enabled (with proper voice coordination)
     if (typeof window.speakText === 'function') {
@@ -179,8 +220,9 @@ function addMessage(text, sender, timestamp = null) {
     const currentTime = timestamp || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     
     let senderName = 'You';
-    if (sender === 'jarvis') {
-        senderName = personalities[currentPersonality].name;
+    if (sender === 'Nova') {
+        const personality = personalities[currentPersonality] || personalities['Nova'];
+        senderName = personality ? personality.name : 'N.O.V.A';
     }
     
     messageDiv.innerHTML = `
@@ -206,47 +248,60 @@ function addMessage(text, sender, timestamp = null) {
 }
 
 function processUserMessage(userMessage) {
-    console.log('💭 Processing user message:', userMessage);
+    console.log('💭 ==========================================');
+    console.log('💭 processUserMessage CALLED');
+    console.log('💭 Message:', userMessage);
+    console.log('💭 Current personality:', currentPersonality);
+    console.log('💭 ==========================================');
     
-    // Add user message to chat
-    addMessage(userMessage, 'user');
-    
-    // Add thinking indicator
-    addThinkingIndicator();
-    
-    // Clear input
-    const messageInput = document.getElementById('messageInput');
-    if (messageInput) {
-        messageInput.value = '';
+    try {
+        // Add user message to chat
+        addMessage(userMessage, 'user');
+        
+        // Add thinking indicator
+        addThinkingIndicator();
+        
+        // Clear input
+        const messageInput = document.getElementById('messageInput');
+        if (messageInput) {
+            messageInput.value = '';
+        }
+        
+        // Generate AI response
+        setTimeout(() => {
+            generateAIResponse(userMessage, currentPersonality);
+        }, 1000);
+    } catch (error) {
+        console.error('❌ Error in processUserMessage:', error);
+        removeThinkingIndicator();
+        addMessage('System error processing your message. Please try again.', 'Nova');
     }
-    
-    // Generate AI response
-    setTimeout(() => {
-        generateAIResponse(userMessage, currentPersonality);
-    }, 1000);
 }
 
-// Enhanced OpenAI integration with improved error handling and debugging
+// Enhanced AI integration with multi-provider support and improved error handling
 async function generateAIResponse(userMessage, personality) {
     console.log('🤖 Generating AI response for personality:', personality);
-    console.log('🚀 Sending request to OpenAI API (gpt-4o-mini)...');
+    
+    // Get current provider configuration
+    const provider = providerConfig[currentProvider];
+    console.log('🚀 Sending request to', currentProvider.toUpperCase(), 'API (', provider.model, ')...');
     
     try {
         // Add network delay for better UX
         await new Promise(resolve => setTimeout(resolve, 800));
         
-        // Prepare OpenAI messages array with conversation history
+        // Prepare messages array with conversation history
         const messages = prepareOpenAIMessages(userMessage, personality);
         
         const requestPayload = {
-            model: "gpt-4o-mini",
+            model: provider.model,
             messages: messages,
-            max_tokens: 800,
+            max_tokens: provider.maxTokens,
             temperature: 0.7,
             stream: false
         };
         
-        console.log('🤖 OpenAI Request:');
+        console.log('🤖', currentProvider.toUpperCase(), 'Request:');
         console.log('📤 Messages array:', messages);
         console.log('📤 Full payload:', requestPayload);
         
@@ -254,10 +309,11 @@ async function generateAIResponse(userMessage, personality) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
         
-        const response = await fetch(API_URL, {
+        const response = await fetch(provider.apiUrl, {
             method: "POST",
             headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${provider.apiKey}`
             },
             body: JSON.stringify(requestPayload),
             signal: controller.signal
@@ -293,30 +349,31 @@ async function generateAIResponse(userMessage, personality) {
             
             // Log request details for debugging
             console.error('🔧 DEBUG - Request details:');
-            console.error('  - URL:', API_URL);
+            console.error('  - Provider:', currentProvider.toUpperCase());
+            console.error('  - URL:', provider.apiUrl);
             console.error('  - Status:', response.status);
             console.error('  - Status Text:', response.statusText);
             
-            throw new Error(`OpenAI API Error (${response.status}): ${errorText}`);
+            throw new Error(`${currentProvider.toUpperCase()} API Error (${response.status}): ${errorText}`);
         }
         
         const responseData = await response.json();
-        console.log('📦 OpenAI Response:', responseData);
+        console.log('📦', currentProvider.toUpperCase(), 'Response:', responseData);
         
-        // OpenAI response format validation
+        // Response format validation
         if (!responseData.choices || !responseData.choices[0] || !responseData.choices[0].message) {
-            throw new Error('Invalid OpenAI response format');
+            throw new Error(`Invalid ${currentProvider.toUpperCase()} response format`);
         }
         
         const reply = responseData.choices[0].message.content;
-        console.log('✅ OpenAI Response Success - Length:', reply.length, 'characters');
+        console.log('✅', currentProvider.toUpperCase(), 'Response Success - Length:', reply.length, 'characters');
         console.log('🎭 Personality:', personality);
         
         // Remove thinking indicator
         removeThinkingIndicator();
         
         // Add response to chat
-        addMessage(reply, 'jarvis');
+        addMessage(reply, 'Nova');
         
         // Save to conversation history
         conversationHistory.push({
@@ -329,9 +386,20 @@ async function generateAIResponse(userMessage, personality) {
         // Speak response if voice is enabled (with proper voice coordination)
         if (typeof window.speakText === 'function') {
             console.log('🔊 AI Response: Starting voice output with coordination...');
-            window.speakText(reply, () => {
-                console.log('🔊 AI Response: Voice output completed');
-            });
+            console.log('🔊 AI Response: isWakeWordSession =', window.isWakeWordSession);
+            
+            // Only add restoration callback if this is a wake word session
+            if (window.isWakeWordSession && typeof window.restoreWakeListeningAfterResponse === 'function') {
+                window.speakText(reply, () => {
+                    console.log('🔊 AI Response: Voice output completed');
+                    console.log('🔊 AI Response complete - restoring wake listening');
+                    window.restoreWakeListeningAfterResponse();
+                });
+            } else {
+                window.speakText(reply, () => {
+                    console.log('🔊 AI Response: Voice output completed (push-to-talk mode)');
+                });
+            }
         }
         
     } catch (error) {
@@ -339,8 +407,12 @@ async function generateAIResponse(userMessage, personality) {
         console.error('🔧 DEBUG - Error message:', error.message);
         console.error('🔧 DEBUG - Error stack:', error.stack);
         
-        // Remove thinking indicator
-        removeThinkingIndicator();
+        // Remove thinking indicator - wrapped in try-catch to prevent secondary errors
+        try {
+            removeThinkingIndicator();
+        } catch (e) {
+            console.error('Error removing thinking indicator:', e);
+        }
         
         let errorMsg;
         
@@ -363,7 +435,31 @@ async function generateAIResponse(userMessage, personality) {
             console.error('🔧 Full error for debugging:', error);
         }
         
-        addMessage(errorMsg, 'jarvis');
+        // Ensure error message is always added to chat
+        try {
+            addMessage(errorMsg, 'Nova');
+        } catch (e) {
+            console.error('Failed to add error message to chat:', e);
+        }
+        
+        // Speak error message if voice is enabled (for voice command flow)
+        if (typeof window.speakText === 'function') {
+            console.log('🔊 AI Error: Speaking error message with coordination...');
+            console.log('🔊 AI Error: isWakeWordSession =', window.isWakeWordSession);
+            
+            // Only add restoration callback if this is a wake word session
+            if (window.isWakeWordSession && typeof window.restoreWakeListeningAfterResponse === 'function') {
+                window.speakText(errorMsg, () => {
+                    console.log('🔊 AI Error: Error message voice output completed');
+                    console.log('🔊 AI Error complete - restoring wake listening');
+                    window.restoreWakeListeningAfterResponse();
+                });
+            } else {
+                window.speakText(errorMsg, () => {
+                    console.log('🔊 AI Error: Error message voice output completed (push-to-talk mode)');
+                });
+            }
+        }
     }
 }
 
@@ -371,7 +467,7 @@ function prepareOpenAIMessages(userMessage, personality) {
     console.log('📝 Preparing messages for OpenAI with personality:', personality);
     
     // Get personality config
-    const config = personalities[personality] || personalities.jarvis;
+    const config = personalities[personality] || personalities.Nova;
     
     // System message with personality
     const systemMessage = {
@@ -380,11 +476,11 @@ function prepareOpenAIMessages(userMessage, personality) {
 
 Keep responses natural and conversational. Be helpful and direct - skip unnecessary formality and preamble.
 
-If you are J.A.R.V.I.S:
+If you are N.O.V.A:
 - Address user as "sir" when appropriate
 - Use dry British humor and occasional witty sarcasm
 - Be intelligent and efficient
-- Think Paul Bettany's JARVIS: witty, helpful, authoritative but never condescending
+- Think Paul Bettany's Nova: witty, helpful, authoritative but never condescending
 
 If you are Genius Mode:
 - Analytical and technical
@@ -509,7 +605,7 @@ function populateVoiceSelection() {
     // Filter for English voices and prioritize British
     const englishVoices = voices.filter(voice => voice.lang.startsWith('en'));
     
-    // Prioritize British English voices (en-GB) for authentic JARVIS experience
+    // Prioritize British English voices (en-GB) for authentic Nova experience
     const britishVoices = englishVoices.filter(voice => 
         voice.lang.includes('GB') || voice.lang.includes('UK') ||
         voice.name.toLowerCase().includes('british') ||
@@ -520,8 +616,8 @@ function populateVoiceSelection() {
         voice.name.toLowerCase().includes('thomas')     // Often British
     );
     
-    // JARVIS-like characteristics: Deep, articulate, sophisticated
-    const jarvisVoices = englishVoices.filter(voice => {
+    // Nova-like characteristics: Deep, articulate, sophisticated
+    const NovaVoices = englishVoices.filter(voice => {
         const name = voice.name.toLowerCase();
         return (
             name.includes('male') || 
@@ -538,20 +634,20 @@ function populateVoiceSelection() {
         ) && !name.includes('female') && !name.includes('compact');
     });
     
-    // Best JARVIS voices: British + Male characteristics
-    const bestJarvisVoices = jarvisVoices.filter(voice => 
+    // Best Nova voices: British + Male characteristics
+    const bestNovaVoices = NovaVoices.filter(voice => 
         britishVoices.includes(voice) || voice.lang.includes('GB')
     );
     
     console.log('🇬🇧 British voices found:', britishVoices.length);
-    console.log('🤖 JARVIS-suitable voices:', jarvisVoices.length);
-    console.log('⭐ Best JARVIS voices:', bestJarvisVoices.length);
+    console.log('🤖 Nova-suitable voices:', NovaVoices.length);
+    console.log('⭐ Best Nova voices:', bestNovaVoices.length);
     
-    // Add best JARVIS voices first (British + suitable characteristics)
-    if (bestJarvisVoices.length > 0) {
+    // Add best Nova voices first (British + suitable characteristics)
+    if (bestNovaVoices.length > 0) {
         const bestGroup = document.createElement('optgroup');
-        bestGroup.label = '⭐ Premium JARVIS Voices (British)';
-        bestJarvisVoices.forEach(voice => {
+        bestGroup.label = '⭐ Premium Nova Voices (British)';
+        bestNovaVoices.forEach(voice => {
             const option = document.createElement('option');
             option.value = voice.name;
             option.textContent = `${voice.name} (${voice.lang}) ${voice.localService ? '🎯' : '☁️'}`;
@@ -561,7 +657,7 @@ function populateVoiceSelection() {
     }
     
     // Add other British voices
-    const otherBritishVoices = britishVoices.filter(voice => !bestJarvisVoices.includes(voice));
+    const otherBritishVoices = britishVoices.filter(voice => !bestNovaVoices.includes(voice));
     if (otherBritishVoices.length > 0) {
         const britishGroup = document.createElement('optgroup');
         britishGroup.label = '🇬🇧 Other British Voices';
@@ -574,27 +670,27 @@ function populateVoiceSelection() {
         voiceSelect.appendChild(britishGroup);
     }
     
-    // Add other JARVIS-suitable voices (non-British)
-    const otherJarvisVoices = jarvisVoices.filter(voice => 
-        !bestJarvisVoices.includes(voice) && !otherBritishVoices.includes(voice)
+    // Add other Nova-suitable voices (non-British)
+    const otherNovaVoices = NovaVoices.filter(voice => 
+        !bestNovaVoices.includes(voice) && !otherBritishVoices.includes(voice)
     );
-    if (otherJarvisVoices.length > 0) {
-        const jarvisGroup = document.createElement('optgroup');
-        jarvisGroup.label = '🤖 Recommended JARVIS Voices';
-        otherJarvisVoices.forEach(voice => {
+    if (otherNovaVoices.length > 0) {
+        const NovaGroup = document.createElement('optgroup');
+        NovaGroup.label = '🤖 Recommended Nova Voices';
+        otherNovaVoices.forEach(voice => {
             const option = document.createElement('option');
             option.value = voice.name;
             option.textContent = `${voice.name} (${voice.lang}) ${voice.localService ? '🎯' : '☁️'}`;
-            jarvisGroup.appendChild(option);
+            NovaGroup.appendChild(option);
         });
-        voiceSelect.appendChild(jarvisGroup);
+        voiceSelect.appendChild(NovaGroup);
     }
     
     // Add all remaining English voices
     const remainingVoices = englishVoices.filter(voice => 
-        !bestJarvisVoices.includes(voice) && 
+        !bestNovaVoices.includes(voice) && 
         !otherBritishVoices.includes(voice) && 
-        !otherJarvisVoices.includes(voice)
+        !otherNovaVoices.includes(voice)
     );
     if (remainingVoices.length > 0) {
         const otherGroup = document.createElement('optgroup');
@@ -611,7 +707,7 @@ function populateVoiceSelection() {
     // Try to restore saved voice preference
     let voiceToSelect = null;
     try {
-        const savedPreference = localStorage.getItem('jarvisVoicePreference');
+        const savedPreference = localStorage.getItem('NovaVoicePreference');
         if (savedPreference) {
             const pref = JSON.parse(savedPreference);
             voiceToSelect = voices.find(voice => voice.name === pref.name && voice.lang === pref.lang);
@@ -624,20 +720,20 @@ function populateVoiceSelection() {
         console.warn('Could not restore voice preference:', e);
     }
     
-    // Auto-select best JARVIS voice if no preference is saved
+    // Auto-select best Nova voice if no preference is saved
     if (!voiceToSelect && !window.selectedVoice) {
         // Priority order for auto-selection
         let autoSelectedVoice = null;
         
-        if (bestJarvisVoices.length > 0) {
-            autoSelectedVoice = bestJarvisVoices[0];
-            console.log('🎯 Auto-selected premium British JARVIS voice:', autoSelectedVoice.name);
+        if (bestNovaVoices.length > 0) {
+            autoSelectedVoice = bestNovaVoices[0];
+            console.log('🎯 Auto-selected premium British Nova voice:', autoSelectedVoice.name);
         } else if (otherBritishVoices.length > 0) {
             autoSelectedVoice = otherBritishVoices[0];
             console.log('🇬🇧 Auto-selected British voice:', autoSelectedVoice.name);
-        } else if (otherJarvisVoices.length > 0) {
-            autoSelectedVoice = otherJarvisVoices[0];
-            console.log('🤖 Auto-selected JARVIS-suitable voice:', autoSelectedVoice.name);
+        } else if (otherNovaVoices.length > 0) {
+            autoSelectedVoice = otherNovaVoices[0];
+            console.log('🤖 Auto-selected Nova-suitable voice:', autoSelectedVoice.name);
         }
         
         if (autoSelectedVoice) {
@@ -678,7 +774,7 @@ function setupVoiceSettings() {
                     
                     // Store in localStorage for persistence
                     try {
-                        localStorage.setItem('jarvisVoicePreference', JSON.stringify({
+                        localStorage.setItem('NovaVoicePreference', JSON.stringify({
                             name: selectedVoice.name,
                             lang: selectedVoice.lang
                         }));
@@ -700,7 +796,7 @@ function setupVoiceSettings() {
                 
                 // Clear saved preference
                 try {
-                    localStorage.removeItem('jarvisVoicePreference');
+                    localStorage.removeItem('NovaVoicePreference');
                 } catch (e) {
                     console.warn('Could not clear voice preference:', e);
                 }
@@ -712,7 +808,7 @@ function setupVoiceSettings() {
     const previewBtn = document.getElementById('previewVoiceBtn');
     if (previewBtn) {
         previewBtn.addEventListener('click', function() {
-            const testText = "Good day, sir. This is J.A.R.V.I.S. How do you find this voice?";
+            const testText = "Good day, sir. This is N.O.V.A. How do you find this voice?";
             console.log('🎧 Preview button clicked');
             console.log('🎧 Current selected voice:', window.selectedVoice ? window.selectedVoice.name : 'none');
             
@@ -946,10 +1042,10 @@ window.voiceIntegrationFix = function() {
 // Function to make text more natural for speech synthesis (globally accessible)
 window.makeSpeechFriendly = function(text) {
     return text
-        .replace(/J\.A\.R\.V\.I\.S/g, 'Jarvis')  // Convert J.A.R.V.I.S to Jarvis
-        .replace(/J\.A\.R\.V\.I\.S\./g, 'Jarvis.')  // Handle with trailing period
-        .replace(/J\.A\.R\.V\.I\.S,/g, 'Jarvis,')  // Handle with comma
-        .replace(/J\.A\.R\.V\.I\.S!/g, 'Jarvis!')  // Handle with exclamation
+        .replace(/N\.O\.V\.A/g, 'Nova')  // Convert N.O.V.A to Nova
+        .replace(/N\.O\.V\.A\./g, 'Nova.')  // Handle with trailing period
+        .replace(/N\.O\.V\.A,/g, 'Nova,')  // Handle with comma
+        .replace(/N\.O\.V\.A!/g, 'Nova!')  // Handle with exclamation
         .replace(/Dr\./g, 'Doctor')  // Convert Dr. to Doctor
         .replace(/Mr\./g, 'Mister')  // Convert Mr. to Mister
         .replace(/Mrs\./g, 'Missus')  // Convert Mrs. to Missus
@@ -1011,7 +1107,7 @@ window.enhancedSpeakText = function(text, callback) {
     
     // Apply voice settings
     utterance.rate = parseFloat(document.getElementById('voiceSpeed')?.value || 1.0);
-    utterance.pitch = 0.8; // JARVIS-like pitch
+    utterance.pitch = 0.8; // Nova-like pitch
     utterance.volume = parseFloat(document.getElementById('voiceVolume')?.value || 0.7);
     
     utterance.onstart = () => {
@@ -1071,7 +1167,7 @@ window.processVoiceCommand = function(command) {
         addMessage(command, 'user');
         setTimeout(() => {
             const response = `I heard "${command}" but there seems to be a system issue. Please try typing your request instead, sir.`;
-            addMessage(response, 'jarvis');
+            addMessage(response, 'Nova');
             window.speakText(response);
         }, 1000);
     }
@@ -1309,7 +1405,7 @@ window.testDirectVoiceRecognition = function() {
     }
 };
 
-// Note: Microphone buttons are now handled exclusively by jarvis_voice.js 
+// Note: Microphone buttons are now handled exclusively by nova_voice.js (jarvis_voice.js)
 // to prevent conflicts and ensure proper voice recognition functionality
 
 // Test functions for debugging
@@ -1367,7 +1463,7 @@ window.testFullVoiceWorkflow = function() {
         // Step 4: Test voice recognition if available
         console.log('Step 4: Voice recognition test');
         if (typeof window.startWakeListening === 'function') {
-            console.log('🎤 Voice recognition available - you can now say "Hey Jarvis"');
+            console.log('🎤 Voice recognition available - you can now say "Hey Nova"');
         } else {
             console.log('🎤 Voice recognition not available');
         }
@@ -1380,13 +1476,13 @@ function addThinkingIndicator() {
     if (!chatMessages) return;
     
     const thinkingDiv = document.createElement('div');
-    thinkingDiv.className = 'message jarvis-message thinking-indicator';
+    thinkingDiv.className = 'message Nova-message thinking-indicator';
     thinkingDiv.innerHTML = `
         <div class="message-content">
             <div class="thinking-dots">
                 <span></span><span></span><span></span>
             </div>
-            J.A.R.V.I.S is thinking...
+            N.O.V.A is thinking...
         </div>
     `;
     
@@ -1413,10 +1509,10 @@ function clearChat() {
 
 // Initialize when DOM is loaded
 function initializeMainSystem() {
-    console.log('🚀 Initializing J.A.R.V.I.S main system...');
+    console.log('🚀 Initializing N.O.V.A main system...');
     
     // Initialize core systems
-    initializeJarvis();
+    initializeNova();
     setupEventListeners();
     setupVoiceSettings();
     
@@ -1425,7 +1521,7 @@ function initializeMainSystem() {
         populateVoiceSelection();
     }, 1000);
     
-    console.log('🚀 J.A.R.V.I.S v5 loaded successfully');
+    console.log('🚀 N.O.V.A loaded successfully');
     console.log('🚀 Available test functions:');
     console.log('');
     console.log('🔊 VOICE SYNTHESIS (Speaking):');
@@ -1455,10 +1551,10 @@ function initializeMainSystem() {
     console.log('');
     console.log('🎭 VOICE CONTROL:');
     console.log('  - findBritishVoices() - Discover available British voices');
-    console.log('  - testJarvisVoice() - Test current voice with JARVIS phrase');
+    console.log('  - testNovaVoice() - Test current voice with Nova phrase');
     console.log('  - showAvailableVoices() - List all available voices');
     console.log('  - testVoiceByName("Voice Name") - Test specific voice');
-    console.log('  - setJarvisVoice("Voice Name") - Set and save voice preference');
+    console.log('  - setNovaVoice("Voice Name") - Set and save voice preference');
     console.log('');
     console.log('🚨 TROUBLESHOOTING STEPS:');
     console.log('1. requestMicPermission() - Allow microphone access');
@@ -1480,10 +1576,14 @@ if (document.readyState === 'loading') {
 // GLOBAL EXPORTS FOR VOICE INTEGRATION
 // ========================================
 // Make key functions globally available for voice and other integrations
+console.log('🌐 Exporting functions to window object...');
 window.processUserMessage = processUserMessage;
 window.generateAIResponse = generateAIResponse;
 window.addMessage = addMessage;
 window.currentPersonality = currentPersonality;
+console.log('🌐 ✅ window.processUserMessage:', typeof window.processUserMessage);
+console.log('🌐 ✅ window.generateAIResponse:', typeof window.generateAIResponse);
+console.log('🌐 ✅ window.addMessage:', typeof window.addMessage);
 
 // Update global personality when it changes
 function updateGlobalPersonality() {
@@ -1495,7 +1595,7 @@ function updateGlobalPersonality() {
 // ========================================
 
 function findBritishVoices() {
-    console.log('🇬🇧 Searching for British JARVIS voices...');
+    console.log('🇬🇧 Searching for British Nova voices...');
     
     if (!window.speechSynthesis) {
         console.error('❌ Speech synthesis not supported in this browser');
@@ -1519,7 +1619,7 @@ function findBritishVoices() {
         voice.name.toLowerCase().includes('thomas')
     );
     
-    const jarvisVoices = voices.filter(voice => {
+    const NovaVoices = voices.filter(voice => {
         const name = voice.name.toLowerCase();
         return (
             name.includes('male') || 
@@ -1535,18 +1635,18 @@ function findBritishVoices() {
         ) && !name.includes('female') && !name.includes('compact');
     });
     
-    const bestVoices = jarvisVoices.filter(voice => 
+    const bestVoices = NovaVoices.filter(voice => 
         britishVoices.includes(voice) || voice.lang.includes('GB')
     );
     
-    console.log('\n🎯 BEST JARVIS VOICES (British + Masculine):');
+    console.log('\n🎯 BEST Nova VOICES (British + Masculine):');
     if (bestVoices.length > 0) {
         bestVoices.forEach((voice, i) => {
             console.log(`${i + 1}. ${voice.name} (${voice.lang}) ${voice.localService ? '🎯 Local' : '☁️ Online'}`);
         });
         console.log('\n💡 To test a voice: testVoiceByName("' + bestVoices[0].name + '")');
     } else {
-        console.log('❌ No premium British JARVIS voices found');
+        console.log('❌ No premium British Nova voices found');
     }
     
     console.log('\n🇬🇧 ALL BRITISH VOICES:');
@@ -1558,13 +1658,13 @@ function findBritishVoices() {
         console.log('❌ No British voices found');
     }
     
-    console.log('\n🤖 ALL JARVIS-SUITABLE VOICES:');
-    if (jarvisVoices.length > 0) {
-        jarvisVoices.forEach((voice, i) => {
+    console.log('\n🤖 ALL Nova-SUITABLE VOICES:');
+    if (NovaVoices.length > 0) {
+        NovaVoices.forEach((voice, i) => {
             console.log(`${i + 1}. ${voice.name} (${voice.lang}) ${voice.localService ? '🎯 Local' : '☁️ Online'}`);
         });
     } else {
-        console.log('❌ No JARVIS-suitable voices found');
+        console.log('❌ No Nova-suitable voices found');
     }
 }
 
@@ -1594,8 +1694,8 @@ function showAvailableVoices() {
     console.log('🇬🇧 = British English');
 }
 
-function testJarvisVoice() {
-    const testPhrase = "Good evening, sir. All systems are operational. J.A.R.V.I.S is online and ready to assist with any requests you may have.";
+function testNovaVoice() {
+    const testPhrase = "Good evening, sir. All systems are operational. N.O.V.A is online and ready to assist with any requests you may have.";
     
     if (window.selectedVoice) {
         console.log('🎭 Testing current voice:', window.selectedVoice.name);
@@ -1625,14 +1725,14 @@ function testVoiceByName(voiceName) {
     
     console.log('🎭 Testing voice:', voice.name, `(${voice.lang})`);
     
-    const testPhrase = "Greetings, sir. This is " + voice.name + " speaking. How does this voice sound for your J.A.R.V.I.S assistant?";
+    const testPhrase = "Greetings, sir. This is " + voice.name + " speaking. How does this voice sound for your N.O.V.A assistant?";
     
     if (typeof window.speakText === 'function') {
         window.speakText(testPhrase, () => {
             // Restore previous voice after test
             window.selectedVoice = previousVoice;
             console.log('🎭 Voice test complete. Previous voice restored.');
-            console.log('💡 If you like this voice, use: setJarvisVoice("' + voiceName + '")');
+            console.log('💡 If you like this voice, use: setNovaVoice("' + voiceName + '")');
         });
     } else {
         console.error('❌ speakText function not available');
@@ -1640,7 +1740,7 @@ function testVoiceByName(voiceName) {
     }
 }
 
-function setJarvisVoice(voiceName) {
+function setNovaVoice(voiceName) {
     const voices = window.speechSynthesis.getVoices();
     const voice = voices.find(v => v.name === voiceName);
     
@@ -1651,7 +1751,7 @@ function setJarvisVoice(voiceName) {
     }
     
     window.selectedVoice = voice;
-    console.log('✅ JARVIS voice set to:', voice.name, `(${voice.lang})`);
+    console.log('✅ Nova voice set to:', voice.name, `(${voice.lang})`);
     
     // Save the preference
     try {
@@ -1659,7 +1759,7 @@ function setJarvisVoice(voiceName) {
             name: voice.name,
             lang: voice.lang
         };
-        localStorage.setItem('jarvisVoicePreference', JSON.stringify(voicePreference));
+        localStorage.setItem('NovaVoicePreference', JSON.stringify(voicePreference));
         console.log('💾 Voice preference saved');
     } catch (e) {
         console.warn('⚠️ Could not save voice preference:', e);
@@ -1672,7 +1772,7 @@ function setJarvisVoice(voiceName) {
     }
     
     // Test the new voice
-    const confirmPhrase = "Voice successfully updated, sir. J.A.R.V.I.S is now using " + voice.name + ".";
+    const confirmPhrase = "Voice successfully updated, sir. N.O.V.A is now using " + voice.name + ".";
     if (typeof window.speakText === 'function') {
         window.speakText(confirmPhrase);
     }
@@ -1681,8 +1781,8 @@ function setJarvisVoice(voiceName) {
 // Export voice functions globally
 window.findBritishVoices = findBritishVoices;
 window.showAvailableVoices = showAvailableVoices;
-window.testJarvisVoice = testJarvisVoice;
+window.testNovaVoice = testNovaVoice;
 window.testVoiceByName = testVoiceByName;
-window.setJarvisVoice = setJarvisVoice;
+window.setNovaVoice = setNovaVoice;
 
 console.log('🌐 Global functions exported for voice integration');

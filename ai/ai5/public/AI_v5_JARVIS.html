@@ -9,6 +9,7 @@
 </head>
 <body>
     <!-- Background Animation -->
+     <!-- PREVIOUSLY Named J.A.R.V.I.S -->
     <div class="jarvis-background">
         <div class="circuit-lines"></div>
         <div class="arc-reactor-bg"></div>
@@ -24,8 +25,8 @@
             <div class="arc-ring arc-ring-2"></div>
             <div class="arc-ring arc-ring-3"></div>
         </div>
-        <h1 class="jarvis-title">J.A.R.V.I.S</h1>
-        <p class="jarvis-subtitle">Just A Rather Very Intelligent System</p>
+        <h1 class="jarvis-title">N.O.V.A</h1>
+        <p class="jarvis-subtitle">Networking Orthogonal Virtual Assistant</p>
         <div class="system-status">
             <span class="status-indicator online"></span>
             <span class="status-text">SYSTEM ONLINE</span>
@@ -44,18 +45,10 @@
                 <i class="fas fa-microphone"></i>
                 <span class="sr-only">Activate voice recognition</span>
             </button>
-            <button class="stop-btn" id="stopBtn" type="button" title="Stop JARVIS speaking/listening" onclick="stopJarvis()">
-                <i class="fas fa-stop"></i>
-                <span class="sr-only">Stop JARVIS</span>
-            </button>
-            <button class="wake-toggle-btn" id="wakeToggleBtn" type="button" title="Toggle 'Hey Jarvis' wake word">
-                <i class="fas fa-volume-mute"></i>
-                <span class="sr-only">Toggle wake word</span>
-            </button>
         </div>
 
         <div class="voice-status">
-            <span class="voice-status-text">Press and hold the microphone to speak. Toggle wake word for "Hey Jarvis" mode.</span>
+            <span class="voice-status-text">Press and hold microphone to speak (or hold R key)</span>
         </div>
     </div>
 
@@ -65,7 +58,7 @@
         <div class="mode-grid">
             <div class="mode-card" data-personality="jarvis">
                 <div class="mode-icon">🤖</div>
-                <div class="mode-name">J.A.R.V.I.S</div>
+                <div class="mode-name">N.O.V.A</div>
                 <div class="mode-desc">Sophisticated AI Assistant</div>
             </div>
             <div class="mode-card" data-personality="genius">
@@ -116,7 +109,7 @@
             </button>
             <input type="text" 
                    id="messageInput" 
-                   placeholder="Ask J.A.R.V.I.S anything... or use voice commands"
+                   placeholder="Ask N.O.V.A anything... or use voice commands"
                    autocomplete="off">
             <button class="input-btn voice-input-btn" id="voiceInputBtn" type="button" title="Voice Input">
                 <i class="fas fa-microphone"></i>
@@ -166,10 +159,11 @@
                         <i class="fas fa-play"></i> Preview
                     </button>
                 </div>
-                <div class="setting-group">
-                    <label for="wakePhraseEnabled">Wake Phrase ("Hey Jarvis")</label>
+                <!-- Wake phrase setting - DISABLED/COMMENTED OUT -->
+                <!-- <div class="setting-group">
+                    <label for="wakePhraseEnabled">Wake Phrase ("Hey Nova")</label>
                     <input type="checkbox" id="wakePhraseEnabled" checked>
-                </div>
+                </div> -->
                 <div class="setting-group">
                     <label for="animationsEnabled">UI Animations</label>
                     <input type="checkbox" id="animationsEnabled" checked>
@@ -192,6 +186,9 @@
         <button class="file-option" data-type="code" type="button" title="Upload Code File">
             <i class="fas fa-code"></i> Code File
         </button>
+        <button class="file-option" data-type="audio" type="button" title="Upload Audio File">
+            <i class="fas fa-file-audio"></i> Audio File
+        </button>
     </div>
 
     <!-- Hidden file inputs -->
@@ -199,6 +196,7 @@
     <input type="file" id="imageFileInput" accept="image/*" style="display: none;">
     <input type="file" id="pdfFileInput" accept=".pdf" style="display: none;">
     <input type="file" id="codeFileInput" accept=".js,.py,.html,.css,.java,.cpp,.c" style="display: none;">
+    <input type="file" id="audioFileInput" accept="audio/*,.mp3,.wav,.m4a,.ogg,.flac" style="display: none;">
 
     <!-- Notification System -->
     <div class="notification" id="notification"></div>
@@ -447,13 +445,17 @@
             }, duration);
         }
 
+        /**
+         * Show the welcome message that initializes the AI
+         
+         */
         function showWelcomeMessage() {
             const welcomeMessage = `
                 <div class="welcome-message">
-                    <h3>🤖 J.A.R.V.I.S Systems Initialized</h3>
-                    <p>Good ${getTimeOfDay()}, sir. J.A.R.V.I.S is online and ready to assist you.</p>
+                    <h3>🤖 N.O.V.A Systems Initialized</h3>
+                    <p>Good ${getTimeOfDay()}, sir. N.O.V.A is online and ready to assist you.</p>
                     <div class="feature-highlights">
-                        <div class="feature">🗣️ <strong>Voice Recognition:</strong> Say "Hey Jarvis" or press and hold the microphone</div>
+                        <div class="feature">🗣️ <strong>Voice Recognition:</strong> Say "Hey Nova" or press and hold the microphone</div>
                         <div class="feature">🧠 <strong>AI Modes:</strong> Switch between different AI personalities</div>
                         <div class="feature">⚙️ <strong>Settings:</strong> Customize voice and preferences</div>
                         <div class="feature">📁 <strong>File Upload:</strong> Attach and analyze documents</div>
@@ -462,7 +464,7 @@
                 </div>
             `;
             
-            addMessage(welcomeMessage, 'jarvis');
+            addMessage(welcomeMessage, 'nova');
         }
 
         function getTimeOfDay() {
@@ -533,15 +535,15 @@
             // Load available voices
             loadAvailableVoices();
             
-            // Wake phrase setting
-            const wakePhraseCheckbox = document.getElementById('wakePhraseEnabled');
+            // Wake phrase setting - DISABLED/COMMENTED OUT
+            /*const wakePhraseCheckbox = document.getElementById('wakePhraseEnabled');
             if (wakePhraseCheckbox) {
                 wakePhraseCheckbox.checked = true; // Default enabled
                 wakePhraseCheckbox.addEventListener('change', function() {
                     console.log('Wake phrase enabled:', this.checked);
                     // Can add logic to enable/disable wake phrase detection
                 });
-            }
+            }*/
             
             // Animations setting
             const animationsCheckbox = document.getElementById('animationsEnabled');
@@ -829,7 +831,7 @@
                     updateVoiceVisualizer(false);
                 } else {
                     window.startWakeListening();
-                    updateVoiceStatus('Listening for "Hey Jarvis"...');
+                    updateVoiceStatus('Listening for "Hey Nova"...');
                     updateVoiceVisualizer(true);
                     showVoiceEnabledMessage();
                 }
@@ -865,12 +867,12 @@
             const message = `
                 <div class="voice-enabled-message">
                     <h4>🎤 Voice Recognition Activated</h4>
-                    <p>I'm now listening for "Hey Jarvis" followed by your commands.</p>
+                    <p>I'm now listening for "Hey Nova" followed by your commands.</p>
                     <p><strong>Try saying:</strong></p>
                     <ul>
-                        <li>"Hey Jarvis, what's the weather like?"</li>
-                        <li>"Hey Jarvis, explain quantum physics"</li>
-                        <li>"Hey Jarvis, switch to genius mode"</li>
+                        <li>"Hey Nova, what's the weather like?"</li>
+                        <li>"Hey Nova, explain quantum physics"</li>
+                        <li>"Hey Nova, switch to genius mode"</li>
                     </ul>
                 </div>
             `;
@@ -1418,8 +1420,8 @@
             }
         };
 
-        // Global stop function to interrupt JARVIS
-        window.stopJarvis = function() {
+        // Global stop function - DISABLED/COMMENTED OUT (Stop button removed)
+        /*window.stopJarvis = function() {
             console.log('🛑 STOP button pressed - interrupting JARVIS...');
             
             // 1. Cancel all speech synthesis immediately
@@ -1477,7 +1479,7 @@
             }
             
             console.log('🛑 JARVIS stopped successfully');
-        };
+        };*/
 
         console.log('🚀 J.A.R.V.I.S v5 loaded successfully');
         console.log('🚀 Available test functions:');

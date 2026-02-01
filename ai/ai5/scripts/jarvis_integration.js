@@ -1,5 +1,5 @@
-// J.A.R.V.I.S Integration Script - Handles integration between voice and main systems
-console.log('🔗 Loading J.A.R.V.I.S Integration...');
+// N.O.V.A Integration Script - Handles integration between voice and main systems
+console.log('🔗 Loading N.O.V.A Integration...');
 
 // Voice Integration Fixes
 window.voiceIntegrationFix = function() {
@@ -20,10 +20,10 @@ window.voiceIntegrationFix = function() {
     if (!window.makeSpeechFriendly) {
         window.makeSpeechFriendly = function(text) {
             return text
-                .replace(/J\.A\.R\.V\.I\.S/g, 'Jarvis')  // Convert J.A.R.V.I.S to Jarvis
-                .replace(/J\.A\.R\.V\.I\.S\./g, 'Jarvis.')  // Handle with trailing period
-                .replace(/J\.A\.R\.V\.I\.S,/g, 'Jarvis,')  // Handle with comma
-                .replace(/J\.A\.R\.V\.I\.S!/g, 'Jarvis!')  // Handle with exclamation
+                .replace(/N\.O\.V\.A/g, 'Nova')  // Convert N.O.V.A to Nova
+                .replace(/N\.O\.V\.A\./g, 'Nova.')  // Handle with trailing period
+                .replace(/N\.O\.V\.A,/g, 'Nova,')  // Handle with comma
+                .replace(/N\.O\.V\.A!/g, 'Nova!')  // Handle with exclamation
                 .replace(/Dr\./g, 'Doctor')  // Convert Dr. to Doctor
                 .replace(/Mr\./g, 'Mister')  // Convert Mr. to Mister
                 .replace(/Mrs\./g, 'Missus')  // Convert Mrs. to Missus
@@ -91,7 +91,7 @@ window.voiceIntegrationFix = function() {
             if (window.selectedVoice) {
                 utterance.voice = window.selectedVoice;
             }
-            // Optimized JARVIS voice characteristics
+            // Optimized Nova voice characteristics
             utterance.rate = 0.85;  // Slightly slower for sophistication and clarity
             utterance.pitch = 0.75; // Lower pitch for authoritative, masculine tone
             utterance.volume = 0.8; // Clear and confident volume
@@ -208,9 +208,9 @@ window.enhancedSpeakText = function(text, callback) {
     }
     
     // Apply voice settings
-    // Optimized JARVIS voice characteristics (with user override capability)
+    // Optimized Nova voice characteristics (with user override capability)
     utterance.rate = parseFloat(document.getElementById('voiceSpeed')?.value || 0.85);  // Sophisticated pace
-    utterance.pitch = 0.75; // Deep, authoritative JARVIS pitch
+    utterance.pitch = 0.75; // Deep, authoritative Nova pitch
     utterance.volume = parseFloat(document.getElementById('voiceVolume')?.value || 0.8); // Clear and confident
     
     utterance.onstart = () => console.log('🔊 Enhanced: Started speaking');
@@ -280,7 +280,7 @@ window.processVoiceCommand = function(command) {
             addMessage(command, 'user');
             setTimeout(() => {
                 const response = `I heard "${command}" but there seems to be a system issue. Please try typing your request instead, sir.`;
-                addMessage(response, 'jarvis');
+                addMessage(response, 'Nova');
                 window.speakText(response);
             }, 1000);
         }
@@ -297,7 +297,7 @@ window.addEventListener('load', function() {
         console.log('  - processUserMessage:', typeof processUserMessage);
         console.log('  - addMessage:', typeof addMessage);
         console.log('  - populateVoiceSelection:', typeof populateVoiceSelection);
-        console.log('  - initializeJarvis:', typeof initializeJarvis);
+        console.log('  - initializeNova:', typeof initializeNova);
         console.log('  - window.speakText:', typeof window.speakText);
         console.log('  - window.initializeVoice:', typeof window.initializeVoice);
         
@@ -310,4 +310,4 @@ window.addEventListener('load', function() {
     }, 2000);
 });
 
-console.log('🔗 J.A.R.V.I.S Integration script loaded');
+console.log('🔗 N.O.V.A Integration script loaded');
