@@ -3,19 +3,23 @@
 // ========================================
 // API CONFIGURATION - MULTI-PROVIDER SUPPORT
 // ========================================
-// TODO: Replace with your own API keys
-// Get your API keys from:
-// - OpenAI: https://platform.openai.com/api-keys
-// - Groq: https://console.groq.com/keys
-// - Cohere: https://dashboard.cohere.com/api-keys
-// - Gemini: https://makersuite.google.com/app/apikey
-// - Hugging Face: https://huggingface.co/settings/tokens
+// API keys are now stored in localStorage for user convenience
+// Users can enter their own keys through Settings -> API Configuration
 
-const OPENAI_API_KEY = 'YOUR_OPENAI_API_KEY_HERE';
-const GROQ_API_KEY = 'YOUR_GROQ_API_KEY_HERE';
-const COHERE_API_KEY = 'YOUR_COHERE_API_KEY_HERE';
-const GEMINI_API_KEY = 'YOUR_GEMINI_API_KEY_HERE';
-const HUGGINGFACE_API_KEY = 'YOUR_HUGGINGFACE_API_KEY_HERE';
+// Load API keys from localStorage or use defaults
+function loadApiKey(keyName, defaultValue = 'YOUR_API_KEY_HERE') {
+    const stored = localStorage.getItem(keyName);
+    if (stored && stored !== 'YOUR_API_KEY_HERE' && stored.trim() !== '') {
+        return stored;
+    }
+    return defaultValue;
+}
+
+let OPENAI_API_KEY = loadApiKey('openai_api_key', 'YOUR_OPENAI_API_KEY_HERE');
+let GROQ_API_KEY = loadApiKey('groq_api_key', 'YOUR_GROQ_API_KEY_HERE');
+let COHERE_API_KEY = loadApiKey('cohere_api_key', 'YOUR_COHERE_API_KEY_HERE');
+let GEMINI_API_KEY = loadApiKey('gemini_api_key', 'YOUR_GEMINI_API_KEY_HERE');
+let HUGGINGFACE_API_KEY = loadApiKey('huggingface_api_key', 'YOUR_HUGGINGFACE_API_KEY_HERE');
 
 const API_URL = 'https://api.openai.com/v1/chat/completions';
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
@@ -1507,6 +1511,107 @@ function clearChat() {
     }
 }
 
+// ========================================
+// API KEY MANAGEMENT
+// ========================================
+function setupApiKeyManagement() {
+    console.log('🔑 Setting up API key management...');
+    
+    const saveApiKeyBtn = document.getElementById('saveApiKey');
+    const groqApiKeyInput = document.getElementById('groqApiKey');
+    const apiKeySavedMsg = document.getElementById('apiKeySaved');
+    const settingsBtn = document.getElementById('settingsBtn');
+    const settingsModal = document.getElementById('settingsModal');
+    
+    // Load saved API key into input when settings open
+    if (settingsBtn && settingsModal) {
+        settingsBtn.addEventListener('click', () => {
+            if (groqApiKeyInput) {
+                const savedKey = localStorage.getItem('groq_api_key');
+                if (savedKey && savedKey !== 'YOUR_API_KEY_HERE' && savedKey.trim() !== '') {
+                    groqApiKeyInput.value = savedKey;
+                }
+            }
+        });
+    }
+    
+    // Save API key button
+    if (saveApiKeyBtn && groqApiKeyInput) {
+        saveApiKeyBtn.addEventListener('click', () => {
+            const apiKey = groqApiKeyInput.value.trim();
+            
+            if (!apiKey || apiKey === '') {
+                alert('Please enter a valid API key');
+                return;
+            }
+            
+            // Save to localStorage
+            localStorage.setItem('groq_api_key', apiKey);
+            
+            // Update the runtime variable
+            GROQ_API_KEY = apiKey;
+            
+            // Update provider config
+            if (providerConfig.groq) {
+                providerConfig.groq.apiKey = apiKey;
+            }
+            
+            // Show success message
+            if (apiKeySavedMsg) {
+                apiKeySavedMsg.style.display = 'inline';
+                setTimeout(() => {
+                    apiKeySavedMsg.style.display = 'none';
+                }, 3000);
+            }
+            
+            console.log('✅ API key saved successfully!');
+            
+            // Remove any existing warning
+            const warning = document.querySelector('.api-key-warning');
+            if (warning) {
+                warning.remove();
+            }
+        });
+    }
+}
+
+function checkApiKeyStatus() {
+    console.log('🔍 Checking API key status...');
+    
+    // Check if Groq API key is configured (since it's the default provider)
+    if (!GROQ_API_KEY || GROQ_API_KEY === 'YOUR_API_KEY_HERE' || GROQ_API_KEY.trim() === '') {
+        console.warn('⚠️ Groq API key not configured');
+        showApiKeyWarning();
+    } else {
+        console.log('✅ API key is configured');
+    }
+}
+
+function showApiKeyWarning() {
+    const chatMessages = document.getElementById('chatMessages');
+    if (!chatMessages) return;
+    
+    // Check if warning already exists
+    if (document.querySelector('.api-key-warning')) return;
+    
+    const warningDiv = document.createElement('div');
+    warningDiv.className = 'message Nova-message api-key-warning';
+    warningDiv.innerHTML = `
+        <div class="message-header">
+            <span class="sender-name">⚠️ System Notice</span>
+        </div>
+        <div class="message-content" style="background: rgba(255, 193, 7, 0.1); border-left: 3px solid #FFC107; padding: 1rem;">
+            <strong>API Key Required</strong><br>
+            Please configure your Groq API key to use N.O.V.A:<br>
+            1. Click the ⚙️ Settings button above<br>
+            2. Enter your Groq API key (get one free at <a href="https://console.groq.com/keys" target="_blank" style="color: #FFD700;">console.groq.com/keys</a>)<br>
+            3. Click "Save API Key"
+        </div>
+    `;
+    
+    chatMessages.appendChild(warningDiv);
+}
+
 // Initialize when DOM is loaded
 function initializeMainSystem() {
     console.log('🚀 Initializing N.O.V.A main system...');
@@ -1515,11 +1620,15 @@ function initializeMainSystem() {
     initializeNova();
     setupEventListeners();
     setupVoiceSettings();
+    setupApiKeyManagement();
     
     // Wait for voices to load
     setTimeout(() => {
         populateVoiceSelection();
     }, 1000);
+    
+    // Check if API key is configured
+    checkApiKeyStatus();
     
     console.log('🚀 N.O.V.A loaded successfully');
     console.log('🚀 Available test functions:');

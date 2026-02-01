@@ -144,10 +144,25 @@
                 <button class="modal-close" id="closeSettings">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="setting-group">
-                    <label for="voiceEnabled">Voice Recognition</label>
-                    <input type="checkbox" id="voiceEnabled" checked>
+                <div class="setting-section">
+                    <h4 style="color: #FFD700; margin-bottom: 1rem; border-bottom: 1px solid rgba(255, 215, 0, 0.3); padding-bottom: 0.5rem;">🔑 API Configuration</h4>
+                    <div class="setting-group">
+                        <label for="groqApiKey">Groq API Key (Required for N.O.V.A)</label>
+                        <input type="password" id="groqApiKey" placeholder="Enter your Groq API key" style="width: 100%; padding: 0.5rem; background: rgba(0, 170, 255, 0.1); border: 1px solid rgba(0, 170, 255, 0.3); border-radius: 5px; color: #00aaff;">
+                        <small style="display: block; margin-top: 0.5rem; color: rgba(255, 255, 255, 0.6);">Get your free key at <a href="https://console.groq.com/keys" target="_blank" style="color: #FFD700;">console.groq.com/keys</a></small>
+                    </div>
+                    <div class="setting-group">
+                        <button id="saveApiKey" style="padding: 0.6rem 1.2rem; background: linear-gradient(135deg, #FFD700, #FFA500); border: none; border-radius: 5px; color: #1a1a2e; font-weight: 600; cursor: pointer; transition: all 0.3s;">Save API Key</button>
+                        <span id="apiKeySaved" style="margin-left: 1rem; color: #4CAF50; display: none;">✓ Saved!</span>
+                    </div>
                 </div>
+                
+                <div class="setting-section" style="margin-top: 1.5rem;">
+                    <h4 style="color: #FFD700; margin-bottom: 1rem; border-bottom: 1px solid rgba(255, 215, 0, 0.3); padding-bottom: 0.5rem;">🎤 Voice Settings</h4>
+                    <div class="setting-group">
+                        <label for="voiceEnabled">Voice Recognition</label>
+                        <input type="checkbox" id="voiceEnabled" checked>
+                    </div>
                 <div class="setting-group">
                     <label for="voiceResponse">Voice Responses</label>
                     <input type="checkbox" id="voiceResponse" checked>
@@ -169,10 +184,14 @@
                     <label for="wakePhraseEnabled">Wake Phrase ("Hey Nova")</label>
                     <input type="checkbox" id="wakePhraseEnabled" checked>
                 </div> -->
-                <div class="setting-group">
-                    <label for="animationsEnabled">UI Animations</label>
-                    <input type="checkbox" id="animationsEnabled" checked>
                 </div>
+                
+                <div class="setting-section" style="margin-top: 1.5rem;">
+                    <h4 style="color: #FFD700; margin-bottom: 1rem; border-bottom: 1px solid rgba(255, 215, 0, 0.3); padding-bottom: 0.5rem;">⚙️ General Settings</h4>
+                    <div class="setting-group">
+                        <label for="animationsEnabled">UI Animations</label>
+                        <input type="checkbox" id="animationsEnabled" checked>
+                    </div>
                 <div class="setting-group">
                     <label for="hotkeyEnabled">Push-to-Talk Hotkey</label>
                     <input type="checkbox" id="hotkeyEnabled">
