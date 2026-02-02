@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>J.A.R.V.I.S - AI Professor v5 | Voice-Enabled Assistant</title>
+    <title>N.O.V.A - AI Professor v5 | Voice-Enabled Assistant</title>
     <link rel="stylesheet" href="../styles/jarvis_styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
@@ -83,10 +83,16 @@
     <div class="chat-container">
         <div class="chat-header">
             <div class="chat-title">
-                <span class="current-mode">J.A.R.V.I.S Mode</span>
+                <span class="current-mode">N.O.V.A Mode</span>
                 <span class="chat-status">Ready</span>
             </div>
             <div class="chat-controls">
+                <button class="control-btn" id="newChatBtn" type="button" title="New Chat">
+                    <i class="fas fa-plus"></i>
+                </button>
+                <button class="control-btn" id="chatHistoryBtn" type="button" title="Chat History">
+                    <i class="fas fa-history"></i>
+                </button>
                 <button class="control-btn" id="clearChat" type="button" title="Clear Chat">
                     <i class="fas fa-trash"></i>
                 </button>
@@ -107,10 +113,15 @@
             <button class="input-btn" id="attachBtn" type="button" title="Attach File">
                 <i class="fas fa-paperclip"></i>
             </button>
-            <input type="text" 
+            <textarea
                    id="messageInput" 
-                   placeholder="Ask N.O.V.A anything... or use voice commands"
-                   autocomplete="off">
+                   placeholder="Ask N.O.V.A anything... or use voice commands (Shift+Enter for new line)"
+                   autocomplete="off"
+                   name="nova-message-input"
+                   autocorrect="off"
+                   autocapitalize="off"
+                   spellcheck="false"
+                   rows="1"></textarea>
             <button class="input-btn voice-input-btn" id="voiceInputBtn" type="button" title="Voice Input">
                 <i class="fas fa-microphone"></i>
             </button>
@@ -130,7 +141,7 @@
     <div class="modal" id="settingsModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>J.A.R.V.I.S Settings</h3>
+                <h3>N.O.V.A Settings</h3>
                 <button class="modal-close" id="closeSettings" type="button" title="Close Settings">&times;</button>
             </div>
             <div class="modal-body">
@@ -141,8 +152,13 @@
                         <input type="password" id="groqApiKey" placeholder="Enter your Groq API key" style="width: 100%; padding: 0.5rem; background: rgba(0, 170, 255, 0.1); border: 1px solid rgba(0, 170, 255, 0.3); border-radius: 5px; color: #00aaff;">
                         <small style="display: block; margin-top: 0.5rem; color: rgba(255, 255, 255, 0.6);">Get your free key at <a href="https://console.groq.com/keys" target="_blank" style="color: #FFD700;">console.groq.com/keys</a></small>
                     </div>
+                    <div class="setting-group" style="margin-top: 1rem;">
+                        <label for="openaiApiKey">OpenAI API Key (Optional - for Audio Transcription)</label>
+                        <input type="password" id="openaiApiKey" placeholder="Enter your OpenAI API key" style="width: 100%; padding: 0.5rem; background: rgba(0, 170, 255, 0.1); border: 1px solid rgba(0, 170, 255, 0.3); border-radius: 5px; color: #00aaff;">
+                        <small style="display: block; margin-top: 0.5rem; color: rgba(255, 255, 255, 0.6);">Required only for audio file transcription. Get your key at <a href="https://platform.openai.com/api-keys" target="_blank" style="color: #FFD700;">platform.openai.com/api-keys</a></small>
+                    </div>
                     <div class="setting-group">
-                        <button id="saveApiKey" style="padding: 0.6rem 1.2rem; background: linear-gradient(135deg, #FFD700, #FFA500); border: none; border-radius: 5px; color: #1a1a2e; font-weight: 600; cursor: pointer; transition: all 0.3s;">Save API Key</button>
+                        <button id="saveApiKey" style="padding: 0.6rem 1.2rem; background: linear-gradient(135deg, #FFD700, #FFA500); border: none; border-radius: 5px; color: #1a1a2e; font-weight: 600; cursor: pointer; transition: all 0.3s;">Save API Keys</button>
                         <span id="apiKeySaved" style="margin-left: 1rem; color: #4CAF50; display: none;">✓ Saved!</span>
                     </div>
                 </div>
@@ -166,7 +182,7 @@
                     <input type="range" id="voiceSpeed" min="0.5" max="2" step="0.1" value="1">
                 </div>
                 <div class="setting-group">
-                    <label for="voiceSelection">J.A.R.V.I.S Voice</label>
+                    <label for="voiceSelection">N.O.V.A Voice</label>
                     <select id="voiceSelection">
                         <option value="">Loading voices...</option>
                     </select>
@@ -187,6 +203,58 @@
                         <label for="animationsEnabled">UI Animations</label>
                         <input type="checkbox" id="animationsEnabled" checked>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat History Modal -->
+    <div class="modal" id="chatHistoryModal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h3>📚 Chat History</h3>
+                <button class="modal-close" id="closeChatHistory" type="button" title="Close Chat History">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="chatHistoryList" class="chat-history-list">
+                    <!-- Chat history items will be populated here -->
+                </div>
+                <div class="chat-history-empty" id="chatHistoryEmpty" style="text-align: center; padding: 3rem; color: rgba(255, 255, 255, 0.5);">
+                    <i class="fas fa-history" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.3;"></i>
+                    <p>No saved chat history yet.</p>
+                    <p style="font-size: 0.9rem;">Your conversations will be automatically saved here.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export/Continuation Prompt Modal -->
+    <div class="modal" id="exportModal" style="display: none;">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3>📤 Export Conversation</h3>
+                <button class="modal-close" id="closeExportModal" type="button" title="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 1rem;">
+                    <h4 style="color: #00aaff; margin-bottom: 0.5rem;">Continuation Prompt</h4>
+                    <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; margin-bottom: 1rem;">
+                        Copy this prompt to continue the conversation in a new chat session:
+                    </p>
+                    <textarea id="continuationPrompt" readonly style="width: 100%; height: 300px; background: rgba(0, 17, 34, 0.8); border: 1px solid rgba(0, 170, 255, 0.3); border-radius: 8px; padding: 1rem; color: #ffffff; font-family: 'Courier New', monospace; font-size: 0.85rem; resize: vertical;"></textarea>
+                    <button onclick="copyContinuationPrompt()" style="margin-top: 1rem; padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #00aaff, #0088cc); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                        <i class="fas fa-copy"></i> Copy to Clipboard
+                    </button>
+                </div>
+                <div style="margin-top: 2rem;">
+                    <h4 style="color: #00aaff; margin-bottom: 0.5rem;">Full Chat Export</h4>
+                    <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; margin-bottom: 1rem;">
+                        Download the complete conversation as a text file:
+                    </p>
+                    <button onclick="downloadFullChat()" style="padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #FFD700, #FFA500); color: #001122; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                        <i class="fas fa-download"></i> Download Chat (.txt)
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -229,7 +297,7 @@
                 <div class="arc-segment"></div>
             </div>
         </div>
-        <div class="loading-text">J.A.R.V.I.S is processing...</div>
+        <div class="loading-text">N.O.V.A is processing...</div>
     </div>
 
     <!-- Scripts -->
@@ -342,7 +410,57 @@
     </script>
     
     <script>
-        // J.A.R.V.I.S Main Interface v5 - Enhanced Debug Version
+        // N.O.V.A Main Interface v5 - Enhanced Debug Version
+        
+        // File Upload Functions - Define FIRST for onclick access
+        window.toggleFileMenu = function(event) {
+            console.log('📎 ========== TOGGLE FILE MENU ==========');
+            console.log('📎 Event:', event);
+            
+            // STOP PROPAGATION IMMEDIATELY
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                event.stopImmediatePropagation();
+            }
+            
+            const fileMenu = document.getElementById('fileMenu');
+            console.log('📎 Menu element found:', !!fileMenu);
+            
+            if (!fileMenu) {
+                console.error('📎 ERROR: fileMenu element not found in DOM!');
+                console.log('📎 All elements with id:', document.querySelectorAll('[id="fileMenu"]'));
+                return;
+            }
+            
+            const wasActive = fileMenu.classList.contains('active');
+            console.log('📎 Was active before toggle:', wasActive);
+            
+            fileMenu.classList.toggle('active');
+            
+            const isActive = fileMenu.classList.contains('active');
+            console.log('📎 Is active after toggle:', isActive);
+            console.log('📎 ClassList:', Array.from(fileMenu.classList));
+            
+            const computedStyle = window.getComputedStyle(fileMenu);
+            console.log('📎 Computed display:', computedStyle.display);
+            console.log('📎 Computed visibility:', computedStyle.visibility);
+            console.log('📎 Computed opacity:', computedStyle.opacity);
+            console.log('📎 Position:', computedStyle.position);
+            console.log('📎 Bottom:', computedStyle.bottom);
+            
+            console.log('📎 ========== END TOGGLE ==========');
+        };
+
+        window.hideFileMenu = function() {
+            console.log('📎 hideFileMenu called');
+            const fileMenu = document.getElementById('fileMenu');
+            if (fileMenu) {
+                console.log('📎 Removing active class from menu');
+                fileMenu.classList.remove('active');
+            }
+        };
+        
         let currentPersonality = 'jarvis';
         
         // Initialize voice system variables
@@ -383,7 +501,7 @@
             }
         };
 
-        // Initialize J.A.R.V.I.S - uses jarvis_main.js initialization
+        // Initialize N.O.V.A - uses jarvis_main.js initialization
         document.addEventListener('DOMContentLoaded', function() {
             // jarvis_main.js handles initializeJarvis and setupEventListeners
             if (typeof initializeJarvis === 'function') {
@@ -413,27 +531,10 @@
             
             // Chat controls
             document.getElementById('clearChat').addEventListener('click', clearChat);
-            document.getElementById('exportChat').addEventListener('click', exportChat);
+            // Export chat now handled by jarvis_main.js openExportModal()
             
-            // File upload
-            document.getElementById('attachBtn').addEventListener('click', toggleFileMenu);
-            
-            // File inputs
-            document.querySelectorAll('input[type="file"]').forEach(input => {
-                input.addEventListener('change', handleFileUpload);
-            });
-            
-            // File menu options
-            document.querySelectorAll('.file-option').forEach(option => {
-                option.addEventListener('click', function() {
-                    const type = this.dataset.type;
-                    const fileInput = document.getElementById(type + 'FileInput');
-                    if (fileInput) {
-                        fileInput.click();
-                    }
-                    toggleFileMenu(); // Hide menu
-                });
-            });
+            // File upload - HANDLED BY jarvis_main.js setupFileUploadListeners()
+            // All file upload event listeners moved to jarvis_main.js to avoid conflicts
         }
 
         // selectPersonality and addMessage now in jarvis_main.js
@@ -719,7 +820,7 @@
             const previewBtn = document.getElementById('previewVoiceBtn');
             if (previewBtn) {
                 previewBtn.addEventListener('click', function() {
-                    const testText = "Good day, sir. This is J.A.R.V.I.S. How do you find this voice?";
+                    const testText = "Good day, sir. This is N.O.V.A. How do you find this voice?";
                     console.log('🎧 Preview button clicked');
                     console.log('🎧 Current selected voice:', window.selectedVoice ? window.selectedVoice.name : 'none');
                     
@@ -767,61 +868,10 @@
             showWelcomeMessage();
         }
 
-        function exportChat() {
-            const chatMessages = document.getElementById('chatMessages');
-            const messages = chatMessages.querySelectorAll('.message');
-            let chatContent = 'J.A.R.V.I.S Chat Export\n' + '='.repeat(30) + '\n\n';
-            
-            messages.forEach(message => {
-                const sender = message.querySelector('.sender').textContent;
-                const content = message.querySelector('.message-content').textContent;
-                const timestamp = message.querySelector('.timestamp').textContent;
-                chatContent += `[${timestamp}] ${sender}: ${content}\n\n`;
-            });
-            
-            const blob = new Blob([chatContent], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `jarvis-chat-${new Date().toISOString().slice(0, 10)}.txt`;
-            a.click();
-            URL.revokeObjectURL(url);
-            
-            showNotification('Chat exported successfully', 2000);
-        }
+        // exportChat() function removed - now handled by openExportModal() in jarvis_main.js
 
-        // File Upload Functions
-        function toggleFileMenu() {
-            const fileMenu = document.getElementById('fileMenu');
-            const isVisible = fileMenu.style.display === 'block';
-            fileMenu.style.display = isVisible ? 'none' : 'block';
-        }
-
-        function handleFileUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            console.log('File uploaded:', file.name, file.type, file.size);
-            
-            // Show file processing notification
-            showNotification(`Processing file: ${file.name}`, 3000);
-            
-            // Add file information to chat
-            const fileInfo = `
-                <div class="file-upload-info">
-                    <h4>📁 File Uploaded</h4>
-                    <p><strong>Name:</strong> ${file.name}</p>
-                    <p><strong>Type:</strong> ${file.type}</p>
-                    <p><strong>Size:</strong> ${(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                    <p><em>File processed and ready for analysis.</em></p>
-                </div>
-            `;
-            
-            addMessage(fileInfo, 'jarvis');
-            
-            // Reset file input
-            event.target.value = '';
-        }
+        // File Upload Handler - MOVED TO jarvis_main.js
+        // Complete implementation with audio transcription now in jarvis_main.js
 
         // System Animations
         function startSystemAnimations() {
@@ -1500,7 +1550,7 @@
             console.log('🛑 JARVIS stopped successfully');
         };*/
 
-        console.log('🚀 J.A.R.V.I.S v5 loaded successfully');
+        console.log('🚀 N.O.V.A v5 loaded successfully');
         console.log('🚀 Available test functions:');
         console.log('');
         console.log('🔊 VOICE SYNTHESIS (Speaking):');

@@ -109,7 +109,7 @@
     <!-- Input Area -->
     <div class="input-container">
         <div class="input-wrapper">
-            <button class="input-btn" id="attachBtn" type="button" title="Attach File">
+            <button class="input-btn" id="attachBtn" type="button" title="Attach File" onclick="toggleFileMenu(event)">
                 <i class="fas fa-paperclip"></i>
             </button>
             <!-- <button class="voice-btn" id="voiceBtn" type="button">
@@ -516,9 +516,28 @@
             document.getElementById('settingsModal').classList.remove('active');
         }
 
-        function toggleFileMenu() {
+        function toggleFileMenu(event) {
+            console.log('📎 Toggle file menu clicked');
             const menu = document.getElementById('fileMenu');
+            console.log('📎 Menu element:', menu);
+            
+            if (!menu) {
+                console.error('📎 ERROR: fileMenu element not found!');
+                alert('File menu not found. Please refresh the page.');
+                return;
+            }
+            
+            console.log('📎 Menu classList:', menu.classList);
+            console.log('📎 Menu current display:', window.getComputedStyle(menu).display);
+            
             menu.classList.toggle('active');
+            
+            console.log('📎 Menu active after toggle:', menu.classList.contains('active'));
+            console.log('📎 Menu new display:', window.getComputedStyle(menu).display);
+            
+            if (event) {
+                event.stopPropagation();
+            }
         }
 
         function hideFileMenu() {
