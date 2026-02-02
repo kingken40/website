@@ -34,12 +34,9 @@
                 <!-- First Game -->
                 <div class="game-item">
                     <div class="left-content">
-                        <h3>Tough-Luck <span class="status-light" id="toughLuckStatus"></span></h3>
-                        <a href="ToughLuckv7\game-server\templates\UserGUI.html" class="play-button">Play</a>
+                        <h3>Tough-Luck</h3>
+                        <a href="ToughLuckv7\public\UserGUI.html" class="play-button">Play</a>
                         <button class="feedback-btn" onclick="openFeedback('Tough-Luck')">Feedback</button>
-                        <div class="server-info">
-                            <small>Server Status: <span id="serverStatusText" style="color: #ff4444;">Offline</span></small>
-                        </div>
                     </div>
                     <div class="right-content">
                         <p>A luck-based game where the outcome depends entirely on chance. <strong>Are you feeling lucky today?</strong> Take your chances and see if fortune favors you!</p>
@@ -130,33 +127,7 @@
         background-color: #ffa500;
     }
     
-    /* Status Light Styles */
-    .status-light {
-        display: inline-block;
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        margin-left: 8px;
-        background-color: #ff4444; /* Red by default */
-        box-shadow: 0 0 6px rgba(255, 68, 68, 0.6);
-        transition: all 0.3s ease;
-        position: relative;
-        top: -1px;
-    }
-    
-    .status-light.online {
-        background-color: #44ff44; /* Green when online */
-        box-shadow: 0 0 6px rgba(68, 255, 68, 0.6);
-    }
-    
-    .server-info {
-        margin-top: 8px;
-        font-style: italic;
-    }
-    
-    .server-info small {
-        color: #666;
-    }
+
     </style>
 
     <script>
@@ -193,46 +164,6 @@
         document.getElementById('feedbackModal').style.display = 'none';
         document.getElementById('feedbackForm').reset();
     }
-    
-    // ToughLuck Server Status Checker
-    function checkToughLuckServerStatus() {
-        const statusLight = document.getElementById('toughLuckStatus');
-        const statusText = document.getElementById('serverStatusText');
-        
-        // Try to reach the server (no checking state)
-        fetch('http://localhost:5000/', {
-            method: 'GET',
-            mode: 'cors',
-            signal: AbortSignal.timeout(3000) // 3 second timeout
-        })
-        .then(response => {
-            if (response.ok) {
-                // Server is running
-                statusLight.className = 'status-light online';
-                statusText.textContent = 'Online (Server Running)';
-                statusText.style.color = '#44aa44';
-            } else {
-                // Server responded but with error
-                statusLight.className = 'status-light';
-                statusText.textContent = 'Server Error';
-                statusText.style.color = '#ff4444';
-            }
-        })
-        .catch(error => {
-            // Server is not running or not reachable
-            statusLight.className = 'status-light';
-            statusText.textContent = 'Offline';
-            statusText.style.color = '#ff4444';
-        });
-    }
-    
-    // Check status when page loads
-    document.addEventListener('DOMContentLoaded', function() {
-        checkToughLuckServerStatus();
-        
-        // Check status every 5 seconds
-        setInterval(checkToughLuckServerStatus, 5000);
-    });
     </script>
 </body>
 </html>

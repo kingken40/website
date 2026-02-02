@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tough Luck Game - Intro</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            color: #333;
+            text-align: center;
+            padding: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+            font-weight: bold;
+            font-size: 36px;
+        }
+        .button {
+            background-color: #3498db;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+        .button:hover {
+            background-color: #2980b9;
+        }
+        .instructions {
+            margin-top: 20px;
+            text-align: left;
+            display: inline-block;
+            max-width: 600px;
+        }
+        .instructions h2 {
+            font-weight: bold;
+            color: #2980b9;
+            font-size: 28px;
+        }
+        .instructions ul {
+            list-style-type: disc;
+            padding-left: 20px;
+        }
+        .instructions li {
+            margin: 15px 0;
+            font-weight: bold;
+            font-size: 20px;
+        }
+        .button-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Welcome to Tough Luck!</h1>
+    <p><strong>Get ready to test your luck in this exciting game!</strong></p>
+    
+    <div class="instructions">
+        <h2>How to Play:</h2>
+        <ul>
+            <li>Choose the <strong>number of moves</strong> you want to play.</li>
+            <li>Select the <strong>Game Mode</strong>: TL-1, TL-2, or Endless.</li>
+            <li>Decide if you want to allow <strong>Duplicate Numbers</strong> in your path.</li>
+            <li>Enter your moves (integer from 0-9) based on the <strong>numbers generated</strong> by the game. (You'll be lucky to get one!)</li>
+            <li>Score points for <strong>correct moves</strong> and try to avoid wrong ones!</li>
+        </ul>
+    </div>
+    
+    <div class="button-container">
+        <button class="button" id="start-button">Start Game</button>
+    </div>
+
+    <a href="../../Games.html">
+        <button type="button" class="button">Return to Games Page</button>
+    </a>
+
+    <script>
+        document.getElementById("start-button").addEventListener("click", function() {
+            window.location.href = "UserStart.html";
+        });
+    </script>
+</body>
+</html>
