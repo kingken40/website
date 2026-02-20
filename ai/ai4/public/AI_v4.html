@@ -145,30 +145,7 @@
                             <button class="add-course-btn" onclick="addNewCourse()">➕ Add Course</button>
                         </div>
                         <div id="courseList">
-                            <div class="course-item" data-course-id="software-eng-practicum">
-                                <div class="course-info">
-                                    <label for="course-title-software-eng-practicum">Course Title:</label>
-                                    <input type="text" id="course-title-software-eng-practicum" class="course-title" value="Software Engineering Practicum" placeholder="Enter course title" title="Course title for this configuration" />
-                                    <label for="course-prompt-software-eng-practicum">Course Context Prompt:</label>
-                                    <textarea id="course-prompt-software-eng-practicum" class="course-prompt" rows="4" placeholder="Describe the course context and objectives" title="Course context prompt that will be used to provide AI with course-specific guidance">Capstone software project in which the student applies concepts learned in the program. The practicum can be completed in a course in which the instructor oversees teams of students, or through an arrangement with an industry partner in which a manager evaluates the work of a student on a particular project. The latter requires prior approval.</textarea>
-                                    <div class="course-actions">
-                                        <button class="save-course-btn" onclick="saveCourse('software-eng-practicum')">💾 Save</button>
-                                        <button class="delete-course-btn" onclick="deleteCourse('software-eng-practicum')">🗑️ Delete</button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="course-item" data-course-id="computer-networks">
-                                <div class="course-info">
-                                    <label for="course-title-computer-networks">Course Title:</label>
-                                    <input type="text" id="course-title-computer-networks" class="course-title" value="Computer Networks" placeholder="Enter course title" title="Course title for this configuration" />
-                                    <label for="course-prompt-computer-networks">Course Context Prompt:</label>
-                                    <textarea id="course-prompt-computer-networks" class="course-prompt" rows="4" placeholder="Describe the course context and objectives" title="Course context prompt that will be used to provide AI with course-specific guidance">Introduction to network design and programming. The course covers topics such as data transmission, link control, encoding, network topologies, internetworking, address resolution, protocol layering, routing methods, network and data security, socket programming, and remote procedure calls.</textarea>
-                                    <div class="course-actions">
-                                        <button class="save-course-btn" onclick="saveCourse('computer-networks')">💾 Save</button>
-                                        <button class="delete-course-btn" onclick="deleteCourse('computer-networks')">🗑️ Delete</button>
-                                    </div>
-                                </div>
-                            </div>
+                            <!-- Courses will be dynamically loaded from localStorage -->
                         </div>
                     </div>
                 </div>

@@ -22,12 +22,12 @@ const fileUploadMenu = document.getElementById('fileUploadMenu');
 // Groq API - FREE and faster than OpenAI (for text)
 // Get your free API key from: https://console.groq.com/keys
 // API keys are now managed via Settings (localStorage)
-let GROQ_API_KEY = 'YOUR_GROQ_API_KEY_HERE';
+let GROQ_API_KEY = '';
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_MODEL = 'llama-3.3-70b-versatile';
 
 // OpenAI API - for vision/image analysis
-let OPENAI_API_KEY = 'YOUR_OPENAI_API_KEY_HERE';
+let OPENAI_API_KEY = '';
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 const OPENAI_VISION_MODEL = 'gpt-4o';
 
@@ -2044,20 +2044,9 @@ setInterval(() => {
 // COURSE CONFIGURATION SYSTEM
 // ========================================
 
-let courses = {
-    'software-eng-practicum': {
-        id: 'software-eng-practicum',
-        title: 'Software Engineering Practicum',
-        prompt: 'Capstone software project in which the student applies concepts learned in the program. The practicum can be completed in a course in which the instructor oversees teams of students, or through an arrangement with an industry partner in which a manager evaluates the work of a student on a particular project. The latter requires prior approval.'
-    },
-    'computer-networks': {
-        id: 'computer-networks',
-        title: 'Computer Networks',
-        prompt: 'Introduction to network design and programming. The course covers topics such as data transmission, link control, encoding, network topologies, internetworking, address resolution, protocol layering, routing methods, network and data security, socket programming, and remote procedure calls.'
-    }
-};
+let courses = {};
 
-let activeCourse = 'software-eng-practicum';
+let activeCourse = '';
 
 // Load courses from localStorage on startup
 function loadCourses() {
