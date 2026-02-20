@@ -2044,20 +2044,37 @@ setInterval(() => {
 // COURSE CONFIGURATION SYSTEM
 // ========================================
 
-let courses = {};
+let courses = {
+    'integrated-problem-solving': {
+        id: 'integrated-problem-solving',
+        title: 'Integrated Problem Solving for AI',
+        prompt: 'The course will cover methodologies and best practices for developing AI solutions that integrate knowledge and perspectives across multiple disciplines.'
+    },
+    'human-centric-cybersecurity': {
+        id: 'human-centric-cybersecurity',
+        title: 'Human-Centric Cybersecurity',
+        prompt: 'Human‑Centric Cybersecurity examines how attackers exploit human behavior and trust. The course focuses on social engineering, deception, and psychological defenses that strengthen security where people are most vulnerable.'
+    }
+};
 
-let activeCourse = '';
+let activeCourse = 'integrated-problem-solving';
 
 // Load courses from localStorage on startup
 function loadCourses() {
     const savedCourses = localStorage.getItem('ai_professor_courses');
     if (savedCourses) {
         courses = JSON.parse(savedCourses);
+    } else {
+        // First time load - save default courses to localStorage
+        saveCourses();
     }
     
     const savedActiveCourse = localStorage.getItem('ai_professor_active_course');
     if (savedActiveCourse && courses[savedActiveCourse]) {
         activeCourse = savedActiveCourse;
+    } else {
+        // First time load - save default active course
+        saveCourses();
     }
     
     updateCourseSelector();
@@ -2346,6 +2363,14 @@ function loadApiKeys() {
 window.showSettings = showSettings;
 window.hideSettings = hideSettings;
 window.saveApiKeys = saveApiKeys;
+
+// Make course management functions globally accessible
+window.showCourseConfig = showCourseConfig;
+window.hideCourseConfig = hideCourseConfig;
+window.addNewCourse = addNewCourse;
+window.saveCourse = saveCourse;
+window.deleteCourse = deleteCourse;
+window.setActiveCourse = setActiveCourse;
 
 // Initialize courses and API keys on page load
 document.addEventListener('DOMContentLoaded', () => {
