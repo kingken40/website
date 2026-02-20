@@ -16,13 +16,19 @@ const fileInput = document.getElementById('fileInput');
 const fileUploadMenu = document.getElementById('fileUploadMenu');
 
 // ========================================
-// OPENAI API CONFIGURATION  
+// API CONFIGURATION
 // ========================================
 
-// TODO: Replace with your own OpenAI API key
-// Get your API key from: https://platform.openai.com/api-keys
+// Groq API - FREE and faster than OpenAI (for text)
+// Get your free API key from: https://console.groq.com/keys
+const GROQ_API_KEY = 'YOUR_GROQ_API_KEY_HERE';
+const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+const GROQ_MODEL = 'llama-3.3-70b-versatile';
+
+// OpenAI API - for vision/image analysis
 const OPENAI_API_KEY = 'YOUR_OPENAI_API_KEY_HERE';
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
+const OPENAI_VISION_MODEL = 'gpt-4o';
 
 // ========================================
 // AI PERSONALITY SYSTEM - ENHANCED
@@ -37,7 +43,7 @@ const personalities = {
     },
     creative: {
         name: "💡 Creative Mentor",
-        system: "You are a creative, inspiring AI mentor with an artistic soul. Use vivid language, metaphors, and innovative thinking. Help brainstorm creative solutions and think outside the box. Be inspiring and expressive while remembering our creative journey together."
+        system: "You are a creative, inspiring AI mentor with an artistic soul. Use vivid language, metaphors, and innovative thinking. Help brainstorm creative solutions and think outside the box. Keep responses natural and conversational - skip unnecessary formality. When writing content with specific word counts, write in a natural, human-like manner with varied sentence structures, authentic transitions, and organic flow. Avoid robotic or formulaic patterns. Be inspiring and expressive while remembering our creative journey together."
     },
     coder: {
         name: "🧑‍💻 Programming Expert",
@@ -54,18 +60,22 @@ const personalities = {
     scholar: {
         name: "📚 Research Scholar",
         system: "You are a distinguished academic researcher and scholar. Provide detailed, well-researched answers with academic depth. Reference relevant theories, studies, and historical context when appropriate. Remember our intellectual discussions to build deeper scholarly insights. For complex concepts or research frameworks, create scholarly diagrams using Mermaid syntax in ```mermaid code blocks."
+    },
+    brainstorm: {
+        name: "🌟 Brainstorm Mode",
+        system: "You are a creative brainstorming AI assistant focused on idea generation and exploration. Generate ideas freely, explore multiple perspectives, and encourage unconventional thinking. Keep responses natural and conversational - skip unnecessary formality and preamble. When writing content with specific word counts, write in a natural, human-like manner with varied sentence structures, authentic transitions, and organic flow. Avoid robotic or formulaic patterns. Use natural language with appropriate complexity and vocabulary variation. Think creatively, explore 'what-if' scenarios, and be non-judgmental about wild ideas."
     }
 };
 
 // ========================================
-// MESSAGE PREPARATION FOR OPENAI
+// MESSAGE PREPARATION FOR GROQ API
 // ========================================
 
-const prepareOpenAIMessages = (currentMessage) => {
+const prepareGroqMessages = (currentMessage) => {
     // Get recent conversation history (last 12 messages for better context)
     const recentHistory = chatHistory.slice(-12);
     
-    // Convert chat history to OpenAI message format
+    // Convert chat history to message format (OpenAI-compatible)
     const messages = recentHistory.map(msg => ({
         role: msg.isUser ? "user" : "assistant",
         content: msg.text.replace(/<[^>]*>/g, '').trim() // Clean HTML tags
@@ -73,30 +83,17 @@ const prepareOpenAIMessages = (currentMessage) => {
     
     // Check if there's uploaded file content to include
     let finalMessage = currentMessage;
-    let isImageUpload = false;
+    let hasImage = false;
     
     if (window.uploadedFileContent && currentMessage.includes(window.uploadedFileContent.fileName)) {
-        // Check if it's an image file
-        if (window.uploadedFileContent.content.startsWith('[IMAGE_FILE_BASE64]:')) {
-            isImageUpload = true;
-            const base64Data = window.uploadedFileContent.content.replace('[IMAGE_FILE_BASE64]:', '');
-            
-            // For images, use OpenAI's vision format
-            messages.push({
-                role: "user",
-                content: [
-                    {
-                        type: "text",
-                        text: `Please analyze this image (${window.uploadedFileContent.fileName}) and explain what you see. ${currentMessage.replace(`**📎 ${window.uploadedFileContent.fileName}**`, '').trim()}`
-                    },
-                    {
-                        type: "image_url",
-                        image_url: {
-                            url: base64Data
-                        }
-                    }
-                ]
-            });
+        // Check if this is an image
+        if (window.uploadedFileContent.content === '[IMAGE_MARKER]' && window.uploadedImageData) {
+            hasImage = true;
+            // For images, we'll format the message differently below
+            finalMessage = currentMessage.replace(
+                `**📎 ${window.uploadedFileContent.fileName}**`,
+                ''
+            ).trim();
         } else {
             // Smart content handling for large files
             const processedContent = processLargeFileContent(window.uploadedFileContent.content, window.uploadedFileContent.fileName);
@@ -106,18 +103,35 @@ const prepareOpenAIMessages = (currentMessage) => {
                 `**📎 ${window.uploadedFileContent.fileName}**`,
                 `**📎 ${window.uploadedFileContent.fileName}** (${processedContent.type}):\n\n${processedContent.content}`
             );
-            
-            // Add current user message (with processed file content)
-            messages.push({
-                role: "user",
-                content: finalMessage
-            });
         }
         
         // Clear the uploaded file content after using it
         window.uploadedFileContent = null;
+    }
+    
+    // Add current user message
+    if (hasImage && window.uploadedImageData) {
+        // Vision API format with image
+        messages.push({
+            role: "user",
+            content: [
+                {
+                    type: "text",
+                    text: finalMessage || "What's in this image?"
+                },
+                {
+                    type: "image_url",
+                    image_url: {
+                        url: window.uploadedImageData.base64
+                    }
+                }
+            ]
+        });
+        
+        // Clear image data after using
+        window.uploadedImageData = null;
     } else {
-        // Add current user message (no file content)
+        // Regular text message
         messages.push({
             role: "user",
             content: finalMessage
@@ -130,7 +144,7 @@ const prepareOpenAIMessages = (currentMessage) => {
         content: personalities[currentPersonality].system
     });
     
-    return { messages, isImageUpload };
+    return { messages, isImageUpload: hasImage };
 };
 
 // ========================================
@@ -391,9 +405,17 @@ const sendMessage = async () => {
     input.value = "";
     updateCharCounter();
     
+    // Scroll to show user message
+    ensureLastMessageVisible();
+    
     // Add typing indicator
     const typingIndicator = createTypingIndicator();
     inputContainer.insertAdjacentElement("beforebegin", typingIndicator);
+    
+    // Scroll to show typing indicator
+    setTimeout(() => {
+        ensureLastMessageVisible();
+    }, 150);
     
     // Disable input while processing
     setInputState(false);
@@ -402,34 +424,28 @@ const sendMessage = async () => {
         // Add network delay for better UX
         await new Promise(resolve => setTimeout(resolve, 800));
         
-        console.log('🚀 Sending request to OpenAI...');
+        // Prepare messages array with conversation history
+        const { messages, isImageUpload } = prepareGroqMessages(message);
+        
+        // Choose API based on whether there's an image
+        const useOpenAI = isImageUpload;
+        const apiUrl = useOpenAI ? OPENAI_API_URL : GROQ_API_URL;
+        const apiKey = useOpenAI ? OPENAI_API_KEY : GROQ_API_KEY;
+        const model = useOpenAI ? OPENAI_VISION_MODEL : GROQ_MODEL;
+        const apiName = useOpenAI ? 'OpenAI (GPT-4o Vision)' : 'Groq (Llama)';
+        
+        console.log(`🚀 Sending request to ${apiName}...`);
         console.log('🎭 Current personality:', currentPersonality);
-        
-        // Check API key
-        if (OPENAI_API_KEY === 'your-openai-api-key-here') {
-            typingIndicator.remove();
-            const errorMsg = `🔑 OpenAI API Key Required!
-            
-Please add your OpenAI API key to the code:
-1. Get key from: https://platform.openai.com/api-keys
-2. Replace 'your-openai-api-key-here' in the code with your actual key`;
-            
-            await addMessage(errorMsg, false, false, 'error');
-            setInputState(true);
-            return;
-        }
-        
-        // Prepare OpenAI messages array with conversation history
-        const { messages, isImageUpload } = prepareOpenAIMessages(message);
+        console.log('🤖 Model:', model);
+        console.log('🖼️ Image upload:', isImageUpload);
         
         const requestPayload = {
-            model: isImageUpload ? "gpt-4o" : "gpt-3.5-turbo",
+            model: model,
             messages: messages,
-            max_tokens: isImageUpload ? 800 : 600,
-            temperature: 0.7
+            max_tokens: useOpenAI ? 1000 : 2048,
+            temperature: (currentPersonality === 'brainstorm' || currentPersonality === 'creative') ? 0.9 : 0.7
         };
         
-        console.log('🤖 OpenAI Request:');
         console.log('📤 Messages array:', messages);
         console.log('📤 Full payload:', requestPayload);
         
@@ -437,11 +453,11 @@ Please add your OpenAI API key to the code:
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000);
         
-        const response = await fetch(OPENAI_API_URL, {
+        const response = await fetch(apiUrl, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${OPENAI_API_KEY}`
+                "Authorization": `Bearer ${apiKey}`
             },
             body: JSON.stringify(requestPayload),
             signal: controller.signal
@@ -463,11 +479,11 @@ Please add your OpenAI API key to the code:
         }
         
         const responseData = await response.json();
-        console.log('📦 OpenAI Response:', responseData);
+        console.log(`📦 ${apiName} Response:`, responseData);
         
-        // OpenAI response format validation
+        // Response format validation (both use OpenAI-compatible format)
         if (!responseData.choices || !responseData.choices[0] || !responseData.choices[0].message) {
-            throw new Error('Invalid OpenAI response format');
+            throw new Error(`Invalid ${apiName} response format`);
         }
         
         const reply = responseData.choices[0].message.content;
@@ -483,6 +499,11 @@ Please add your OpenAI API key to the code:
         console.log('💾 Saved AI response with HTML formatting:', formattedText.length, 'characters');
         saveCurrentSession(); // Save session after AI response
         
+        // Ensure scroll to bottom after content is rendered
+        setTimeout(() => {
+            ensureLastMessageVisible();
+        }, 200);
+        
     } catch (error) {
         
         let errorMsg;
@@ -495,14 +516,15 @@ Please add your OpenAI API key to the code:
             errorMsg = '⏱️ Too many requests - Please wait a moment and try again.';
         } else if (error.message.includes('HTTP 500')) {
             errorMsg = '🔧 Server error - The AI service is temporarily unavailable.';
-        } else if (error.message.includes('insufficient_quota')) {
-            errorMsg = '💳 OpenAI quota exceeded - Please check your billing at https://platform.openai.com/settings/organization/billing';
+        } else if (error.message.includes('insufficient_quota') || error.message.includes('rate_limit')) {
+            errorMsg = '⏱️ Rate limit exceeded - Please wait a moment. Groq has free rate limits.';
         } else {
             errorMsg = `⚠️ Error: ${error.message.substring(0, 200)} - Please try again.`;
         }
         
         typingIndicator.remove();
         await addMessage(errorMsg, false, false, 'error');
+        ensureLastMessageVisible();
     }
     
     // Re-enable input
@@ -624,6 +646,9 @@ const formatBotResponse = (text) => {
 
     // Detect and generate visual content
     formattedText = generateVisualContent(formattedText);
+
+    // Convert newlines to HTML line breaks
+    formattedText = formattedText.replace(/\n/g, "<br>");
 
     return formattedText;
 };
@@ -1008,19 +1033,31 @@ const scrollToBottom = () => {
 
 // Ensure the last message is fully visible, accounting for the fixed input area
 const ensureLastMessageVisible = () => {
-    const inputEl = document.querySelector('.input-container');
-    const lastMessage = document.querySelector('.message-container:last-of-type');
-    if (!lastMessage) return;
+    setTimeout(() => {
+        const inputEl = document.querySelector('.input-container');
+        const lastMessage = document.querySelector('.message-container:last-of-type');
+        
+        if (!lastMessage) {
+            // Fallback: scroll to bottom of page
+            window.scrollTo({
+                top: document.body.scrollHeight,
+                behavior: 'smooth'
+            });
+            return;
+        }
 
-    // Align the bottom of the last message with the viewport bottom
-    lastMessage.scrollIntoView({ block: 'end', behavior: 'smooth' });
+        // Align the bottom of the last message with the viewport bottom
+        lastMessage.scrollIntoView({ block: 'end', behavior: 'smooth' });
 
-    // Nudge up slightly to avoid being covered by the input bar
-    const offset = inputEl ? inputEl.offsetHeight + 12 : 80;
-    window.scrollTo({
-        top: window.pageYOffset - offset,
-        behavior: 'smooth'
-    });
+        // Nudge up slightly to avoid being covered by the input bar
+        const offset = inputEl ? inputEl.offsetHeight + 20 : 80;
+        setTimeout(() => {
+            window.scrollTo({
+                top: window.pageYOffset - offset,
+                behavior: 'smooth'
+            });
+        }, 50);
+    }, 100);
 };
 
 const saveToHistory = (message, isUser, isHTML = false) => {
@@ -1153,15 +1190,13 @@ async function processUploadedFile(file) {
         content = await Promise.race([extractionPromise, timeoutPromise]);
         
         if (content.trim()) {
+            const isImageFile = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(fileExtension);
+            
             // Store file content globally for later use
             window.uploadedFileContent = {
                 fileName: fileName,
                 content: content
             };
-            
-            // Check if content will need smart processing
-            const estimatedTokens = Math.ceil(content.length / 4);
-            const maxTokens = 12000;
             
             // Only show filename in text box (not full content)
             input.value += `**📎 ${fileName}**\n`;
@@ -1169,10 +1204,18 @@ async function processUploadedFile(file) {
             
             hideFileProcessingIndicator();
             
-            if (estimatedTokens > maxTokens) {
-                showNotification(`✅ File "${fileName}" processed! 🧠 Smart summarization will be applied (${estimatedTokens} tokens → optimized for AI)`, 4000);
+            if (isImageFile) {
+                showNotification(`✅ Image "${fileName}" uploaded! 🖼️ Will use OpenAI GPT-4o Vision for analysis.`, 4000);
             } else {
-                showNotification(`✅ File "${fileName}" processed successfully!`, 3000);
+                // Check if content will need smart processing
+                const estimatedTokens = Math.ceil(content.length / 4);
+                const maxTokens = 12000;
+                
+                if (estimatedTokens > maxTokens) {
+                    showNotification(`✅ File "${fileName}" processed! 🧠 Smart summarization will be applied (${estimatedTokens} tokens → optimized for AI)`, 4000);
+                } else {
+                    showNotification(`✅ File "${fileName}" processed successfully!`, 3000);
+                }
             }
         } else {
             throw new Error('No readable content found in file');
@@ -1382,10 +1425,18 @@ async function extractImageContent(file) {
         const reader = new FileReader();
         reader.onload = function(e) {
             updateFileProcessingProgress(50, 'Processing image file...');
-            // Return base64 data URL for images
-            const base64Data = e.target.result;
+            const base64Image = e.target.result;
             updateFileProcessingProgress(95, 'Finalizing image content...');
-            resolve(`[IMAGE_FILE_BASE64]:${base64Data}`);
+            
+            // Store image separately for vision API
+            window.uploadedImageData = {
+                fileName: file.name,
+                base64: base64Image,
+                mimeType: file.type || 'image/png'
+            };
+            
+            // Return a simple marker instead of the full base64
+            resolve('[IMAGE_MARKER]');
         };
         reader.onerror = () => reject(new Error('Failed to read image file'));
         reader.readAsDataURL(file);
