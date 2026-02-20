@@ -2022,12 +2022,10 @@ const loadSession = (sessionId) => {
     }
 };
 
-// Save session on page unload and prevent accidental reload
-window.addEventListener('beforeunload', (e) => {
+// Save session on page unload
+window.addEventListener('beforeunload', () => {
     if (chatHistory.length > 0) {
         saveCurrentSession();
-        e.preventDefault();
-        e.returnValue = '';
     }
 });
 
