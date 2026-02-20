@@ -23,7 +23,7 @@ let HUGGINGFACE_API_KEY = loadApiKey('huggingface_api_key', 'YOUR_HUGGINGFACE_AP
 
 const API_URL = 'https://api.openai.com/v1/chat/completions';
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
 
 // AI Provider Configuration
 let currentProvider = 'groq'; // Options: 'openai', 'groq', 'gemini' - Using Groq (FREE, fastest)
@@ -45,8 +45,8 @@ const providerConfig = {
     gemini: {
         apiKey: GEMINI_API_KEY,
         apiUrl: GEMINI_API_URL,
-        model: 'gemini-pro',
-        maxTokens: 1024
+        model: 'gemini-1.5-flash',
+        maxTokens: 2048
     }
 };
 
@@ -91,6 +91,12 @@ const personalities = {
         greeting: 'Data analysis systems online. Ready to process information.',
         style: 'data-driven, precise, statistical',
         responsePrefix: 'Based on the data... '
+    },
+    brainstorm: {
+        name: 'Brainstorm Mode',
+        greeting: 'Creative thinking mode activated. Let\'s explore some ideas together.',
+        style: 'creative, exploratory, non-judgmental, generates multiple perspectives and "what-if" scenarios, encourages wild ideas and unconventional thinking',
+        responsePrefix: 'Let\'s explore this... '
     }
 };
 
@@ -229,13 +235,23 @@ function addMessage(text, sender, timestamp = null) {
         senderName = personality ? personality.name : 'N.O.V.A';
     }
     
+    // Add unique ID for message replay/edit functionality
+    const messageId = 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    
     messageDiv.innerHTML = `
         <div class="message-header">
             <span class="sender-name">${senderName}</span>
             <span class="message-time">${currentTime}</span>
         </div>
-        <div class="message-content">${text}</div>
+        <div class="message-content">${formatMessageContent(text)}</div>
+        ${sender === 'user' ? `<button class="message-edit-btn" onclick="editMessage('${messageId}')" title="Edit and resubmit message"><i class="fas fa-edit"></i></button>` : ''}
+        ${sender === 'Nova' ? `<button class="message-replay-btn" onclick="replayMessage('${messageId}')" title="Replay message"><i class="fas fa-microphone"></i></button>` : ''}
     `;
+    
+    // Store original text and metadata (for replay/edit functionality)
+    messageDiv.dataset.messageId = messageId;
+    messageDiv.dataset.originalText = text;
+    messageDiv.dataset.messageIndex = chatHistory.length; // Position in history for truncation
     
     chatMessages.appendChild(messageDiv);
     chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -249,6 +265,110 @@ function addMessage(text, sender, timestamp = null) {
     });
     
     console.log('💬 Message added:', { sender, text: text.substring(0, 50) + '...', personality: currentPersonality });
+}
+
+// ========================================
+// MESSAGE EDITING FUNCTIONS (Conversation Branching)
+// ========================================
+
+function editMessage(messageId) {
+    const messageDiv = document.querySelector(`[data-message-id="${messageId}"]`);
+    if (!messageDiv) return;
+    
+    const originalText = messageDiv.dataset.originalText;
+    const contentDiv = messageDiv.querySelector('.message-content');
+    const editBtn = messageDiv.querySelector('.message-edit-btn');
+    
+    // Replace content with textarea
+    contentDiv.innerHTML = `
+        <textarea class="message-edit-textarea" style="width: 100%; min-height: 60px; padding: 0.5rem; background: rgba(0, 170, 255, 0.1); border: 1px solid rgba(0, 170, 255, 0.3); border-radius: 5px; color: #00aaff; font-family: inherit; font-size: inherit; resize: vertical;">${originalText}</textarea>
+        <div class="edit-controls" style="margin-top: 0.5rem; display: flex; gap: 0.5rem;">
+            <button class="edit-save-btn" onclick="saveEditedMessage('${messageId}')" style="padding: 0.4rem 0.8rem; background: linear-gradient(135deg, #00aaff, #0077cc); border: none; border-radius: 5px; color: white; cursor: pointer; font-weight: 600;"><i class="fas fa-check"></i> Save & Resubmit</button>
+            <button class="edit-cancel-btn" onclick="cancelEdit('${messageId}')" style="padding: 0.4rem 0.8rem; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 5px; color: white; cursor: pointer;"><i class="fas fa-times"></i> Cancel</button>
+        </div>
+    `;
+    
+    // Hide edit button
+    if (editBtn) editBtn.style.display = 'none';
+    
+    // Focus textarea
+    const textarea = contentDiv.querySelector('textarea');
+    if (textarea) {
+        textarea.focus();
+        textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    }
+    
+    console.log('✏️ Editing message:', messageId);
+}
+
+function saveEditedMessage(messageId) {
+    const messageDiv = document.querySelector(`[data-message-id="${messageId}"]`);
+    if (!messageDiv) return;
+    
+    const textarea = messageDiv.querySelector('.message-edit-textarea');
+    if (!textarea) return;
+    
+    const newText = textarea.value.trim();
+    if (!newText) {
+        showNotification('Message cannot be empty', 'error');
+        return;
+    }
+    
+    const messageIndex = parseInt(messageDiv.dataset.messageIndex);
+    
+    console.log('💾 Saving edited message. Index:', messageIndex, 'New text:', newText);
+    console.log('📜 Current chat history length:', chatHistory.length);
+    console.log('📜 Current conversation history length:', conversationHistory.length);
+    
+    // Remove all messages after this one in the DOM
+    const chatMessages = document.getElementById('chatMessages');
+    const allMessages = Array.from(chatMessages.querySelectorAll('.message'));
+    allMessages.forEach((msg) => {
+        const msgIndex = parseInt(msg.dataset.messageIndex);
+        if (msgIndex >= messageIndex) {
+            msg.remove();
+        }
+    });
+    
+    // Truncate chat history
+    chatHistory = chatHistory.slice(0, messageIndex);
+    
+    // Truncate conversation history (remove all after the user message at this position)
+    // Find the corresponding position in conversationHistory
+    let conversationIndex = 0;
+    let chatCount = 0;
+    for (let i = 0; i < conversationHistory.length; i++) {
+        if (conversationHistory[i].role === 'user') {
+            if (chatCount === messageIndex) {
+                conversationIndex = i;
+                break;
+            }
+            chatCount++;
+        }
+    }
+    conversationHistory = conversationHistory.slice(0, conversationIndex);
+    
+    console.log('✂️ Truncated histories. Chat:', chatHistory.length, 'Conversation:', conversationHistory.length);
+    
+    // Re-submit the edited message
+    processUserMessage(newText);
+}
+
+function cancelEdit(messageId) {
+    const messageDiv = document.querySelector(`[data-message-id="${messageId}"]`);
+    if (!messageDiv) return;
+    
+    const originalText = messageDiv.dataset.originalText;
+    const contentDiv = messageDiv.querySelector('.message-content');
+    const editBtn = messageDiv.querySelector('.message-edit-btn');
+    
+    // Restore original content
+    contentDiv.innerHTML = formatMessageContent(originalText);
+    
+    // Show edit button again
+    if (editBtn) editBtn.style.display = '';
+    
+    console.log('❌ Edit cancelled:', messageId);
 }
 
 function processUserMessage(userMessage) {
@@ -265,10 +385,11 @@ function processUserMessage(userMessage) {
         // Add thinking indicator
         addThinkingIndicator();
         
-        // Clear input
+        // Clear input and reset height
         const messageInput = document.getElementById('messageInput');
         if (messageInput) {
             messageInput.value = '';
+            messageInput.style.height = 'auto'; // Reset to minimum height
         }
         
         // Generate AI response
@@ -301,11 +422,12 @@ async function generateAIResponse(userMessage, personality) {
             model: provider.model,
             messages: messages,
             max_tokens: provider.maxTokens,
-            temperature: 0.7,
+            temperature: personality === 'brainstorm' ? 0.95 : 0.7,
             stream: false
         };
         
         console.log('🤖', currentProvider.toUpperCase(), 'Request:');
+        console.log('🔑 Using API Key:', provider.apiKey ? (provider.apiKey.substring(0, 10) + '...' + provider.apiKey.slice(-4)) : 'NONE');
         console.log('📤 Messages array:', messages);
         console.log('📤 Full payload:', requestPayload);
         
@@ -411,6 +533,42 @@ async function generateAIResponse(userMessage, personality) {
         console.error('🔧 DEBUG - Error message:', error.message);
         console.error('🔧 DEBUG - Error stack:', error.stack);
         
+        // Check if this is a quota/length error and Gemini fallback is available
+        const isQuotaError = error.message.includes('insufficient_quota') || 
+                           error.message.includes('billing') || 
+                           error.message.includes('429');
+        const isLengthError = error.message.includes('reduce the length') || 
+                            error.message.includes('too long') ||
+                            error.message.includes('maximum context length');
+        const isGroqProvider = currentProvider === 'groq';
+        const hasGeminiKey = providerConfig.gemini.apiKey && 
+                           providerConfig.gemini.apiKey !== 'YOUR_GEMINI_API_KEY_HERE';
+        
+        // AUTO-FALLBACK: If Groq quota/length error and Gemini is available, retry with Gemini
+        if ((isQuotaError || isLengthError) && isGroqProvider && hasGeminiKey && !error.isRetry) {
+            const reason = isLengthError ? 'Message too long' : 'Quota exceeded';
+            console.log(`🔄 Groq ${reason} - Auto-switching to Gemini fallback...`);
+            
+            // Show notification
+            showNotification(`⚠️ Groq ${reason.toLowerCase()}. Switching to Gemini...`, 3000);
+            
+            // Add temporary message
+            addMessage(`🔄 Groq API ${reason.toLowerCase()}. Switching to Gemini (larger context window)...`, 'Nova');
+            
+            // Add thinking indicator back
+            addThinkingIndicator();
+            
+            // Retry with Gemini
+            try {
+                await generateGeminiResponse(userMessage, personality);
+                return; // Success - exit early
+            } catch (geminiError) {
+                console.error('🔧 Gemini fallback also failed:', geminiError);
+                geminiError.isRetry = true; // Mark to prevent infinite loop
+                // Continue to regular error handling below
+            }
+        }
+        
         // Remove thinking indicator - wrapped in try-catch to prevent secondary errors
         try {
             removeThinkingIndicator();
@@ -423,15 +581,20 @@ async function generateAIResponse(userMessage, personality) {
         if (error.name === 'AbortError') {
             errorMsg = '⏱️ Request timed out - The AI response is taking too long. Please try again.';
         } else if (error.message.includes('401') || error.message.includes('Unauthorized')) {
-            errorMsg = '🔑 Authentication Error - API configuration issue. Please contact the administrator.';
+            errorMsg = '🔑 Authentication Error - API configuration issue. Please check your API keys.';
         } else if (error.message.includes('429')) {
             errorMsg = '🚫 Rate limit exceeded - Too many requests. Please wait a moment before trying again.';
         } else if (error.message.includes('insufficient_quota') || error.message.includes('billing')) {
-            errorMsg = '💳 API Quota Exceeded - Service quota has been reached. Please contact the administrator.';
+            if (hasGeminiKey) {
+                errorMsg = '💳 API Quota Exceeded - Both Groq and Gemini providers are unavailable. Please try again later or add a valid API key.';
+            } else {
+                errorMsg = '💳 API Quota Exceeded - Groq quota reached. Add a Gemini API key for automatic fallback (free at https://aistudio.google.com/apikey)';
+            }
         } else if (error.message.includes('500') || error.message.includes('502') || error.message.includes('503')) {
             errorMsg = '🔧 Server error - The service is temporarily unavailable. Please try again in a moment.';
         } else if (error.message.includes('fetch') || error.message.includes('Failed to fetch')) {
-            errorMsg = '🌐 Network error - Check your connection and try again.';
+            console.error('🔧 Network/Fetch Error Details:', error);
+            errorMsg = '🌐 Network error - Check your connection and try again. (Check console for details)';
         } else if (!navigator.onLine) {
             errorMsg = '🌐 No internet connection - Please check your network and try again.';
         } else {
@@ -464,6 +627,152 @@ async function generateAIResponse(userMessage, personality) {
                 });
             }
         }
+    }
+}
+
+// Gemini-specific API handler (different format than OpenAI)
+async function generateGeminiResponse(userMessage, personality) {
+    console.log('🤖 Generating Gemini AI response for personality:', personality);
+    
+    const provider = providerConfig.gemini;
+    console.log('🚀 Sending request to GEMINI API (', provider.model, ')...');
+    
+    try {
+        // Prepare messages for Gemini format
+        const config = personalities[personality] || personalities.Nova;
+        
+        // Gemini uses "contents" array with "parts" instead of OpenAI's "messages"
+        const systemPrompt = `You are ${config.name}, a ${config.style}.
+
+Keep responses natural and conversational. Be helpful and direct - skip unnecessary formality and preamble.
+
+If you are N.O.V.A:
+- Address user as "sir" when appropriate
+- Use dry British humor and occasional witty sarcasm
+- Be intelligent and efficient
+- Think Paul Bettany's Nova: witty, helpful, authoritative but never condescending
+
+If you are Genius Mode, focus on technical analysis and problem-solving.
+If you are Professor, focus on teaching and explaining concepts clearly.
+If you are Data Analyst, focus on data-driven insights and statistics.`;
+
+        // Build conversation history in Gemini format
+        const contents = [];
+        
+        // Add system context as first user message (Gemini doesn't have system role)
+        contents.push({
+            role: "user",
+            parts: [{ text: systemPrompt }]
+        });
+        contents.push({
+            role: "model",
+            parts: [{ text: "Understood. I will respond in character." }]
+        });
+        
+        // Add recent conversation history (last 10 messages)
+        const recentHistory = conversationHistory.slice(-10);
+        recentHistory.forEach(msg => {
+            if (msg.role === 'user') {
+                contents.push({
+                    role: "user",
+                    parts: [{ text: msg.content }]
+                });
+            } else if (msg.role === 'assistant') {
+                contents.push({
+                    role: "model",
+                    parts: [{ text: msg.content }]
+                });
+            }
+        });
+        
+        // Add current user message
+        contents.push({
+            role: "user",
+            parts: [{ text: userMessage }]
+        });
+        
+        const requestPayload = {
+            contents: contents,
+            generationConfig: {
+                temperature: personality === 'brainstorm' ? 0.95 : 0.7,
+                maxOutputTokens: provider.maxTokens,
+            }
+        };
+        
+        console.log('🤖 GEMINI Request:');
+        console.log('🔑 Using API Key:', provider.apiKey ? (provider.apiKey.substring(0, 10) + '...') : 'NONE');
+        console.log('📤 Contents array length:', contents.length);
+        
+        // Gemini uses API key as query parameter
+        const apiUrlWithKey = `${provider.apiUrl}?key=${provider.apiKey}`;
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+        
+        const response = await fetch(apiUrlWithKey, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(requestPayload),
+            signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        console.log('📡 Gemini Response received - Status:', response.status, response.statusText);
+        
+        if (!response.ok) {
+            let errorText = 'Unknown error';
+            try {
+                errorText = await response.text();
+                console.error('🔧 DEBUG - Gemini error response:', errorText);
+            } catch (e) {
+                console.error('🔧 DEBUG - Could not read error response:', e);
+            }
+            throw new Error(`GEMINI API Error (${response.status}): ${errorText}`);
+        }
+        
+        const responseData = await response.json();
+        console.log('📦 GEMINI Response:', responseData);
+        
+        // Extract text from Gemini response format
+        if (!responseData.candidates || !responseData.candidates[0] || 
+            !responseData.candidates[0].content || !responseData.candidates[0].content.parts) {
+            throw new Error('Invalid GEMINI response format');
+        }
+        
+        const reply = responseData.candidates[0].content.parts[0].text;
+        console.log('✅ GEMINI Response Success - Length:', reply.length, 'characters');
+        
+        // Remove thinking indicator
+        removeThinkingIndicator();
+        
+        // Add response to chat
+        addMessage(reply, 'Nova');
+        
+        // Save to conversation history
+        conversationHistory.push({
+            role: 'assistant',
+            content: reply,
+            personality: personality,
+            timestamp: new Date().toISOString()
+        });
+        
+        // Speak response if voice is enabled
+        if (typeof window.speakText === 'function') {
+            if (window.isWakeWordSession && typeof window.restoreWakeListeningAfterResponse === 'function') {
+                window.speakText(reply, () => {
+                    window.restoreWakeListeningAfterResponse();
+                });
+            } else {
+                window.speakText(reply);
+            }
+        }
+        
+    } catch (error) {
+        console.error('🔧 Gemini Error:', error);
+        throw error; // Re-throw to be caught by main error handler
     }
 }
 
@@ -578,6 +887,16 @@ function showNotification(message, duration = 3000) {
             notification.classList.remove('show');
         }, duration);
     }
+}
+
+// Auto-resize textarea to fit content
+function autoResizeTextarea(textarea) {
+    // Reset height to auto to get the correct scrollHeight
+    textarea.style.height = 'auto';
+    
+    // Set height to scrollHeight, but respect min and max
+    const newHeight = Math.min(Math.max(textarea.scrollHeight, 40), 150);
+    textarea.style.height = newHeight + 'px';
 }
 
 function populateVoiceSelection() {
@@ -883,12 +1202,20 @@ function setupEventListeners() {
     // Enter key for message input
     const messageInput = document.getElementById('messageInput');
     if (messageInput) {
+        // Handle Enter key (send message) and Shift+Enter (new line)
         messageInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault(); // Prevent new line
                 if (messageInput.value.trim()) {
                     processUserMessage(messageInput.value.trim());
                 }
             }
+            // Shift+Enter naturally creates new line, no need to handle
+        });
+        
+        // Auto-resize textarea as user types
+        messageInput.addEventListener('input', () => {
+            autoResizeTextarea(messageInput);
         });
     }
     
@@ -907,6 +1234,28 @@ function setupEventListeners() {
     const clearChatBtn = document.getElementById('clearChat');
     if (clearChatBtn) {
         clearChatBtn.addEventListener('click', clearChat);
+    }
+    
+    // Export chat
+    const exportChatBtn = document.getElementById('exportChat');
+    if (exportChatBtn) {
+        exportChatBtn.addEventListener('click', openExportModal);
+    }
+    
+    // Close export modal
+    const closeExportModalBtn = document.getElementById('closeExportModal');
+    if (closeExportModalBtn) {
+        closeExportModalBtn.addEventListener('click', closeExportModal);
+    }
+    
+    // Close export modal when clicking outside
+    const exportModal = document.getElementById('exportModal');
+    if (exportModal) {
+        exportModal.addEventListener('click', (e) => {
+            if (e.target === exportModal) {
+                closeExportModal();
+            }
+        });
     }
     
     // Settings modal
@@ -931,9 +1280,39 @@ function setupEventListeners() {
     const fileMenu = document.getElementById('fileMenu');
     
     if (attachBtn && fileMenu) {
-        attachBtn.addEventListener('click', () => {
-            fileMenu.classList.toggle('active');
+        console.log('📎 [jarvis_main.js] Attaching event listener to attachBtn');
+        
+        // Ensure menu starts closed
+        fileMenu.classList.remove('active');
+        console.log('📎 [jarvis_main.js] Menu initialized as closed');
+        
+        attachBtn.addEventListener('click', (e) => {
+            console.log('📎 Attach button clicked');
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const isActive = fileMenu.classList.contains('active');
+            
+            if (isActive) {
+                fileMenu.classList.remove('active');
+                console.log('📎 Menu closed');
+            } else {
+                fileMenu.classList.add('active');
+                console.log('📎 Menu opened');
+            }
         });
+        
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!fileMenu.contains(e.target) && !attachBtn.contains(e.target)) {
+                if (fileMenu.classList.contains('active')) {
+                    console.log('📎 [jarvis_main.js] Closing menu (clicked outside)');
+                    fileMenu.classList.remove('active');
+                }
+            }
+        });
+    } else {
+        console.error('📎 [jarvis_main.js] Could not find attachBtn or fileMenu!', {attachBtn, fileMenu});
     }
 }
 
@@ -1519,11 +1898,12 @@ function setupApiKeyManagement() {
     
     const saveApiKeyBtn = document.getElementById('saveApiKey');
     const groqApiKeyInput = document.getElementById('groqApiKey');
+    const openaiApiKeyInput = document.getElementById('openaiApiKey');
     const apiKeySavedMsg = document.getElementById('apiKeySaved');
     const settingsBtn = document.getElementById('settingsBtn');
     const settingsModal = document.getElementById('settingsModal');
     
-    // Load saved API key into input when settings open
+    // Load saved API keys into inputs when settings open
     if (settingsBtn && settingsModal) {
         settingsBtn.addEventListener('click', () => {
             if (groqApiKeyInput) {
@@ -1532,28 +1912,61 @@ function setupApiKeyManagement() {
                     groqApiKeyInput.value = savedKey;
                 }
             }
+            if (openaiApiKeyInput) {
+                const savedKey = localStorage.getItem('openai_api_key');
+                if (savedKey && savedKey !== 'YOUR_OPENAI_API_KEY_HERE' && savedKey.trim() !== '') {
+                    openaiApiKeyInput.value = savedKey;
+                }
+            }
         });
     }
     
-    // Save API key button
-    if (saveApiKeyBtn && groqApiKeyInput) {
+    // Save API keys button
+    if (saveApiKeyBtn) {
         saveApiKeyBtn.addEventListener('click', () => {
-            const apiKey = groqApiKeyInput.value.trim();
+            let saved = false;
             
-            if (!apiKey || apiKey === '') {
-                alert('Please enter a valid API key');
-                return;
+            // Save Groq API key
+            if (groqApiKeyInput) {
+                const apiKey = groqApiKeyInput.value.trim();
+                if (apiKey && apiKey !== '') {
+                    localStorage.setItem('groq_api_key', apiKey);
+                    GROQ_API_KEY = apiKey;
+                    
+                    if (providerConfig.groq) {
+                        providerConfig.groq.apiKey = apiKey;
+                    }
+                    
+                    saved = true;
+                    console.log('✅ Groq API key saved successfully!');
+                    
+                    // Remove any existing warning
+                    const warning = document.querySelector('.api-key-warning');
+                    if (warning) {
+                        warning.remove();
+                    }
+                }
             }
             
-            // Save to localStorage
-            localStorage.setItem('groq_api_key', apiKey);
+            // Save OpenAI API key (optional)
+            if (openaiApiKeyInput) {
+                const apiKey = openaiApiKeyInput.value.trim();
+                if (apiKey && apiKey !== '') {
+                    localStorage.setItem('openai_api_key', apiKey);
+                    OPENAI_API_KEY = apiKey;
+                    
+                    if (providerConfig.openai) {
+                        providerConfig.openai.apiKey = apiKey;
+                    }
+                    
+                    saved = true;
+                    console.log('✅ OpenAI API key saved successfully!');
+                }
+            }
             
-            // Update the runtime variable
-            GROQ_API_KEY = apiKey;
-            
-            // Update provider config
-            if (providerConfig.groq) {
-                providerConfig.groq.apiKey = apiKey;
+            if (!saved) {
+                alert('Please enter at least the Groq API key');
+                return;
             }
             
             // Show success message
@@ -1562,14 +1975,6 @@ function setupApiKeyManagement() {
                 setTimeout(() => {
                     apiKeySavedMsg.style.display = 'none';
                 }, 3000);
-            }
-            
-            console.log('✅ API key saved successfully!');
-            
-            // Remove any existing warning
-            const warning = document.querySelector('.api-key-warning');
-            if (warning) {
-                warning.remove();
             }
         });
     }
@@ -1621,6 +2026,8 @@ function initializeMainSystem() {
     setupEventListeners();
     setupVoiceSettings();
     setupApiKeyManagement();
+    setupFileUploadListeners();
+    setupChatHistoryListeners();
     
     // Wait for voices to load
     setTimeout(() => {
@@ -1886,6 +2293,937 @@ function setNovaVoice(voiceName) {
         window.speakText(confirmPhrase);
     }
 }
+
+// ========================================
+// FILE UPLOAD FUNCTIONALITY
+// ========================================
+
+// File size limits (in bytes)
+const FILE_SIZE_LIMITS = {
+    text: 5 * 1024 * 1024,    // 5MB for text files
+    image: 10 * 1024 * 1024,  // 10MB for images
+    pdf: 20 * 1024 * 1024,    // 20MB for PDFs
+    code: 5 * 1024 * 1024,    // 5MB for code files
+    audio: 25 * 1024 * 1024   // 25MB for audio files (Whisper API limit)
+};
+
+// Setup file upload event listeners
+function setupFileUploadListeners() {
+    console.log('📎 Setting up file upload listeners...');
+    
+    // File option buttons
+    const fileOptions = document.querySelectorAll('.file-option');
+    fileOptions.forEach(option => {
+        option.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const type = option.dataset.type;
+            console.log('📎 File option clicked:', type);
+            
+            const fileInput = document.getElementById(`${type}FileInput`);
+            if (fileInput) {
+                fileInput.click();
+                
+                // Close the file menu
+                const fileMenu = document.getElementById('fileMenu');
+                if (fileMenu) {
+                    fileMenu.classList.remove('active');
+                }
+            } else {
+                console.error('📎 File input not found:', `${type}FileInput`);
+            }
+        });
+    });
+    
+    // File input change listeners
+    document.getElementById('textFileInput')?.addEventListener('change', (e) => handleFileUpload(e, 'text'));
+    document.getElementById('imageFileInput')?.addEventListener('change', (e) => handleFileUpload(e, 'image'));
+    document.getElementById('pdfFileInput')?.addEventListener('change', (e) => handleFileUpload(e, 'pdf'));
+    document.getElementById('codeFileInput')?.addEventListener('change', (e) => handleFileUpload(e, 'code'));
+    document.getElementById('audioFileInput')?.addEventListener('change', (e) => handleFileUpload(e, 'audio'));
+    
+    console.log('✅ File upload listeners setup complete');
+}
+
+// Handle file upload
+async function handleFileUpload(event, type) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    console.log('📎 File selected:', file.name, '| Type:', type, '| Size:', (file.size / 1024 / 1024).toFixed(2), 'MB');
+    
+    // Validate file size
+    if (file.size > FILE_SIZE_LIMITS[type]) {
+        const limitMB = (FILE_SIZE_LIMITS[type] / 1024 / 1024).toFixed(0);
+        showNotification(`File too large! Maximum size: ${limitMB}MB`, 5000);
+        event.target.value = ''; // Reset input
+        return;
+    }
+    
+    // Show loading indicator
+    showLoading('Processing file...');
+    
+    try {
+        switch (type) {
+            case 'text':
+                await handleTextFile(file);
+                break;
+            case 'image':
+                await handleImageFile(file);
+                break;
+            case 'pdf':
+                await handlePDFFile(file);
+                break;
+            case 'code':
+                await handleCodeFile(file);
+                break;
+            case 'audio':
+                await handleAudioFile(file);
+                break;
+        }
+    } catch (error) {
+        console.error('📎 Error processing file:', error);
+        showNotification('Error processing file: ' + error.message, 5000);
+    } finally {
+        hideLoading();
+        event.target.value = ''; // Reset input for next upload
+    }
+}
+
+// Handle text file upload
+async function handleTextFile(file) {
+    const text = await file.text();
+    console.log('📄 Text file loaded:', file.name, '| Length:', text.length);
+    
+    // Add file preview to chat
+    addFileMessage(file.name, 'text', text);
+    
+    // Auto-send a message asking Nova to analyze it
+    setTimeout(() => {
+        processUserMessage(`I've uploaded a text file "${file.name}". Please analyze it.`);
+    }, 500);
+}
+
+// Handle image file upload
+async function handleImageFile(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        
+        reader.onload = (e) => {
+            const imageData = e.target.result;
+            console.log('🖼️ Image loaded:', file.name);
+            
+            // Add image preview to chat
+            addFileMessage(file.name, 'image', imageData);
+            
+            // Note: Image analysis would require vision API (GPT-4V, Claude Vision, etc.)
+            showNotification('Image uploaded! Note: Image analysis requires vision-enabled AI model.', 5000);
+            resolve();
+        };
+        
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+// Handle PDF file upload
+async function handlePDFFile(file) {
+    console.log('📕 PDF uploaded:', file.name);
+    
+    try {
+        // Check if PDF.js is available
+        if (typeof pdfjsLib === 'undefined') {
+            throw new Error('PDF.js library not loaded. Cannot extract PDF text.');
+        }
+        
+        // Set worker path for PDF.js
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        
+        // Read file as array buffer
+        const arrayBuffer = await file.arrayBuffer();
+        
+        // Load PDF document
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        console.log('📕 PDF loaded. Pages:', pdf.numPages);
+        
+        // Extract text from all pages
+        let fullText = '';
+        for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items.map(item => item.str).join(' ');
+            fullText += `\n--- Page ${i} ---\n${pageText}\n`;
+        }
+        
+        console.log('📕 PDF text extracted. Length:', fullText.length, 'characters');
+        
+        // Add PDF preview with text to chat
+        addFileMessage(file.name, 'pdf', fullText);
+        
+        // Auto-send message asking Nova to analyze the PDF
+        setTimeout(() => {
+            processUserMessage(`I've uploaded a PDF document "${file.name}". Please analyze and summarize its content.`);
+        }, 500);
+        
+        showNotification(`PDF processed successfully! Extracted ${fullText.length} characters from ${pdf.numPages} pages.`, 5000);
+        
+    } catch (error) {
+        console.error('📕 PDF processing error:', error);
+        
+        // Fallback: Add PDF without text extraction
+        addFileMessage(file.name, 'pdf', null);
+        showNotification('PDF uploaded but text extraction failed: ' + error.message, 5000);
+    }
+}
+
+// Handle code file upload
+async function handleCodeFile(file) {
+    const code = await file.text();
+    const extension = file.name.split('.').pop();
+    console.log('💻 Code file loaded:', file.name, '| Extension:', extension, '| Length:', code.length);
+    
+    // Add code preview to chat
+    addFileMessage(file.name, 'code', code, extension);
+    
+    // Auto-send a message asking Nova to analyze the code
+    setTimeout(() => {
+        processUserMessage(`I've uploaded a code file "${file.name}". Please review and explain this code.`);
+    }, 500);
+}
+
+// Handle audio file upload with transcription
+async function handleAudioFile(file) {
+    console.log('🎵 Audio file uploaded:', file.name, '| Type:', file.type);
+    
+    // Show audio player in chat
+    const audioURL = URL.createObjectURL(file);
+    addFileMessage(file.name, 'audio', audioURL);
+    
+    // Transcribe audio using OpenAI Whisper API
+    try {
+        showNotification('Transcribing audio... This may take a moment.', 10000);
+        const transcription = await transcribeAudio(file);
+        
+        console.log('🎵 Transcription complete:', transcription.substring(0, 100) + '...');
+        
+        // Add transcription to chat
+        addMessage(`📝 Transcription of "${file.name}":\n\n${transcription}`, 'Nova');
+        
+        // Auto-send message to Nova to analyze the lecture
+        setTimeout(() => {
+            processUserMessage(`I've uploaded a lecture recording "${file.name}". The transcription is above. Please summarize the key points and main topics covered in this lecture.`);
+        }, 1000);
+        
+    } catch (error) {
+        console.error('🎵 Transcription error:', error);
+        showNotification('Audio uploaded but transcription failed: ' + error.message, 5000);
+    }
+}
+
+// Transcribe audio using OpenAI Whisper API
+async function transcribeAudio(audioFile) {
+    console.log('🎤 Starting audio transcription...');
+    
+    // Check if OpenAI API key is available
+    if (!OPENAI_API_KEY || OPENAI_API_KEY === 'YOUR_OPENAI_API_KEY_HERE') {
+        throw new Error('OpenAI API key required for audio transcription. Please add it in Settings.');
+    }
+    
+    // Check file size (Whisper API has 25MB limit)
+    const MAX_WHISPER_SIZE = 25 * 1024 * 1024; // 25MB
+    if (audioFile.size > MAX_WHISPER_SIZE) {
+        const sizeMB = (audioFile.size / 1024 / 1024).toFixed(2);
+        throw new Error(
+            `Audio file too large (${sizeMB}MB). Whisper API limit is 25MB. ` +
+            `Please compress your audio file using a tool like Audacity or online converter, ` +
+            `or split it into smaller segments.`
+        );
+    }
+    
+    // Create FormData for audio upload
+    const formData = new FormData();
+    formData.append('file', audioFile);
+    formData.append('model', 'whisper-1');
+    formData.append('language', 'en'); // English
+    formData.append('response_format', 'text');
+    
+    console.log('🎤 Sending audio to Whisper API...');
+    console.log('🎤 File:', audioFile.name, '| Size:', (audioFile.size / 1024 / 1024).toFixed(2), 'MB');
+    
+    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${OPENAI_API_KEY}`
+        },
+        body: formData
+    });
+    
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error('🎤 Whisper API error:', response.status, errorText);
+        throw new Error(`Whisper API error (${response.status}): ${errorText}`);
+    }
+    
+    const transcription = await response.text();
+    console.log('✅ Transcription successful');
+    
+    return transcription;
+}
+
+// Add file message to chat
+function addFileMessage(fileName, fileType, fileData, fileExtension = null) {
+    const chatMessages = document.getElementById('chatMessages');
+    if (!chatMessages) return;
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message user-message file-message';
+    
+    const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
+    let filePreview = '';
+    
+    switch (fileType) {
+        case 'text':
+            const preview = fileData.length > 500 ? fileData.substring(0, 500) + '...' : fileData;
+            filePreview = `
+                <div class="file-preview text-preview">
+                    <pre>${escapeHtml(preview)}</pre>
+                </div>
+            `;
+            break;
+            
+        case 'image':
+            filePreview = `
+                <div class="file-preview image-preview">
+                    <img src="${fileData}" alt="${fileName}" style="max-width: 100%; border-radius: 8px;">
+                </div>
+            `;
+            break;
+            
+        case 'pdf':
+            if (fileData && fileData.trim()) {
+                const pdfPreview = fileData.length > 1000 ? fileData.substring(0, 1000) + '\n...' : fileData;
+                filePreview = `
+                    <div class="file-preview pdf-preview">
+                        <div class="pdf-header" style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                            <i class="fas fa-file-pdf" style="font-size: 32px; color: #ff4444;"></i>
+                            <span style="color: #ff4444; font-weight: 600;">PDF Document - Text Extracted</span>
+                        </div>
+                        <div class="pdf-text-preview" style="background: rgba(255, 68, 68, 0.05); border: 1px solid rgba(255, 68, 68, 0.2); border-radius: 8px; padding: 1rem; max-height: 300px; overflow-y: auto;">
+                            <pre style="white-space: pre-wrap; word-wrap: break-word; margin: 0; color: rgba(255, 255, 255, 0.9);">${escapeHtml(pdfPreview)}</pre>
+                        </div>
+                    </div>
+                `;
+            } else {
+                filePreview = `
+                    <div class="file-preview pdf-preview">
+                        <i class="fas fa-file-pdf" style="font-size: 48px; color: #ff4444;"></i>
+                        <p>PDF Document (Text extraction unavailable)</p>
+                    </div>
+                `;
+            }
+            break;
+            
+        case 'code':
+            const codePreview = fileData.length > 1000 ? fileData.substring(0, 1000) + '\n...' : fileData;
+            filePreview = `
+                <div class="file-preview code-preview">
+                    <div class="code-header">${fileExtension || 'code'}</div>
+                    <pre><code>${escapeHtml(codePreview)}</code></pre>
+                </div>
+            `;
+            break;
+            
+        case 'audio':
+            filePreview = `
+                <div class="file-preview audio-preview">
+                    <i class="fas fa-file-audio" style="font-size: 32px; color: #00aaff; margin-bottom: 10px;"></i>
+                    <audio controls style="width: 100%; max-width: 400px;">
+                        <source src="${fileData}" type="audio/mpeg">
+                        Your browser does not support audio playback.
+                    </audio>
+                </div>
+            `;
+            break;
+    }
+    
+    messageDiv.innerHTML = `
+        <div class="message-header">
+            <span class="sender-name">You</span>
+            <span class="message-time">${currentTime}</span>
+        </div>
+        <div class="message-content">
+            <div class="file-attachment">
+                <i class="fas fa-paperclip"></i> <strong>${fileName}</strong>
+            </div>
+            ${filePreview}
+        </div>
+    `;
+    
+    chatMessages.appendChild(messageDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    
+    console.log('📎 File message added to chat:', fileName);
+}
+
+// Utility function to escape HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Format message content with proper line breaks and markdown-style formatting
+function formatMessageContent(text) {
+    if (!text) return '';
+    
+    let formatted = text;
+    
+    // Convert numbered lists with bold formatting (before general bold processing)
+    // Match patterns like "**1:" or "**1." followed by content
+    formatted = formatted.replace(/\*\*(\d+)[:.]\s*/g, '\n<strong>$1.</strong> ');
+    
+    // Convert markdown-style bold (**text**) to HTML (non-greedy)
+    formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    
+    // Convert markdown-style italic (*text* but not **) to HTML
+    formatted = formatted.replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
+    
+    // Convert markdown-style code (`code`) to HTML
+    formatted = formatted.replace(/`(.+?)`/g, '<code>$1</code>');
+    
+    // Convert bullet points (- item) to proper list format
+    formatted = formatted.replace(/^- (.+)$/gm, '• $1');
+    
+    // Convert double newlines to paragraph breaks
+    formatted = formatted.replace(/\n\n/g, '<br><br>');
+    
+    // Convert single newlines to line breaks
+    formatted = formatted.replace(/\n/g, '<br>');
+    
+    // Clean up multiple consecutive <br> tags (more than 2)
+    formatted = formatted.replace(/(<br>){3,}/g, '<br><br>');
+    
+    // Clean up any leading <br> tags
+    formatted = formatted.replace(/^(<br>)+/, '');
+    
+    // Clean up trailing <br> tags
+    formatted = formatted.replace(/(<br>)+$/, '');
+    
+    // Escape any remaining HTML that wasn't converted (for security)
+    // We'll use a more targeted approach: escape < and > that aren't part of our allowed tags
+    const allowedTags = ['strong', 'em', 'code', 'br'];
+    const tagPattern = new RegExp(`<(\\/?)(${ allowedTags.join('|')})>`, 'gi');
+    
+    // Temporarily replace allowed tags with placeholders
+    const placeholders = [];
+    formatted = formatted.replace(tagPattern, (match) => {
+        placeholders.push(match);
+        return `###PLACEHOLDER${placeholders.length - 1}###`;
+    });
+    
+    // Escape remaining HTML
+    formatted = formatted.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    
+    // Restore allowed tags
+    formatted = formatted.replace(/###PLACEHOLDER(\d+)###/g, (match, index) => {
+        return placeholders[parseInt(index)];
+    });
+    
+    return formatted;
+}
+
+// Generate continuation prompt for new chat
+function generateContinuationPrompt() {
+    if (!chatHistory || chatHistory.length === 0) {
+        return 'No conversation history available.';
+    }
+    
+    // Get current chat name
+    const allChats = JSON.parse(localStorage.getItem('nova_chat_history') || '[]');
+    const currentChat = allChats.find(chat => chat.id === currentChatId);
+    const chatName = currentChat?.name || 'Nova Chat';
+    
+    // Build conversation summary
+    let prompt = `Continue this conversation with N.O.V.A:\n\n`;
+    prompt += `Chat: ${chatName}\n`;
+    prompt += `Personality Mode: ${personalities[currentPersonality]?.name || 'N.O.V.A'}\n`;
+    prompt += `Messages: ${chatHistory.length}\n`;
+    prompt += `Date: ${new Date().toLocaleString()}\n\n`;
+    prompt += `--- CONVERSATION HISTORY ---\n\n`;
+    
+    // Add last 10 messages (or all if fewer)
+    const recentMessages = chatHistory.slice(-10);
+    recentMessages.forEach((msg, index) => {
+        const sender = msg.sender === 'user' ? 'User' : personalities[msg.personality]?.name || 'N.O.V.A';
+        prompt += `[${msg.timestamp}] ${sender}:\n${msg.text}\n\n`;
+    });
+    
+    prompt += `--- END OF HISTORY ---\n\n`;
+    prompt += `Please continue this conversation, maintaining the same personality and context.`;
+    
+    return prompt;
+}
+
+// Export chat as downloadable text file
+function downloadFullChat() {
+    if (!chatHistory || chatHistory.length === 0) {
+        showNotification('No chat to export', 2000);
+        return;
+    }
+    
+    const allChats = JSON.parse(localStorage.getItem('nova_chat_history') || '[]');
+    const currentChat = allChats.find(chat => chat.id === currentChatId);
+    const chatName = currentChat?.name || 'Nova Chat';
+    
+    let content = `N.O.V.A Chat Export\n`;
+    content += `${'='.repeat(50)}\n\n`;
+    content += `Chat Name: ${chatName}\n`;
+    content += `Personality: ${personalities[currentPersonality]?.name || 'N.O.V.A'}\n`;
+    content += `Messages: ${chatHistory.length}\n`;
+    content += `Export Date: ${new Date().toLocaleString()}\n\n`;
+    content += `${'='.repeat(50)}\n\n`;
+    
+    chatHistory.forEach(msg => {
+        const sender = msg.sender === 'user' ? 'You' : personalities[msg.personality]?.name || 'N.O.V.A';
+        content += `[${msg.timestamp}] ${sender}:\n`;
+        content += `${msg.text}\n\n`;
+        content += `${'-'.repeat(40)}\n\n`;
+    });
+    
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const filename = `nova-chat-${chatName.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${new Date().toISOString().slice(0, 10)}.txt`;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    showNotification('Chat exported successfully', 2000);
+    console.log('📥 Chat exported:', filename);
+}
+
+// Copy continuation prompt to clipboard
+function copyContinuationPrompt() {
+    const promptText = document.getElementById('continuationPrompt');
+    if (!promptText) return;
+    
+    promptText.select();
+    promptText.setSelectionRange(0, 99999); // For mobile
+    
+    navigator.clipboard.writeText(promptText.value).then(() => {
+        showNotification('Copied to clipboard!', 2000);
+        console.log('📋 Continuation prompt copied');
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+        showNotification('Failed to copy. Please copy manually.', 3000);
+    });
+}
+
+// Open export modal
+function openExportModal() {
+    if (!chatHistory || chatHistory.length === 0) {
+        showNotification('No chat to export', 2000);
+        return;
+    }
+    
+    const modal = document.getElementById('exportModal');
+    const promptTextarea = document.getElementById('continuationPrompt');
+    
+    if (modal && promptTextarea) {
+        // Generate and populate continuation prompt
+        promptTextarea.value = generateContinuationPrompt();
+        modal.style.display = 'flex';
+    }
+}
+
+// Close export modal
+function closeExportModal() {
+    const modal = document.getElementById('exportModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// Replay message (read aloud again)
+function replayMessage(messageId) {
+    console.log('🔊 Replaying message:', messageId);
+    
+    // Find message by ID
+    const messageDiv = document.querySelector(`[data-message-id="${messageId}"]`);
+    if (!messageDiv) {
+        console.error('❌ Message not found:', messageId);
+        return;
+    }
+    
+    const originalText = messageDiv.dataset.originalText;
+    if (!originalText) {
+        console.error('❌ Original text not found for message:', messageId);
+        return;
+    }
+    
+    // Use the speakText function if available
+    if (typeof window.speakText === 'function') {
+        console.log('🔊 Replaying:', originalText.substring(0, 50) + '...');
+        window.speakText(originalText);
+    } else {
+        showNotification('Voice system not available', 2000);
+        console.error('❌ speakText function not available');
+    }
+}
+
+// Show loading overlay
+function showLoading(message = 'Processing...') {
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) {
+        const loadingText = overlay.querySelector('.loading-text');
+        if (loadingText) loadingText.textContent = message;
+        overlay.style.display = 'flex';
+    }
+}
+
+// Hide loading overlay
+function hideLoading() {
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) {
+        overlay.style.display = 'none';
+    }
+}
+
+// ========================================
+// CHAT HISTORY MANAGEMENT
+// ========================================
+
+let currentChatId = null;
+
+// Generate unique chat ID
+function generateChatId() {
+    return 'chat_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+}
+
+// Save current chat to localStorage
+function saveCurrentChat() {
+    if (!chatHistory || chatHistory.length === 0) {
+        console.log('💾 No chat to save');
+        return;
+    }
+    
+    // Create or update current chat session
+    if (!currentChatId) {
+        currentChatId = generateChatId();
+    }
+    
+    // Get existing chat to preserve custom name if it exists
+    const allChatsTemp = JSON.parse(localStorage.getItem('nova_chat_history') || '[]');
+    const existingChat = allChatsTemp.find(chat => chat.id === currentChatId);
+    
+    const chatData = {
+        id: currentChatId,
+        name: existingChat?.name || `${personalities[currentPersonality]?.name || 'Nova'} Chat`,
+        timestamp: Date.now(),
+        personality: currentPersonality,
+        messages: chatHistory,
+        messageCount: chatHistory.length
+    };
+    
+    // Get existing chat history from localStorage
+    let allChats = JSON.parse(localStorage.getItem('nova_chat_history') || '[]');
+    
+    // Update or add current chat
+    const existingIndex = allChats.findIndex(chat => chat.id === currentChatId);
+    if (existingIndex >= 0) {
+        allChats[existingIndex] = chatData;
+    } else {
+        allChats.unshift(chatData); // Add to beginning
+    }
+    
+    // Keep only last 50 chats
+    if (allChats.length > 50) {
+        allChats = allChats.slice(0, 50);
+    }
+    
+    localStorage.setItem('nova_chat_history', JSON.stringify(allChats));
+    console.log('💾 Chat saved:', currentChatId, '| Messages:', chatHistory.length);
+}
+
+// Auto-save chat periodically
+function startAutoSave() {
+    setInterval(() => {
+        if (chatHistory && chatHistory.length > 0) {
+            saveCurrentChat();
+        }
+    }, 30000); // Save every 30 seconds
+}
+
+// Start new chat
+function startNewChat() {
+    console.log('📝 Starting new chat...');
+    
+    // Save current chat if it has messages
+    if (chatHistory && chatHistory.length > 0) {
+        saveCurrentChat();
+    }
+    
+    // Clear current chat
+    chatHistory = [];
+    conversationHistory = [];
+    currentChatId = generateChatId();
+    
+    // Clear chat UI
+    const chatMessages = document.getElementById('chatMessages');
+    if (chatMessages) {
+        chatMessages.innerHTML = '';
+    }
+    
+    // Show greeting
+    const greeting = currentPersonality === 'Nova' ? getRandomNovaGreeting() : personalities[currentPersonality].greeting;
+    addMessage(greeting, 'Nova');
+    
+    showNotification('New chat started', 2000);
+    console.log('✅ New chat created:', currentChatId);
+}
+
+// Load chat from history
+function loadChat(chatId) {
+    console.log('📂 Loading chat:', chatId);
+    
+    const allChats = JSON.parse(localStorage.getItem('nova_chat_history') || '[]');
+    const chat = allChats.find(c => c.id === chatId);
+    
+    if (!chat) {
+        console.error('❌ Chat not found:', chatId);
+        return;
+    }
+    
+    // Save current chat before loading new one
+    if (chatHistory && chatHistory.length > 0 && currentChatId !== chatId) {
+        saveCurrentChat();
+    }
+    
+    // Load chat data
+    currentChatId = chat.id;
+    chatHistory = chat.messages || [];
+    currentPersonality = chat.personality || 'Nova';
+    
+    // Reconstruct conversation history for AI
+    conversationHistory = chatHistory.filter(msg => msg.sender !== 'Nova').map(msg => ({
+        role: msg.sender === 'user' ? 'user' : 'assistant',
+        content: msg.text
+    }));
+    
+    // Clear and reload chat UI
+    const chatMessages = document.getElementById('chatMessages');
+    if (chatMessages) {
+        chatMessages.innerHTML = '';
+    }
+    
+    // Reload all messages
+    chatHistory.forEach(msg => {
+        addMessage(msg.text, msg.sender, msg.timestamp);
+    });
+    
+    // Update personality mode
+    selectPersonality(chat.personality || 'Nova');
+    
+    // Close modal
+    closeChatHistoryModal();
+    
+    showNotification('Chat loaded', 2000);
+    console.log('✅ Chat loaded:', chatId, '| Messages:', chatHistory.length);
+}
+
+// Rename chat
+function renameChat(chatId, event) {
+    if (event) {
+        event.stopPropagation(); // Prevent loading chat when renaming
+    }
+    
+    console.log('✏️ Renaming chat:', chatId);
+    
+    let allChats = JSON.parse(localStorage.getItem('nova_chat_history') || '[]');
+    const chat = allChats.find(c => c.id === chatId);
+    
+    if (!chat) {
+        console.error('❌ Chat not found:', chatId);
+        return;
+    }
+    
+    const currentName = chat.name || 'Nova Chat';
+    const newName = prompt('Enter new chat name:', currentName);
+    
+    if (!newName || newName.trim() === '' || newName === currentName) {
+        return; // User cancelled or didn't change name
+    }
+    
+    // Update chat name
+    chat.name = newName.trim();
+    localStorage.setItem('nova_chat_history', JSON.stringify(allChats));
+    
+    // Refresh history display
+    displayChatHistory();
+    
+    showNotification('Chat renamed', 2000);
+    console.log('✅ Chat renamed to:', newName);
+}
+
+// Delete chat from history
+function deleteChat(chatId, event) {
+    if (event) {
+        event.stopPropagation(); // Prevent loading chat when deleting
+    }
+    
+    if (!confirm('Delete this chat permanently?')) {
+        return;
+    }
+    
+    console.log('🗑️ Deleting chat:', chatId);
+    
+    let allChats = JSON.parse(localStorage.getItem('nova_chat_history') || '[]');
+    allChats = allChats.filter(chat => chat.id !== chatId);
+    localStorage.setItem('nova_chat_history', JSON.stringify(allChats));
+    
+    // If deleted chat was current, start new chat
+    if (currentChatId === chatId) {
+        startNewChat();
+    }
+    
+    // Refresh history display
+    displayChatHistory();
+    
+    showNotification('Chat deleted', 2000);
+    console.log('✅ Chat deleted');
+}
+
+// Display chat history in modal
+function displayChatHistory() {
+    const allChats = JSON.parse(localStorage.getItem('nova_chat_history') || '[]');
+    const historyList = document.getElementById('chatHistoryList');
+    const emptyState = document.getElementById('chatHistoryEmpty');
+    
+    if (!historyList) return;
+    
+    if (allChats.length === 0) {
+        historyList.innerHTML = '';
+        if (emptyState) emptyState.style.display = 'block';
+        return;
+    }
+    
+    if (emptyState) emptyState.style.display = 'none';
+    
+    historyList.innerHTML = allChats.map(chat => {
+        const date = new Date(chat.timestamp);
+        const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        
+        // Get first user message as preview
+        const firstUserMsg = chat.messages.find(msg => msg.sender === 'user');
+        const preview = firstUserMsg ? firstUserMsg.text.substring(0, 100) : 'No messages';
+        
+        const isCurrent = chat.id === currentChatId;
+        
+        const chatName = chat.name || `${personalities[chat.personality]?.name || 'N.O.V.A'} Chat`;
+        
+        return `
+            <div class="chat-history-item ${isCurrent ? 'current' : ''}" onclick="loadChat('${chat.id}')" data-chat-id="${chat.id}">
+                <div class="chat-history-header">
+                    <div class="chat-history-title">
+                        ${isCurrent ? '📍 ' : ''}${escapeHtml(chatName)}
+                    </div>
+                    <div class="chat-history-date">${dateStr}</div>
+                </div>
+                <div class="chat-history-preview">${escapeHtml(preview)}${preview.length >= 100 ? '...' : ''}</div>
+                <div class="chat-history-meta">
+                    <span><i class="fas fa-comments"></i> ${chat.messageCount || 0} messages</span>
+                    <span><i class="fas fa-robot"></i> ${personalities[chat.personality]?.name || 'N.O.V.A'}</span>
+                </div>
+                <div class="chat-history-actions">
+                    <button class="chat-history-btn rename" onclick="renameChat('${chat.id}', event)" title="Rename Chat">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="chat-history-btn delete" onclick="deleteChat('${chat.id}', event)" title="Delete Chat">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    console.log('📚 Displayed', allChats.length, 'chats');
+}
+
+// Open chat history modal
+function openChatHistoryModal() {
+    const modal = document.getElementById('chatHistoryModal');
+    if (modal) {
+        displayChatHistory();
+        modal.style.display = 'flex';
+    }
+}
+
+// Close chat history modal
+function closeChatHistoryModal() {
+    const modal = document.getElementById('chatHistoryModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// Setup chat history event listeners
+function setupChatHistoryListeners() {
+    console.log('📚 Setting up chat history listeners...');
+    
+    // New chat button
+    const newChatBtn = document.getElementById('newChatBtn');
+    if (newChatBtn) {
+        newChatBtn.addEventListener('click', startNewChat);
+    }
+    
+    // Chat history button
+    const chatHistoryBtn = document.getElementById('chatHistoryBtn');
+    if (chatHistoryBtn) {
+        chatHistoryBtn.addEventListener('click', openChatHistoryModal);
+    }
+    
+    // Close chat history modal
+    const closeChatHistory = document.getElementById('closeChatHistory');
+    if (closeChatHistory) {
+        closeChatHistory.addEventListener('click', closeChatHistoryModal);
+    }
+    
+    // Close modal when clicking outside
+    const chatHistoryModal = document.getElementById('chatHistoryModal');
+    if (chatHistoryModal) {
+        chatHistoryModal.addEventListener('click', (e) => {
+            if (e.target === chatHistoryModal) {
+                closeChatHistoryModal();
+            }
+        });
+    }
+    
+    // Start auto-save
+    startAutoSave();
+    
+    // Initialize current chat ID
+    if (!currentChatId) {
+        currentChatId = generateChatId();
+    }
+    
+    console.log('✅ Chat history system initialized');
+}
+
+// Export functions globally
+window.loadChat = loadChat;
+window.deleteChat = deleteChat;
+window.renameChat = renameChat;
+window.replayMessage = replayMessage;
+window.editMessage = editMessage;
+window.saveEditedMessage = saveEditedMessage;
+window.cancelEdit = cancelEdit;
+window.copyContinuationPrompt = copyContinuationPrompt;
+window.downloadFullChat = downloadFullChat;
+window.openExportModal = openExportModal;
+window.closeExportModal = closeExportModal;
 
 // Export voice functions globally
 window.findBritishVoices = findBritishVoices;
