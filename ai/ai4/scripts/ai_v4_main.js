@@ -21,12 +21,13 @@ const fileUploadMenu = document.getElementById('fileUploadMenu');
 
 // Groq API - FREE and faster than OpenAI (for text)
 // Get your free API key from: https://console.groq.com/keys
-const GROQ_API_KEY = 'YOUR_GROQ_API_KEY_HERE';
+// API keys are now managed via Settings (localStorage)
+let GROQ_API_KEY = 'YOUR_GROQ_API_KEY_HERE';
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_MODEL = 'llama-3.3-70b-versatile';
 
 // OpenAI API - for vision/image analysis
-const OPENAI_API_KEY = 'YOUR_OPENAI_API_KEY_HERE';
+let OPENAI_API_KEY = 'YOUR_OPENAI_API_KEY_HERE';
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 const OPENAI_VISION_MODEL = 'gpt-4o';
 
@@ -2254,9 +2255,110 @@ window.showChatHistory = showChatHistory;
 window.hideChatHistory = hideChatHistory;
 window.loadSession = loadSession;
 
-// Initialize courses on page load
+// ========================================
+// API KEY MANAGEMENT
+// ========================================
+
+function showSettings() {
+    const modal = document.getElementById('settingsModal');
+    if (modal) {
+        // Load current API keys into inputs
+        const groqInput = document.getElementById('groqApiKeyInput');
+        const openaiInput = document.getElementById('openaiApiKeyInput');
+        
+        if (groqInput) {
+            const savedKey = localStorage.getItem('groq_api_key');
+            if (savedKey && savedKey !== 'YOUR_GROQ_API_KEY_HERE') {
+                groqInput.value = savedKey;
+            }
+        }
+        
+        if (openaiInput) {
+            const savedKey = localStorage.getItem('openai_api_key');
+            if (savedKey && savedKey !== 'YOUR_OPENAI_API_KEY_HERE') {
+                openaiInput.value = savedKey;
+            }
+        }
+        
+        modal.style.display = 'flex';
+    }
+}
+
+function hideSettings() {
+    const modal = document.getElementById('settingsModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function saveApiKeys() {
+    const groqInput = document.getElementById('groqApiKeyInput');
+    const openaiInput = document.getElementById('openaiApiKeyInput');
+    const savedMsg = document.getElementById('apiKeysSaved');
+    
+    let saved = false;
+    
+    // Save Groq API key
+    if (groqInput && groqInput.value.trim()) {
+        const apiKey = groqInput.value.trim();
+        localStorage.setItem('groq_api_key', apiKey);
+        GROQ_API_KEY = apiKey;
+        saved = true;
+        console.log('✅ Groq API key saved successfully!');
+    }
+    
+    // Save OpenAI API key (optional)
+    if (openaiInput && openaiInput.value.trim()) {
+        const apiKey = openaiInput.value.trim();
+        localStorage.setItem('openai_api_key', apiKey);
+        OPENAI_API_KEY = apiKey;
+        saved = true;
+        console.log('✅ OpenAI API key saved successfully!');
+    }
+    
+    if (!saved) {
+        alert('Please enter at least the Groq API key');
+        return;
+    }
+    
+    // Show success message
+    if (savedMsg) {
+        savedMsg.style.display = 'inline';
+        setTimeout(() => {
+            savedMsg.style.display = 'none';
+        }, 3000);
+    }
+    
+    showNotification('✅ API keys saved successfully!', 3000);
+}
+
+function loadApiKeys() {
+    // Load Groq API key
+    const groqKey = localStorage.getItem('groq_api_key');
+    if (groqKey && groqKey !== 'YOUR_GROQ_API_KEY_HERE') {
+        GROQ_API_KEY = groqKey;
+        console.log('✅ Loaded Groq API key from localStorage');
+    } else {
+        console.warn('⚠️ No Groq API key found. Please configure in settings.');
+    }
+    
+    // Load OpenAI API key
+    const openaiKey = localStorage.getItem('openai_api_key');
+    if (openaiKey && openaiKey !== 'YOUR_OPENAI_API_KEY_HERE') {
+        OPENAI_API_KEY = openaiKey;
+        console.log('✅ Loaded OpenAI API key from localStorage');
+    }
+}
+
+// Make settings functions globally accessible
+window.showSettings = showSettings;
+window.hideSettings = hideSettings;
+window.saveApiKeys = saveApiKeys;
+
+// Initialize courses and API keys on page load
 document.addEventListener('DOMContentLoaded', () => {
     loadCourses();
+    loadApiKeys();
 });
 
 console.log('🚀 AI Professor v4 Ultimate Edition - Ready for learning!');

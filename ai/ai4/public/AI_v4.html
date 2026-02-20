@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Professor v4 - Advanced Teaching Assistant with Personalities</title>
+    <title>AI Professor v4 - Advanced Teaching Assistant (Groq-Powered)</title>
     <link rel="stylesheet" href="../styles/ai_v4_styles.css">
     
     <!-- Mermaid.js for diagram generation -->
@@ -19,7 +19,7 @@
 <body>
     
     <h1>🎓 AI Professor v4</h1>
-    <p class="professor-subtitle">Advanced Teaching Assistant with Multiple Personalities</p>
+    <p class="professor-subtitle">Advanced Teaching Assistant with Multiple Personalities • Powered by Groq (FREE & FAST)</p>
     
     <div style="text-align: center; margin: 10px 0;">
         <a href="../../../Projects.html" class="control-btn" style="display: inline-block; text-decoration: none; padding: 10px 20px;">⬅️ Back to Projects</a>
@@ -55,6 +55,10 @@
             <div class="personality-option" data-personality="scholar">
                 <span class="personality-emoji">📚</span>
                 <span class="personality-name">Research Scholar</span>
+            </div>
+            <div class="personality-option" data-personality="brainstorm">
+                <span class="personality-emoji">🌟</span>
+                <span class="personality-name">Brainstorm Mode</span>
             </div>
         </div>
     </div>
@@ -101,6 +105,12 @@
                     <div class="help-personality">📚 <strong>Research Scholar</strong></div>
                     <div class="help-description">
                         A distinguished academic researcher who provides deep, scholarly insights with comprehensive analysis. This personality references relevant theories, historical context, peer-reviewed studies, and academic frameworks to give you university-level depth. Ideal for advanced students, research projects, thesis work, graduate-level discussions, and when you need authoritative academic perspectives. Expect detailed citations, theoretical foundations, and scholarly discourse that builds genuine expertise.
+                    </div>
+                </div>
+                <div class="personality-help-item">
+                    <div class="help-personality">🌟 <strong>Brainstorm Mode</strong></div>
+                    <div class="help-description">
+                        A creative idea generator focused on exploration and free thinking. This personality excels at generating multiple perspectives, exploring "what-if" scenarios, and encouraging unconventional approaches. Writes in a natural, conversational style perfect for essays, creative writing, and extended content. Ideal for essay writing, brainstorming sessions, creative projects, idea generation, and when you need natural-sounding content with specific word counts. Expect flowing, human-like writing with varied sentence structures and authentic voice.
                     </div>
                 </div>
             </div>
@@ -166,6 +176,42 @@
         </div>
     </div>
 
+    <!-- API Settings Modal -->
+    <div id="settingsModal" class="help-modal">
+        <div class="help-content">
+            <div class="help-header">
+                <h3>🔑 API Settings</h3>
+                <button class="close-help" onclick="hideSettings()">✕</button>
+            </div>
+            <div class="help-body">
+                <div style="padding: 20px;">
+                    <div style="margin-bottom: 20px;">
+                        <label for="groqApiKeyInput" style="display: block; margin-bottom: 8px; font-weight: 600; color: #FFD700;">Groq API Key (Required)</label>
+                        <input type="password" id="groqApiKeyInput" placeholder="Enter your Groq API key" 
+                               style="width: 100%; padding: 10px; background: rgba(0, 120, 212, 0.1); border: 1px solid rgba(0, 120, 212, 0.3); border-radius: 5px; color: #fff; font-size: 14px;">
+                        <small style="display: block; margin-top: 8px; color: rgba(255, 255, 255, 0.7);">
+                            Get your free API key at <a href="https://console.groq.com/keys" target="_blank" style="color: #FFD700;">console.groq.com/keys</a>
+                        </small>
+                    </div>
+                    <div style="margin-bottom: 20px;">
+                        <label for="openaiApiKeyInput" style="display: block; margin-bottom: 8px; font-weight: 600; color: #FFD700;">OpenAI API Key (Optional - for Image Analysis)</label>
+                        <input type="password" id="openaiApiKeyInput" placeholder="Enter your OpenAI API key" 
+                               style="width: 100%; padding: 10px; background: rgba(0, 120, 212, 0.1); border: 1px solid rgba(0, 120, 212, 0.3); border-radius: 5px; color: #fff; font-size: 14px;">
+                        <small style="display: block; margin-top: 8px; color: rgba(255, 255, 255, 0.7);">
+                            Required only for image file analysis. Get your key at <a href="https://platform.openai.com/api-keys" target="_blank" style="color: #FFD700;">platform.openai.com/api-keys</a>
+                        </small>
+                    </div>
+                    <div style="margin-top: 24px;">
+                        <button id="saveApiKeys" onclick="saveApiKeys()" style="padding: 12px 24px; background: linear-gradient(135deg, #0078D4, #005A9E); border: none; border-radius: 5px; color: white; font-weight: 600; cursor: pointer; transition: all 0.3s;">
+                            💾 Save API Keys
+                        </button>
+                        <span id="apiKeysSaved" style="margin-left: 12px; color: #4CAF50; display: none; font-weight: 600;">✓ Saved!</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Course Selector -->
     <div class="course-selector-container">
         <div class="course-selector-header">
@@ -184,6 +230,7 @@
         <button class="control-btn new-chat-btn" onclick="startNewChat()">🆕 New Session</button>
         <button class="control-btn history-btn" onclick="showChatHistory()">📜 Chat History</button>
         <button class="control-btn config-btn" onclick="showCourseConfig()">⚙️ Configure Courses</button>
+        <button class="control-btn" id="settingsBtn" onclick="showSettings()">🔑 API Settings</button>
         <button class="control-btn" onclick="exportChat()">💾 Export Chat</button>
         <button class="control-btn" onclick="clearChat()">🗑️ Clear All</button>
     </div>
