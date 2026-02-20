@@ -55,6 +55,9 @@ let currentPersonality = 'Nova';
 // Initialize conversation history
 let conversationHistory = [];
 
+// File attachment state
+let currentFileAttachment = null; // Stores { name, type, content, extension }
+
 // Initialize voice system variables
 window.isListening = false;
 window.isWakeListening = false;
@@ -402,6 +405,114 @@ function processUserMessage(userMessage) {
         addMessage('System error processing your message. Please try again.', 'Nova');
     }
 }
+
+// Send message with optional file attachment
+function sendMessageWithAttachment() {
+    const messageInput = document.getElementById('messageInput');
+    const userText = messageInput ? messageInput.value.trim() : '';
+    
+    // Check if there's either text or a file attachment
+    if (!userText && !currentFileAttachment) {
+        return; // Nothing to send
+    }
+    
+    let finalMessage = userText;
+    
+    // If there's a file attachment, prepend it to the message
+    if (currentFileAttachment) {
+        const { name, type, content, extension } = currentFileAttachment;
+        
+        let fileContent = '';
+        switch (type) {
+            case 'text':
+                fileContent = content.length > 10000 ? content.substring(0, 10000) + '\n\n[Content truncated due to length...]' : content;
+                finalMessage = `I've uploaded a text file "${name}". Here is the content:\n\n${fileContent}${userText ? '\n\n' + userText : ''}`;
+                break;
+                
+            case 'pdf':
+                fileContent = content.length > 15000 ? content.substring(0, 15000) + '\n\n[Content truncated due to length...]' : content;
+                finalMessage = `I've uploaded a PDF document "${name}". Here is the extracted text:\n\n${fileContent}${userText ? '\n\n' + userText : ''}`;
+                break;
+                
+            case 'code':
+                fileContent = content.length > 8000 ? content.substring(0, 8000) + '\n\n[Code truncated due to length...]' : content;
+                finalMessage = `I've uploaded a code file "${name}" (${extension}). Here is the code:\n\n\`\`\`${extension}\n${fileContent}\n\`\`\`${userText ? '\n\n' + userText : ''}`;
+                break;
+                
+            case 'image':
+                finalMessage = `I've uploaded an image "${name}".${userText ? ' ' + userText : ' Please acknowledge the image upload.'}`;
+                break;
+                
+            case 'audio':
+                finalMessage = `I've uploaded an audio file "${name}".${userText ? ' ' + userText : ' Please acknowledge the audio upload.'}`;
+                break;
+        }
+        
+        // Clear the file attachment after using it
+        clearFileAttachment();
+    }
+    
+    // Send the message
+    if (finalMessage) {
+        processUserMessage(finalMessage);
+    }
+}
+
+// Display file chip in the input area
+function displayFileChip(fileName, fileType) {
+    // Remove any existing chip
+    clearFileChip();
+    
+    // Create file chip container
+    const inputWrapper = document.querySelector('.input-wrapper');
+    if (!inputWrapper) return;
+    
+    const fileChip = document.createElement('div');
+    fileChip.className = 'file-chip';
+    fileChip.id = 'fileChip';
+    
+    // Choose icon based on file type
+    let icon = 'fa-file';
+    switch (fileType) {
+        case 'text': icon = 'fa-file-text'; break;
+        case 'image': icon = 'fa-image'; break;
+        case 'pdf': icon = 'fa-file-pdf'; break;
+        case 'code': icon = 'fa-code'; break;
+        case 'audio': icon = 'fa-file-audio'; break;
+    }
+    
+    fileChip.innerHTML = `
+        <i class="fas ${icon}"></i>
+        <span class="file-chip-name">${fileName}</span>
+        <button class="file-chip-remove" onclick="clearFileAttachment()" title="Remove file" type="button">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    // Insert before the textarea
+    const messageInput = document.getElementById('messageInput');
+    if (messageInput) {
+        inputWrapper.insertBefore(fileChip, messageInput);
+    }
+}
+
+// Clear file chip from UI
+function clearFileChip() {
+    const existingChip = document.getElementById('fileChip');
+    if (existingChip) {
+        existingChip.remove();
+    }
+}
+
+// Clear file attachment (called by remove button or after sending)
+function clearFileAttachment() {
+    currentFileAttachment = null;
+    clearFileChip();
+    console.log('📎 File attachment cleared');
+}
+
+// Make clearFileAttachment globally available for onclick handler
+window.clearFileAttachment = clearFileAttachment;
 
 // Enhanced AI integration with multi-provider support and improved error handling
 async function generateAIResponse(userMessage, personality) {
@@ -1192,10 +1303,7 @@ function setupEventListeners() {
     const sendBtn = document.getElementById('sendBtn');
     if (sendBtn) {
         sendBtn.addEventListener('click', () => {
-            const messageInput = document.getElementById('messageInput');
-            if (messageInput && messageInput.value.trim()) {
-                processUserMessage(messageInput.value.trim());
-            }
+            sendMessageWithAttachment();
         });
     }
     
@@ -1206,9 +1314,7 @@ function setupEventListeners() {
         messageInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault(); // Prevent new line
-                if (messageInput.value.trim()) {
-                    processUserMessage(messageInput.value.trim());
-                }
+                sendMessageWithAttachment();
             }
             // Shift+Enter naturally creates new line, no need to handle
         });
@@ -2396,14 +2502,19 @@ async function handleTextFile(file) {
     const text = await file.text();
     console.log('📄 Text file loaded:', file.name, '| Length:', text.length);
     
-    // Add file preview to chat
-    addFileMessage(file.name, 'text', text);
+    // Store file attachment
+    currentFileAttachment = {
+        name: file.name,
+        type: 'text',
+        content: text,
+        extension: file.name.split('.').pop()
+    };
     
-    // Auto-send message with actual content to Nova for analysis
-    setTimeout(() => {
-        const fileContent = text.length > 10000 ? text.substring(0, 10000) + '\n\n[Content truncated due to length...]' : text;
-        processUserMessage(`I've uploaded a text file "${file.name}". Here is the content:\n\n${fileContent}\n\nPlease analyze this file.`);
-    }, 500);
+    // Display file chip in input area
+    displayFileChip(file.name, 'text');
+    
+    // Show notification
+    showNotification(`Text file "${file.name}" attached. Add a message or send.`, 3000);
 }
 
 // Handle image file upload
@@ -2415,11 +2526,19 @@ async function handleImageFile(file) {
             const imageData = e.target.result;
             console.log('🖼️ Image loaded:', file.name);
             
-            // Add image preview to chat
-            addFileMessage(file.name, 'image', imageData);
+            // Store file attachment
+            currentFileAttachment = {
+                name: file.name,
+                type: 'image',
+                content: imageData,
+                extension: file.name.split('.').pop()
+            };
+            
+            // Display file chip in input area
+            displayFileChip(file.name, 'image');
             
             // Note: Image analysis would require vision API (GPT-4V, Claude Vision, etc.)
-            showNotification('Image uploaded! Note: Image analysis requires vision-enabled AI model.', 5000);
+            showNotification(`Image "${file.name}" attached. Add a message or send.`, 3000);
             resolve();
         };
         
@@ -2459,16 +2578,18 @@ async function handlePDFFile(file) {
         
         console.log('📕 PDF text extracted. Length:', fullText.length, 'characters');
         
-        // Add PDF preview with text to chat
-        addFileMessage(file.name, 'pdf', fullText);
+        // Store file attachment
+        currentFileAttachment = {
+            name: file.name,
+            type: 'pdf',
+            content: fullText,
+            extension: 'pdf'
+        };
         
-        // Auto-send message with actual PDF content to Nova for analysis
-        setTimeout(() => {
-            const pdfContent = fullText.length > 15000 ? fullText.substring(0, 15000) + '\n\n[Content truncated due to length...]' : fullText;
-            processUserMessage(`I've uploaded a PDF document "${file.name}". Here is the extracted text:\n\n${pdfContent}\n\nPlease analyze and summarize the key points from this document.`);
-        }, 500);
+        // Display file chip in input area
+        displayFileChip(file.name, 'pdf');
         
-        showNotification(`PDF processed successfully! Extracted ${fullText.length} characters from ${pdf.numPages} pages.`, 5000);
+        showNotification(`PDF "${file.name}" attached (${fullText.length} chars from ${pdf.numPages} pages). Add a message or send.`, 5000);
         
     } catch (error) {
         console.error('📕 PDF processing error:', error);
@@ -2485,23 +2606,26 @@ async function handleCodeFile(file) {
     const extension = file.name.split('.').pop();
     console.log('💻 Code file loaded:', file.name, '| Extension:', extension, '| Length:', code.length);
     
-    // Add code preview to chat
-    addFileMessage(file.name, 'code', code, extension);
+    // Store file attachment
+    currentFileAttachment = {
+        name: file.name,
+        type: 'code',
+        content: code,
+        extension: extension
+    };
     
-    // Auto-send message with actual code to Nova for analysis
-    setTimeout(() => {
-        const codeContent = code.length > 8000 ? code.substring(0, 8000) + '\n\n[Code truncated due to length...]' : code;
-        processUserMessage(`I've uploaded a code file "${file.name}" (${extension}). Here is the code:\n\n\`\`\`${extension}\n${codeContent}\n\`\`\`\n\nPlease review and explain this code.`);
-    }, 500);
+    // Display file chip in input area
+    displayFileChip(file.name, 'code');
+    
+    // Show notification
+    showNotification(`Code file "${file.name}" attached. Add a message or send.`, 3000);
 }
 
 // Handle audio file upload with transcription
 async function handleAudioFile(file) {
     console.log('🎵 Audio file uploaded:', file.name, '| Type:', file.type);
     
-    // Show audio player in chat
     const audioURL = URL.createObjectURL(file);
-    addFileMessage(file.name, 'audio', audioURL);
     
     // Transcribe audio using OpenAI Whisper API
     try {
@@ -2510,17 +2634,22 @@ async function handleAudioFile(file) {
         
         console.log('🎵 Transcription complete:', transcription.substring(0, 100) + '...');
         
-        // Add transcription to chat
-        addMessage(`📝 Transcription of "${file.name}":\n\n${transcription}`, 'Nova');
+        // Store file attachment with transcription
+        currentFileAttachment = {
+            name: file.name,
+            type: 'audio',
+            content: `Audio transcription:\n\n${transcription}`,
+            extension: file.name.split('.').pop()
+        };
         
-        // Auto-send message to Nova to analyze the lecture
-        setTimeout(() => {
-            processUserMessage(`I've uploaded a lecture recording "${file.name}". The transcription is above. Please summarize the key points and main topics covered in this lecture.`);
-        }, 1000);
+        // Display file chip in input area
+        displayFileChip(file.name, 'audio');
+        
+        showNotification(`Audio "${file.name}" transcribed and attached. Add a message or send.`, 5000);
         
     } catch (error) {
         console.error('🎵 Transcription error:', error);
-        showNotification('Audio uploaded but transcription failed: ' + error.message, 5000);
+        showNotification('Audio transcription failed: ' + error.message, 5000);
     }
 }
 

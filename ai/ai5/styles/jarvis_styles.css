@@ -721,6 +721,7 @@ body {
 
 .input-wrapper {
     display: flex;
+    flex-wrap: wrap;
     gap: 0.5rem;
     background: linear-gradient(145deg, rgba(0, 34, 68, 0.3), rgba(0, 17, 34, 0.3));
     border: 2px solid rgba(0, 170, 255, 0.2);
@@ -728,6 +729,7 @@ body {
     padding: 0.5rem;
     -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
+    align-items: flex-start;
 }
 
 .input-wrapper:focus-within {
@@ -846,6 +848,73 @@ body {
     background: rgba(0, 170, 255, 0.2);
     color: #00aaff;
     border-color: #00aaff;
+}
+
+/* File Chip Styles */
+.file-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, rgba(0, 170, 255, 0.2), rgba(0, 136, 204, 0.2));
+    border: 1px solid rgba(0, 170, 255, 0.4);
+    border-radius: 20px;
+    padding: 0.4rem 0.8rem;
+    margin: 0.25rem 0.5rem;
+    color: #00aaff;
+    font-size: 0.9rem;
+    animation: fileChipAppear 0.3s ease-out;
+    box-shadow: 0 0 10px rgba(0, 170, 255, 0.3);
+}
+
+@keyframes fileChipAppear {
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.file-chip i {
+    color: #00aaff;
+    font-size: 1rem;
+}
+
+.file-chip-name {
+    color: #ffffff;
+    font-weight: 500;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.file-chip-remove {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 68, 68, 0.2);
+    color: #ff4444;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    padding: 0;
+    font-size: 0.7rem;
+}
+
+.file-chip-remove:hover {
+    background: rgba(255, 68, 68, 0.4);
+    transform: scale(1.1);
+}
+
+.file-chip-remove i {
+    font-size: 0.7rem;
+    color: #ff4444;
 }
 
 /* Modal Styles */
