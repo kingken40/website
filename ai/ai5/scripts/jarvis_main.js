@@ -2399,9 +2399,10 @@ async function handleTextFile(file) {
     // Add file preview to chat
     addFileMessage(file.name, 'text', text);
     
-    // Auto-send a message asking Nova to analyze it
+    // Auto-send message with actual content to Nova for analysis
     setTimeout(() => {
-        processUserMessage(`I've uploaded a text file "${file.name}". Please analyze it.`);
+        const fileContent = text.length > 10000 ? text.substring(0, 10000) + '\n\n[Content truncated due to length...]' : text;
+        processUserMessage(`I've uploaded a text file "${file.name}". Here is the content:\n\n${fileContent}\n\nPlease analyze this file.`);
     }, 500);
 }
 
@@ -2461,9 +2462,10 @@ async function handlePDFFile(file) {
         // Add PDF preview with text to chat
         addFileMessage(file.name, 'pdf', fullText);
         
-        // Auto-send message asking Nova to analyze the PDF
+        // Auto-send message with actual PDF content to Nova for analysis
         setTimeout(() => {
-            processUserMessage(`I've uploaded a PDF document "${file.name}". Please analyze and summarize its content.`);
+            const pdfContent = fullText.length > 15000 ? fullText.substring(0, 15000) + '\n\n[Content truncated due to length...]' : fullText;
+            processUserMessage(`I've uploaded a PDF document "${file.name}". Here is the extracted text:\n\n${pdfContent}\n\nPlease analyze and summarize the key points from this document.`);
         }, 500);
         
         showNotification(`PDF processed successfully! Extracted ${fullText.length} characters from ${pdf.numPages} pages.`, 5000);
@@ -2486,9 +2488,10 @@ async function handleCodeFile(file) {
     // Add code preview to chat
     addFileMessage(file.name, 'code', code, extension);
     
-    // Auto-send a message asking Nova to analyze the code
+    // Auto-send message with actual code to Nova for analysis
     setTimeout(() => {
-        processUserMessage(`I've uploaded a code file "${file.name}". Please review and explain this code.`);
+        const codeContent = code.length > 8000 ? code.substring(0, 8000) + '\n\n[Code truncated due to length...]' : code;
+        processUserMessage(`I've uploaded a code file "${file.name}" (${extension}). Here is the code:\n\n\`\`\`${extension}\n${codeContent}\n\`\`\`\n\nPlease review and explain this code.`);
     }, 500);
 }
 
