@@ -2136,8 +2136,11 @@ function addNewCourse() {
     };
     
     courses[courseId] = newCourse;
+    saveCourses(); // Save to localStorage
     renderCourseList();
     updateCourseSelector();
+    
+    showNotification('➕ New course added! Don\'t forget to save your changes.', 2000);
 }
 
 // Save a specific course
