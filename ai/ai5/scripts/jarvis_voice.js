@@ -147,11 +147,35 @@ function setupSpeechRecognition() {
     };
     
     recognition.onend = function() {
-        console.log('🎤 Voice recognition ended, isWakeListening:', isWakeListening, 'wakeWordEnabled:', wakeWordEnabled);
+        console.log('🎤 Voice recognition ended, isWakeListening:', isWakeListening, 'wakeWordEnabled:', wakeWordEnabled, 'hotkeyListening:', hotkeyListening);
         updateVoiceUI(false);
         
+        // If hotkey (R key) is still being held, restart recognition immediately
+        if (hotkeyListening && hotkeyActive && !restartPending) {
+            console.log('🎤 Hotkey still held - restarting recognition...');
+            restartPending = true;
+            
+            setTimeout(() => {
+                if (hotkeyListening && hotkeyActive) {
+                    restartPending = false;
+                    isListening = true;
+                    window.isListening = true;
+                    try {
+                        recognition.continuous = true;
+                        recognition.start();
+                        console.log('🎤 Recognition restarted for continued hotkey hold');
+                    } catch (e) {
+                        console.log('🎤 Failed to restart:', e);
+                        restartPending = false;
+                    }
+                } else {
+                    console.log('🎤 Hotkey released - not restarting');
+                    restartPending = false;
+                }
+            }, 100);
+        }
         // If wake listening is active and enabled, restart it
-        if (isWakeListening && wakeWordEnabled && !restartPending && !isSpeechOutputActive) {
+        else if (isWakeListening && wakeWordEnabled && !restartPending && !isSpeechOutputActive) {
             console.log('🎤 Scheduling wake listening restart...');
             restartPending = true;
             
@@ -1260,7 +1284,7 @@ function startVoiceRecognition() {
     updateVoiceStatus('Listening for your command...');
     
     try {
-        recognition.continuous = false;
+        recognition.continuous = true;
         recognition.start();
     } catch (error) {
         console.error('Error starting manual voice recognition:', error);
