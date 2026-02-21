@@ -133,7 +133,7 @@ function initializeVoice() {
 function setupSpeechRecognition() {
     if (!recognition) return;
     
-    recognition.continuous = false;
+    recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = 'en-US';
     recognition.maxAlternatives = 1;
