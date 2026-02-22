@@ -13,6 +13,10 @@
     <h1>🎓 AI Professor v4</h1>
     <p class="professor-subtitle">Advanced Teaching Assistant with Multiple Personalities</p>
     
+    <div style="text-align: center; margin: 10px 0;">
+        <a href="../../Projects.html" class="control-btn" style="display: inline-block; text-decoration: none; padding: 10px 20px;">⬅️ Back to Projects</a>
+    </div>
+    
     <!-- AI Personality Selector -->
     <div class="personality-container">
         <div class="personality-header">
@@ -43,6 +47,10 @@
             <div class="personality-option" data-personality="scholar">
                 <span class="personality-emoji">📚</span>
                 <span class="personality-name">Research Scholar</span>
+            </div>
+            <div class="personality-option" data-personality="homework">
+                <span class="personality-emoji">📝</span>
+                <span class="personality-name">Assignment Helper</span>
             </div>
         </div>
     </div>
@@ -91,6 +99,12 @@
                         A distinguished academic researcher who provides deep, scholarly insights with comprehensive analysis. This personality references relevant theories, historical context, peer-reviewed studies, and academic frameworks to give you university-level depth. Ideal for advanced students, research projects, thesis work, graduate-level discussions, and when you need authoritative academic perspectives. Expect detailed citations, theoretical foundations, and scholarly discourse that builds genuine expertise.
                     </div>
                 </div>
+                <div class="personality-help-item">
+                    <div class="help-personality">📝 <strong>Assignment Helper</strong></div>
+                    <div class="help-description">
+                        Your dedicated homework and assignment completion assistant. This personality specializes in breaking down complex assignments, providing step-by-step solutions with detailed explanations, helping with essay outlines and thesis development, checking citations (APA, MLA, Chicago), solving math and science problems with complete working, and organizing research projects. Perfect for students working on homework, essays, research papers, problem sets, and any academic assignments. Upload your assignment files for comprehensive analysis and assistance. Focuses on helping you learn and understand, not just providing answers.
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -108,9 +122,32 @@
         </div>
     </div>
 
+    <!-- Context Sessions Modal -->
+    <div id="contextSessionsModal" class="help-modal">
+        <div class="help-content">
+            <div class="help-header">
+                <h3>🧠 Include Past Sessions as Context</h3>
+                <button class="close-help" onclick="hideContextSessions()">✕</button>
+            </div>
+            <div class="help-body">
+                <div style="margin-bottom: 15px; padding: 10px; background: rgba(255, 215, 0, 0.1); border-radius: 8px;">
+                    <p style="margin: 0; font-size: 14px;">Select previous chat sessions to include as context. The AI will remember conversations from selected sessions.</p>
+                </div>
+                <div id="contextSessionsList">
+                    <div class="no-history">No saved sessions available.</div>
+                </div>
+                <div style="margin-top: 15px; text-align: center;">
+                    <button class="control-btn" onclick="applyContextSessions()" style="display: inline-block;">✅ Apply Selected Sessions</button>
+                    <button class="control-btn" onclick="clearContextSessions()" style="display: inline-block; margin-left: 10px;">🗑️ Clear All</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="chat-controls">
         <button class="control-btn new-chat-btn" onclick="startNewChat()">🆕 New Session</button>
         <button class="control-btn history-btn" onclick="showChatHistory()">📜 Chat History</button>
+        <button class="control-btn" onclick="showContextSessions()">🧠 Include Context</button>
         <button class="control-btn" onclick="exportChat()">💾 Export Chat</button>
         <button class="control-btn" onclick="clearChat()">🗑️ Clear All</button>
     </div>
@@ -134,6 +171,6 @@
     <!-- Hidden file input element -->
     <input type="file" id="fileInput" style="display: none;" accept=".pdf,.doc,.docx,.txt,.csv,.pptx">
 
-    <script src="scripts/ai_v4_main.js"></script>
+    <script src="scripts/ai_v4_main.js?v=2.3"></script>
 </body>
 </html>

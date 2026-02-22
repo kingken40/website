@@ -40,7 +40,7 @@ let currentPersonality = 'assistant'; // Default personality
 const personalities = {
     assistant: {
         name: "🤖 Professional Assistant",
-        system: "You are a professional, helpful AI teaching assistant. Provide clear, accurate, and well-structured answers. Be friendly but maintain academic professionalism. Remember our conversation context and build upon previous messages. When creating diagrams, use Mermaid syntax wrapped in ```mermaid code blocks. Create dynamic diagrams based on the specific request rather than generic examples."
+        system: "You are a professional, helpful AI teaching assistant. Provide clear, accurate, and well-structured answers. Be friendly but maintain academic professionalism. Remember our conversation context and build upon previous messages. When creating diagrams, use Mermaid syntax wrapped in ```mermaid code blocks. Create dynamic diagrams based on the specific request rather than generic examples. Help with academic tasks including: research assistance, study planning, assignment guidance, citation formatting (APA, MLA, Chicago), concept clarification, and exam preparation. Always cite sources when providing factual information and encourage critical thinking."
     },
     creative: {
         name: "💡 Creative Mentor",
@@ -52,7 +52,7 @@ const personalities = {
     },
     teacher: {
         name: "🎓 Patient Educator", 
-        system: "You are a patient, encouraging university professor. Break down complex topics into digestible steps, use analogies and real-world examples, ask guiding questions, and adapt to the student's level. Remember what we've discussed to build knowledge progressively. When helpful for learning, create educational diagrams using Mermaid syntax in ```mermaid code blocks to visualize concepts."
+        system: "You are a patient, encouraging university professor. Break down complex topics into digestible steps, use analogies and real-world examples, ask guiding questions, and adapt to the student's level. Remember what we've discussed to build knowledge progressively. When helpful for learning, create educational diagrams using Mermaid syntax in ```mermaid code blocks to visualize concepts. Specialize in: creating study guides, generating practice questions, explaining difficult concepts multiple ways, providing memory techniques, offering exam strategies, and building confidence. Always check for understanding and adjust teaching approach based on student needs."
     },
     funny: {
         name: "🎪 Humorous Tutor",
@@ -60,11 +60,15 @@ const personalities = {
     },
     scholar: {
         name: "📚 Research Scholar",
-        system: "You are a distinguished academic researcher and scholar. Provide detailed, well-researched answers with academic depth. Reference relevant theories, studies, and historical context when appropriate. Remember our intellectual discussions to build deeper scholarly insights. For complex concepts or research frameworks, create scholarly diagrams using Mermaid syntax in ```mermaid code blocks."
+        system: "You are a distinguished academic researcher and scholar. Provide detailed, well-researched answers with academic depth. Reference relevant theories, studies, and historical context when appropriate. Remember our intellectual discussions to build deeper scholarly insights. For complex concepts or research frameworks, create scholarly diagrams using Mermaid syntax in ```mermaid code blocks. Excel at: literature reviews, research methodology guidance, academic writing support, thesis development, critical analysis, source evaluation, and proper academic citations. Help identify research gaps, formulate research questions, and structure academic arguments."
     },
     brainstorm: {
         name: "🌟 Brainstorm Mode",
         system: "You are a creative brainstorming AI assistant focused on idea generation and exploration. Generate ideas freely, explore multiple perspectives, and encourage unconventional thinking. Keep responses natural and conversational - skip unnecessary formality and preamble. When writing content with specific word counts, write in a natural, human-like manner with varied sentence structures, authentic transitions, and organic flow. Avoid robotic or formulaic patterns. Use natural language with appropriate complexity and vocabulary variation. Think creatively, explore 'what-if' scenarios, and be non-judgmental about wild ideas."
+    },
+    homework: {
+        name: "📝 Assignment Helper",
+        system: "You are an expert academic assistant specializing in homework and assignment completion. Help students understand assignments, break down complex problems, provide step-by-step solutions with explanations, check work for errors, offer study strategies, and guide through research. For essays and writing assignments, help with outlines, thesis development, argument structure, and proper citations (APA, MLA, Chicago). For math and science, show complete working with explanations of each step. For research assignments, help find credible sources and organize information. Always encourage learning and understanding, not just providing answers. When students upload assignment files, carefully analyze requirements and provide comprehensive assistance tailored to their academic level."
     }
 };
 
@@ -73,11 +77,22 @@ const personalities = {
 // ========================================
 
 const prepareGroqMessages = (currentMessage) => {
-    // Get recent conversation history (last 12 messages for better context)
-    const recentHistory = chatHistory.slice(-12);
+    // Get all conversation history from current chat
+    let allHistory = [...chatHistory];
+    
+    // Include selected past sessions if any
+    if (window.selectedPastSessions && window.selectedPastSessions.length > 0) {
+        const sessions = JSON.parse(localStorage.getItem('chatSessions') || '[]');
+        window.selectedPastSessions.forEach(sessionId => {
+            const session = sessions.find(s => s.id === sessionId);
+            if (session && session.messages) {
+                allHistory = [...session.messages, ...allHistory];
+            }
+        });
+    }
     
     // Convert chat history to message format (OpenAI-compatible)
-    const messages = recentHistory.map(msg => ({
+    const messages = allHistory.map(msg => ({
         role: msg.isUser ? "user" : "assistant",
         content: msg.text.replace(/<[^>]*>/g, '').trim() // Clean HTML tags
     }));
@@ -140,9 +155,17 @@ const prepareGroqMessages = (currentMessage) => {
     }
     
     // ALWAYS add system message with current personality (at the beginning)
+    // Include course context if an active course is selected
+    let systemPrompt = personalities[currentPersonality].system;
+    
+    if (activeCourse && courses[activeCourse]) {
+        const course = courses[activeCourse];
+        systemPrompt += `\n\nCOURSE CONTEXT:\nYou are specifically helping with: ${course.title}\nCourse Description: ${course.prompt}\n\nTailor your responses to be relevant to this specific course context. When answering questions, reference concepts and materials from this course when appropriate.`;
+    }
+    
     messages.unshift({
         role: "system",
-        content: personalities[currentPersonality].system
+        content: systemPrompt
     });
     
     return { messages, isImageUpload: hasImage };
@@ -211,30 +234,32 @@ function processLargePowerPoint(content, estimatedTokens, maxTokens) {
         slides.push(currentSlide);
     }
     
-    // Create intelligent summary
-    let summary = `📊 PowerPoint Summary (${slides.length} slides, ${estimatedTokens} tokens - auto-summarized for optimal processing)\n\n`;
+    // Create intelligent summary optimized for lectures/educational content
+    let summary = `📊 Lecture Slides Summary (${slides.length} slides, ${estimatedTokens} tokens - intelligently processed)\n\n`;
     
     // Add overview
     summary += `🎯 PRESENTATION OVERVIEW:\n`;
     summary += `• Total Slides: ${slides.length}\n`;
-    summary += `• Content Length: ${estimatedTokens} estimated tokens\n`;
-    summary += `• Processing: Smart summary to fit context window\n\n`;
+    summary += `• Content Type: Educational/Lecture Material\n`;
+    summary += `• Processing: Optimized for study and review\n\n`;
     
-    // Sample key slides (first few, middle, and last few)
-    const keySlideIndices = getKeySlideIndices(slides.length);
+    // For educational slides, include MORE content since students need to study from them
+    const keySlideIndices = slides.length <= 15 
+        ? Array.from({length: slides.length}, (_, i) => i) // Include all if 15 or fewer
+        : getKeySlideIndices(slides.length);
     
-    summary += `📋 KEY SLIDES CONTENT:\n\n`;
+    summary += `📋 DETAILED SLIDE CONTENT:\n\n`;
     
     keySlideIndices.forEach(index => {
         const slide = slides[index];
         summary += `${slide.title}\n`;
         
-        // Add first few lines of content
-        const slideContent = slide.content.slice(0, 3).join('\n');
+        // For educational content, include more lines per slide
+        const slideContent = slide.content.slice(0, 6).join('\n');
         if (slideContent) {
             summary += `${slideContent}\n`;
-            if (slide.content.length > 3) {
-                summary += `... (${slide.content.length - 3} more lines)\n`;
+            if (slide.content.length > 6) {
+                summary += `... (${slide.content.length - 6} more lines)\n`;
             }
         }
         summary += '\n';
@@ -249,20 +274,24 @@ function processLargePowerPoint(content, estimatedTokens, maxTokens) {
         summary += '\n';
     }
     
-    // Add speaker notes summary if available
+    // Add speaker notes summary if available (important for studying)
     if (speakerNotes.length > 0) {
-        summary += `🎤 SPEAKER NOTES SUMMARY:\n`;
-        summary += speakerNotes.slice(0, 5).join('\n');
-        if (speakerNotes.length > 5) {
-            summary += `\n... (${speakerNotes.length - 5} more notes)\n`;
+        summary += `🎤 SPEAKER NOTES (Important for Study):\n`;
+        summary += speakerNotes.slice(0, 10).join('\n'); // Include more speaker notes
+        if (speakerNotes.length > 10) {
+            summary += `\n... (${speakerNotes.length - 10} more notes)\n`;
         }
         summary += '\n';
     }
     
-    summary += `💡 NOTE: This is an intelligent summary. Ask specific questions about particular slides or topics for detailed analysis.`;
+    summary += `💡 NOTE: These appear to be lecture slides. Ask me to:\n`;
+    summary += `   • Create a study guide from this material\n`;
+    summary += `   • Generate practice questions for exam prep\n`;
+    summary += `   • Explain specific concepts in detail\n`;
+    summary += `   • Summarize key points for review`;
     
     return {
-        type: "Smart Summary",
+        type: "Smart Summary (Educational)",
         content: summary
     };
 }
@@ -326,28 +355,55 @@ function processLargeTextFile(content, estimatedTokens, maxTokens) {
     const lines = content.split('\n');
     const targetLength = Math.floor(maxTokens * 4 * 0.8); // 80% of max tokens, converted to characters
     
-    let summary = `📄 Large Text File Summary (${estimatedTokens} tokens - auto-summarized)\n\n`;
+    // Check if this looks like an assignment/instructions (keywords indicate educational content)
+    const isAssignment = /assignment|homework|instructions|requirements|due date|submit|grade|rubric|objectives|learning outcomes/i.test(content.substring(0, 1000));
     
-    summary += `🎯 FILE OVERVIEW:\n`;
+    let summary = isAssignment 
+        ? `📝 Assignment/Instructions Summary (${estimatedTokens} tokens - intelligently processed)\n\n`
+        : `📄 Large Text File Summary (${estimatedTokens} tokens - auto-summarized)\n\n`;
+    
+    summary += `🎯 DOCUMENT OVERVIEW:\n`;
     summary += `• Original Length: ${content.length} characters\n`;
     summary += `• Estimated Tokens: ${estimatedTokens}\n`;
-    summary += `• Total Lines: ${lines.length}\n\n`;
+    summary += `• Total Lines: ${lines.length}\n`;
+    summary += `• Document Type: ${isAssignment ? 'Assignment/Instructions' : 'Text Document'}\n\n`;
     
-    summary += `📋 CONTENT PREVIEW:\n\n`;
-    
-    // Add beginning of file
-    const beginningLines = lines.slice(0, 20);
-    summary += beginningLines.join('\n');
-    
-    if (lines.length > 40) {
-        summary += `\n\n... (${lines.length - 40} lines omitted) ...\n\n`;
+    if (isAssignment) {
+        // For assignments, include more detail and structure
+        summary += `📋 FULL ASSIGNMENT CONTENT:\n\n`;
         
-        // Add end of file
-        const endLines = lines.slice(-20);
-        summary += endLines.join('\n');
+        // Include up to 60% of content for assignments (they're usually important)
+        const maxLines = Math.floor(lines.length * 0.6);
+        const includedLines = lines.slice(0, Math.min(maxLines, 50));
+        summary += includedLines.join('\n');
+        
+        if (lines.length > maxLines) {
+            summary += `\n\n... (${lines.length - maxLines} additional lines) ...\n\n`;
+            
+            // Add last few lines (often contain due dates, submission info)
+            const endLines = lines.slice(-10);
+            summary += endLines.join('\n');
+        }
+        
+        summary += `\n\n💡 NOTE: This appears to be an assignment or instructions. I've included key details. Ask me to analyze requirements, create an outline, or help with specific sections.`;
+    } else {
+        // Standard processing for other text files
+        summary += `📋 CONTENT PREVIEW:\n\n`;
+        
+        // Add beginning of file
+        const beginningLines = lines.slice(0, 20);
+        summary += beginningLines.join('\n');
+        
+        if (lines.length > 40) {
+            summary += `\n\n... (${lines.length - 40} lines omitted) ...\n\n`;
+            
+            // Add end of file
+            const endLines = lines.slice(-20);
+            summary += endLines.join('\n');
+        }
+        
+        summary += `\n\n💡 NOTE: This is a summary of a large file. Ask specific questions for detailed analysis.`;
     }
-    
-    summary += `\n\n💡 NOTE: This is a summary of a large file. Ask specific questions for detailed analysis.`;
     
     return {
         type: "Smart Summary",
@@ -440,11 +496,19 @@ const sendMessage = async () => {
         console.log('🤖 Model:', model);
         console.log('🖼️ Image upload:', isImageUpload);
         
+        // Adjust temperature based on personality for optimal educational output
+        let temperature = 0.7; // Default balanced temperature
+        if (currentPersonality === 'brainstorm' || currentPersonality === 'creative') {
+            temperature = 0.9; // Higher creativity for brainstorming
+        } else if (currentPersonality === 'homework' || currentPersonality === 'coder' || currentPersonality === 'scholar') {
+            temperature = 0.6; // Lower for accuracy in assignments and research
+        }
+        
         const requestPayload = {
             model: model,
             messages: messages,
             max_tokens: useOpenAI ? 1000 : 2048,
-            temperature: (currentPersonality === 'brainstorm' || currentPersonality === 'creative') ? 0.9 : 0.7
+            temperature: temperature
         };
         
         console.log('📤 Messages array:', messages);
@@ -548,6 +612,9 @@ const addMessage = async (content, isUser, isHTML = false, type = 'normal') => {
     
     if (isHTML) {
         messageDiv.innerHTML = content;
+    } else if (isUser) {
+        // For user messages, convert newlines to <br> tags to preserve formatting
+        messageDiv.innerHTML = content.replace(/\n/g, '<br>');
     } else {
         messageDiv.textContent = content;
     }
@@ -1735,6 +1802,12 @@ const showNotification = (message, duration = 3000, type = 'default') => {
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🎓 AI Professor v4 - Ultimate Edition Loaded!');
     
+    // Load saved API keys from localStorage
+    loadApiKeys();
+    
+    // Load course configuration from localStorage
+    loadCourses();
+    
     // Initialize Mermaid.js for diagram rendering
     if (typeof mermaid !== 'undefined') {
         mermaid.initialize({ 
@@ -2243,24 +2316,174 @@ function getCurrentCourseContext() {
     return `\n\nCOURSE CONTEXT:\nYou are specifically helping with: ${course.title}\nCourse Description: ${course.prompt}\n\nTailor your responses to be relevant to this specific course context.`;
 }
 
-// Override the prepareOpenAIMessages function to include course context
-const originalPrepareOpenAIMessages = prepareOpenAIMessages;
-
-window.prepareOpenAIMessages = (currentMessage) => {
-    const messages = originalPrepareOpenAIMessages(currentMessage);
-    
-    // Add course context to the system message if there's an active course
-    if (activeCourse && courses[activeCourse] && messages[0] && messages[0].role === 'system') {
-        messages[0].content += getCurrentCourseContext();
-    }
-    
-    return messages;
-};
+// Course context is already handled in prepareGroqMessages system message
+// No need to override here
 
 // Make chat history functions globally accessible
 window.showChatHistory = showChatHistory;
 window.hideChatHistory = hideChatHistory;
 window.loadSession = loadSession;
+
+// ========================================
+// CONTEXT SESSIONS - Include Past Chats
+// ========================================
+
+// Initialize selectedPastSessions array
+if (!window.selectedPastSessions) {
+    window.selectedPastSessions = [];
+}
+
+const showContextSessions = () => {
+    console.log('🧠 showContextSessions called');
+    const modal = document.getElementById('contextSessionsModal');
+    const sessionsList = document.getElementById('contextSessionsList');
+    
+    console.log('🧠 Modal found:', !!modal, 'SessionsList found:', !!sessionsList);
+    
+    if (!modal || !sessionsList) {
+        console.error('❌ Context sessions modal not found');
+        alert('Error: Context sessions modal not found. Please refresh the page.');
+        return;
+    }
+    
+    // Load available sessions
+    const sessions = JSON.parse(localStorage.getItem('chatSessions') || '[]');
+    
+    if (sessions.length === 0) {
+        sessionsList.innerHTML = '<div class="no-history">No saved sessions available.</div>';
+    } else {
+        // Sort sessions by timestamp (most recent first)
+        sessions.sort((a, b) => {
+            const dateA = new Date(a.timestamp);
+            const dateB = new Date(b.timestamp);
+            return dateB.getTime() - dateA.getTime();
+        });
+        
+        sessionsList.innerHTML = sessions.map(session => {
+            const date = new Date(session.timestamp);
+            const formattedDate = date.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+            });
+            const formattedTime = date.toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            });
+            
+            const personality = personalities[session.personality] || personalities.assistant;
+            const sessionTitle = session.title || `Session ${sessions.indexOf(session) + 1}`;
+            const isSelected = window.selectedPastSessions.includes(session.id);
+            const isCurrentSession = session.id === currentSessionId;
+            
+            return `
+                <div class="context-session-item" style="padding: 12px; margin: 8px 0; background: ${isSelected ? 'rgba(255, 215, 0, 0.15)' : 'rgba(30, 60, 114, 0.3)'}; border-radius: 8px; border: 2px solid ${isSelected ? '#FFD700' : 'transparent'}; ${isCurrentSession ? 'opacity: 0.5; pointer-events: none;' : 'cursor: pointer;'}" onclick="toggleContextSession('${session.id}')">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" ${isSelected ? 'checked' : ''} ${isCurrentSession ? 'disabled' : ''} style="width: 20px; height: 20px; cursor: pointer;" onclick="event.stopPropagation(); toggleContextSession('${session.id}')">
+                        <div style="flex: 1;">
+                            <div style="font-weight: bold; margin-bottom: 5px;">
+                                ${sessionTitle}
+                                ${isCurrentSession ? '<span style="color: #FFD700; font-size: 12px;"> (Current Session)</span>' : ''}
+                            </div>
+                            <div style="font-size: 12px; opacity: 0.8;">
+                                ${formattedDate} at ${formattedTime}
+                            </div>
+                            <div style="font-size: 12px; margin-top: 5px;">
+                                <span style="color: #FFD700;">${personality.name}</span>
+                                <span style="margin-left: 10px;">${session.messageCount || 0} messages</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+    
+    modal.classList.add('show');
+    
+    // Close on backdrop click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            hideContextSessions();
+        }
+    });
+};
+
+const hideContextSessions = () => {
+    const modal = document.getElementById('contextSessionsModal');
+    if (modal) {
+        modal.classList.remove('show');
+    }
+};
+
+const toggleContextSession = (sessionId) => {
+    // Don't allow selecting current session
+    if (sessionId === currentSessionId) {
+        return;
+    }
+    
+    const index = window.selectedPastSessions.indexOf(sessionId);
+    if (index > -1) {
+        // Remove from selection
+        window.selectedPastSessions.splice(index, 1);
+    } else {
+        // Add to selection
+        window.selectedPastSessions.push(sessionId);
+    }
+    
+    // Refresh the list to update checkboxes
+    showContextSessions();
+    
+    console.log('🧠 Selected sessions:', window.selectedPastSessions.length);
+};
+
+const applyContextSessions = () => {
+    const count = window.selectedPastSessions.length;
+    
+    if (count === 0) {
+        showNotification('ℹ️ No sessions selected. AI will only use current chat context.', 3000);
+    } else {
+        showNotification(`✅ ${count} session${count > 1 ? 's' : ''} included as context! AI will remember those conversations.`, 4000);
+    }
+    
+    hideContextSessions();
+    updateContextButtonLabel();
+    
+    console.log('🧠 Applied context sessions:', window.selectedPastSessions);
+};
+
+const clearContextSessions = () => {
+    window.selectedPastSessions = [];
+    showNotification('🗑️ Context sessions cleared. AI will only use current chat.', 3000);
+    showContextSessions(); // Refresh the list
+    updateContextButtonLabel();
+};
+
+const updateContextButtonLabel = () => {
+    const buttons = document.querySelectorAll('.control-btn');
+    buttons.forEach(btn => {
+        if (btn.textContent.includes('Include Context') || btn.textContent.includes('🧠')) {
+            const count = window.selectedPastSessions.length;
+            if (count > 0) {
+                btn.innerHTML = `🧠 Include Context (${count})`;
+                btn.style.background = 'linear-gradient(135deg, #2a5298 0%, #1e3c72 100%)';
+                btn.style.border = '2px solid #FFD700';
+            } else {
+                btn.innerHTML = '🧠 Include Context';
+                btn.style.background = '';
+                btn.style.border = '';
+            }
+        }
+    });
+};
+
+// Make context session functions globally accessible
+window.showContextSessions = showContextSessions;
+window.hideContextSessions = hideContextSessions;
+window.toggleContextSession = toggleContextSession;
+window.applyContextSessions = applyContextSessions;
+window.clearContextSessions = clearContextSessions;
 
 // ========================================
 // API KEY MANAGEMENT

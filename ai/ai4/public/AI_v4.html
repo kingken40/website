@@ -60,6 +60,10 @@
                 <span class="personality-emoji">🌟</span>
                 <span class="personality-name">Brainstorm Mode</span>
             </div>
+            <div class="personality-option" data-personality="homework">
+                <span class="personality-emoji">📝</span>
+                <span class="personality-name">Assignment Helper</span>
+            </div>
         </div>
     </div>
 
@@ -113,6 +117,12 @@
                         A creative idea generator focused on exploration and free thinking. This personality excels at generating multiple perspectives, exploring "what-if" scenarios, and encouraging unconventional approaches. Writes in a natural, conversational style perfect for essays, creative writing, and extended content. Ideal for essay writing, brainstorming sessions, creative projects, idea generation, and when you need natural-sounding content with specific word counts. Expect flowing, human-like writing with varied sentence structures and authentic voice.
                     </div>
                 </div>
+                <div class="personality-help-item">
+                    <div class="help-personality">📝 <strong>Assignment Helper</strong></div>
+                    <div class="help-description">
+                        Your dedicated homework and assignment completion assistant. This personality specializes in breaking down complex assignments, providing step-by-step solutions with detailed explanations, helping with essay outlines and thesis development, checking citations (APA, MLA, Chicago), solving math and science problems with complete working, and organizing research projects. Perfect for students working on homework, essays, research papers, problem sets, and any academic assignments. Upload your assignment files for comprehensive analysis and assistance. Focuses on helping you learn and understand, not just providing answers.
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -126,6 +136,28 @@
             </div>
             <div class="help-body" id="historyList">
                 <div class="no-history">No chat sessions found. Start a conversation to create your first session!</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Context Sessions Modal -->
+    <div id="contextSessionsModal" class="help-modal">
+        <div class="help-content">
+            <div class="help-header">
+                <h3>🧠 Include Past Sessions as Context</h3>
+                <button class="close-help" onclick="hideContextSessions()">✕</button>
+            </div>
+            <div class="help-body">
+                <div style="margin-bottom: 15px; padding: 10px; background: rgba(255, 215, 0, 0.1); border-radius: 8px;">
+                    <p style="margin: 0; font-size: 14px;">Select previous chat sessions to include as context. The AI will remember conversations from selected sessions.</p>
+                </div>
+                <div id="contextSessionsList">
+                    <div class="no-history">No saved sessions available.</div>
+                </div>
+                <div style="margin-top: 15px; text-align: center;">
+                    <button class="control-btn" onclick="applyContextSessions()" style="display: inline-block;">✅ Apply Selected Sessions</button>
+                    <button class="control-btn" onclick="clearContextSessions()" style="display: inline-block; margin-left: 10px;">🗑️ Clear All</button>
+                </div>
             </div>
         </div>
     </div>
@@ -197,8 +229,8 @@
         <div class="course-selector-wrapper">
             <select id="activeCourseSelect" class="course-select" onchange="setActiveCourse()" aria-labelledby="courseSelectorLabel">
                 <option value="">🎭 General AI Professor (No Course Context)</option>
-                <option value="integrated-problem-solving" selected>🤖 Integrated Problem Solving for AI</option>
-                <option value="human-centric-cybersecurity">🔐 Human-Centric Cybersecurity</option>
+                <option value="software-eng-practicum" selected>📖 Integrated Problem Solving for AI</option>
+                <option value="computer-networks">🌐 Human‑Centric Cybersecurity</option>
             </select>
         </div>
     </div>
@@ -206,6 +238,7 @@
     <div class="chat-controls">
         <button class="control-btn new-chat-btn" onclick="startNewChat()">🆕 New Session</button>
         <button class="control-btn history-btn" onclick="showChatHistory()">📜 Chat History</button>
+        <button class="control-btn" onclick="showContextSessions()">🧠 Include Context</button>
         <button class="control-btn config-btn" onclick="showCourseConfig()">⚙️ Configure Courses</button>
         <button class="control-btn" id="settingsBtn" onclick="showSettings()">🔑 API Settings</button>
         <button class="control-btn" onclick="exportChat()">💾 Export Chat</button>
@@ -235,6 +268,6 @@
     <!-- Hidden file input element -->
     <input type="file" id="fileInput" style="display: none;" accept=".pdf,.doc,.docx,.txt,.csv,.pptx,.jpg,.jpeg,.png,.gif,.bmp,.webp">
 
-    <script src="../scripts/ai_v4_main.js"></script>
+    <script src="../scripts/ai_v4_main.js?v=2.3"></script>
 </body>
 </html>
