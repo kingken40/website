@@ -148,9 +148,14 @@
                 const indicator = voice.localService ? '🎯 Local' : '☁️ Online';
                 const quality = voice.localService ? 'High Quality' : 'Standard Quality';
                 
+                // Special badge for Paul Bettany voices
+                const nameLower = voice.name.toLowerCase();
+                const isPaulBettany = nameLower.includes('paul') || nameLower.includes('bettany');
+                const paulBadge = isPaulBettany ? '<span style="background: #ffd700; color: #000; padding: 2px 8px; border-radius: 4px; margin-left: 10px; font-weight: bold;">🎬 PAUL BETTANY</span>' : '';
+                
                 html += `
                     <div class="voice-item ${className}">
-                        <div class="voice-name">${voice.name}</div>
+                        <div class="voice-name">${voice.name} ${paulBadge}</div>
                         <div class="voice-details">
                             Language: ${voice.lang} | ${indicator} | ${quality}
                         </div>
