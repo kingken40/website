@@ -1,5 +1,7 @@
 # 🇬🇧 JARVIS Voice Setup Guide - Get Authentic British Voices
 
+> **🎬 The Original JARVIS**: In the Marvel Cinematic Universe, JARVIS is voiced by **Paul Bettany** - a British actor with a distinctive, sophisticated accent. This guide helps you find voices that capture that same authoritative, refined British sound.
+
 ## Step 1: Check Your Current Voices
 
 1. **Open the Voice Checker**: Open `voice_checker.html` in your web browser
@@ -136,11 +138,22 @@ Once you have installed new voices:
 
 ## Recommended Voice Priority:
 
-1. **🥇 Microsoft George Desktop (en-GB)** - Perfect JARVIS voice
-2. **🥈 CereProc William** - Premium British sophistication
-3. **🥉 Microsoft Daniel Desktop (en-GB)** - Good alternative
-4. **🏅 CereProc Jack** - Deep Scottish-British accent
-5. **🏅 Edge Enhanced British Male** - If available
+1. **🏆 Paul Bettany Voice Packs** - The authentic JARVIS! (if available from specialty TTS providers)
+2. **🥇 Microsoft George Desktop (en-GB)** - Closest standard voice to JARVIS
+3. **🥈 CereProc William** - Premium British sophistication
+4. **🥉 Microsoft Daniel Desktop (en-GB)** - Good alternative
+5. **🏅 CereProc Jack** - Deep Scottish-British accent
+6. **🏅 Edge Enhanced British Male** - If available
+
+### 🎬 Getting Paul Bettany's Voice:
+
+While official Paul Bettany TTS voices are rare, you can:
+- **AI Voice Cloning Services**: Services like ElevenLabs or Descript may allow creation of similar voices (for personal use only)
+- **Custom Voice Packs**: Some specialty TTS providers offer celebrity-similar voices
+- **Voice Modulation**: Use pitch/rate adjustments on British voices to approximate his tone:
+  - Lower pitch (0.7-0.8)
+  - Moderate rate (0.85-0.95)
+  - British English (en-GB) accent
 
 ## Quick Commands for Voice Checker Console:
 

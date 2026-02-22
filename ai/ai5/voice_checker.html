@@ -94,7 +94,9 @@
                 voice.name.toLowerCase().includes('thomas') ||
                 voice.name.toLowerCase().includes('george') ||
                 voice.name.toLowerCase().includes('hazel') ||
-                voice.name.toLowerCase().includes('william')
+                voice.name.toLowerCase().includes('william') ||
+                voice.name.toLowerCase().includes('paul') ||
+                voice.name.toLowerCase().includes('bettany')
             );
 
             // JARVIS-suitable voices (masculine characteristics)
@@ -116,6 +118,7 @@
                     name.includes('william') ||
                     name.includes('mark') ||
                     name.includes('paul') ||
+                    name.includes('bettany') ||
                     name.includes('matthew') ||
                     voice.localService
                 ) && !name.includes('female') && !name.includes('compact') && voice.lang.startsWith('en');
