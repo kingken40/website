@@ -1028,6 +1028,46 @@ h1 {
 }
 
 /* ========================================
+   SPEAK BUTTON (TTS)
+======================================== */
+
+.speak-btn {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    background: rgba(255, 215, 0, 0.2);
+    border: 1px solid rgba(255, 215, 0, 0.4);
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    padding: 0;
+    -webkit-backdrop-filter: blur(5px);
+    backdrop-filter: blur(5px);
+}
+
+.speak-btn:hover {
+    background: rgba(255, 215, 0, 0.4);
+    border-color: #FFD700;
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
+}
+
+.speak-btn:active {
+    transform: scale(0.95);
+}
+
+/* Add padding to bot messages to make room for speak button */
+.bot-message {
+    padding-bottom: 45px !important;
+}
+
+/* ========================================
    TYPING INDICATOR
 ======================================== */
 

@@ -619,6 +619,19 @@ const addMessage = async (content, isUser, isHTML = false, type = 'normal') => {
         messageDiv.textContent = content;
     }
     
+    // Add speak button for bot messages (bottom right corner)
+    if (!isUser && type !== 'error') {
+        const speakBtn = document.createElement('button');
+        speakBtn.className = 'speak-btn';
+        speakBtn.innerHTML = '🔊';
+        speakBtn.title = 'Read aloud';
+        speakBtn.onclick = (e) => {
+            e.stopPropagation();
+            speakMessage(content);
+        };
+        messageDiv.appendChild(speakBtn);
+    }
+    
     // Add message to container
     containerDiv.appendChild(messageDiv);
     
@@ -1793,6 +1806,89 @@ const showNotification = (message, duration = 3000, type = 'default') => {
             }
         }, 400);
     }, duration);
+};
+
+// ========================================
+// TEXT-TO-SPEECH FUNCTIONALITY
+// ========================================
+
+let currentSpeech = null;
+
+const speakMessage = (htmlContent) => {
+    // Stop any ongoing speech
+    if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+    }
+    
+    // Clean HTML content - remove tags and clean up text for speech
+    let textToSpeak = htmlContent
+        .replace(/<br\s*\/?>/gi, '. ')  // Replace <br> with pause
+        .replace(/<\/p>/gi, '. ')       // Replace closing paragraph with pause
+        .replace(/<\/h[1-6]>/gi, '. ')  // Replace closing headers with pause
+        .replace(/<\/li>/gi, '. ')      // Replace closing list items with pause
+        .replace(/<[^>]+>/g, '')        // Remove all other HTML tags
+        .replace(/&nbsp;/g, ' ')        // Replace &nbsp; with space
+        .replace(/&amp;/g, 'and')       // Replace &amp; with 'and'
+        .replace(/&lt;/g, 'less than')  // Replace &lt; with 'less than'
+        .replace(/&gt;/g, 'greater than') // Replace &gt; with 'greater than'
+        .replace(/\*\*/g, '')           // Remove bold markdown
+        .replace(/`([^`]+)`/g, '$1')    // Remove code backticks
+        .replace(/\s+/g, ' ')           // Clean up multiple spaces
+        .trim();
+    
+    if (!textToSpeak) {
+        console.log('🔊 No text to speak');
+        return;
+    }
+    
+    console.log('🔊 Speaking:', textToSpeak.substring(0, 100) + '...');
+    
+    // Create speech utterance
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    
+    // Configure speech settings
+    utterance.rate = 1.0;      // Normal speed
+    utterance.pitch = 1.0;     // Normal pitch
+    utterance.volume = 1.0;    // Full volume
+    
+    // Try to use a good voice (prefer Google or Microsoft voices)
+    const voices = window.speechSynthesis.getVoices();
+    const preferredVoice = voices.find(v => 
+        v.name.includes('Google') || 
+        v.name.includes('Microsoft') || 
+        v.lang.startsWith('en')
+    );
+    if (preferredVoice) {
+        utterance.voice = preferredVoice;
+    }
+    
+    // Event handlers
+    utterance.onstart = () => {
+        console.log('🔊 Speech started');
+        currentSpeech = utterance;
+    };
+    
+    utterance.onend = () => {
+        console.log('🔊 Speech finished');
+        currentSpeech = null;
+    };
+    
+    utterance.onerror = (e) => {
+        console.error('🔊 Speech error:', e);
+        currentSpeech = null;
+    };
+    
+    // Speak the text
+    window.speechSynthesis.speak(utterance);
+};
+
+// Stop speech function (optional - for future use)
+const stopSpeech = () => {
+    if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+        currentSpeech = null;
+        console.log('🔊 Speech stopped');
+    }
 };
 
 // ========================================
