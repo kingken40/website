@@ -82,6 +82,11 @@
                 <div class="mode-name">Brainstorm Mode</div>
                 <div class="mode-desc">Creative Idea Generation</div>
             </div>
+            <div class="mode-card" data-personality="study">
+                <div class="mode-icon">📝</div>
+                <div class="mode-name">Study Guide</div>
+                <div class="mode-desc">Assignment Helper</div>
+            </div>
         </div>
     </div>
 
@@ -140,6 +145,11 @@
             <button class="quick-action" data-command="help me with math" type="button">Math Help</button>
             <button class="quick-action" data-command="analyze this data" type="button">Data Analysis</button>
             <button class="quick-action" data-command="create a lesson plan" type="button">Lesson Plan</button>
+            <button class="quick-action" data-command="create a comprehensive study guide on this topic" type="button">Study Guide</button>
+            <button class="quick-action" data-command="write an essay outline on this topic" type="button">Write Essay</button>
+            <button class="quick-action" data-command="create flashcards to help me memorize this topic" type="button">Flashcards</button>
+            <button class="quick-action" data-command="summarize the key points of this topic clearly" type="button">Summarize</button>
+            <button class="quick-action" data-command="solve this problem step by step" type="button">Solve Problem</button>
         </div>
     </div>
 
@@ -203,6 +213,31 @@
                 </div> -->
                 </div>
                 
+                <div class="setting-section" style="margin-top: 1.5rem;">
+                    <h4 style="color: #FFD700; margin-bottom: 1rem; border-bottom: 1px solid rgba(255, 215, 0, 0.3); padding-bottom: 0.5rem;">📚 Course Material</h4>
+                    <p style="color:rgba(255,255,255,0.6);font-size:0.82rem;margin-bottom:0.8rem;">Add notes, slides, or readings that N.O.V.A will reference across all chats. Great for Study Guide mode.</p>
+                    <div class="setting-group">
+                        <label>Upload a file (txt, md, pdf, code)</label>
+                        <div style="display:flex;gap:0.5rem;align-items:center;margin-top:0.3rem;">
+                            <button type="button" onclick="document.getElementById('materialFileInput').click()" style="padding:0.45rem 1rem;background:linear-gradient(135deg,#00aaff,#0066cc);border:none;border-radius:5px;color:#fff;cursor:pointer;font-size:0.85rem;">📂 Choose File</button>
+                            <input type="file" id="materialFileInput" accept=".txt,.md,.json,.csv,.js,.py,.html,.css,.java,.cpp,.c,.pdf" style="display:none;">
+                        </div>
+                    </div>
+                    <div class="setting-group" style="margin-top:0.8rem;">
+                        <label>Or paste text</label>
+                        <input type="text" id="materialTextName" placeholder="Label (e.g. Chapter 3 Notes)" style="width:100%;padding:0.4rem 0.6rem;background:rgba(0,170,255,0.08);border:1px solid rgba(0,170,255,0.25);border-radius:5px;color:#00aaff;margin-bottom:0.4rem;">
+                        <textarea id="materialTextInput" rows="4" placeholder="Paste your notes or course content here..." style="width:100%;padding:0.5rem 0.6rem;background:rgba(0,170,255,0.08);border:1px solid rgba(0,170,255,0.25);border-radius:5px;color:#e0e0e0;resize:vertical;font-size:0.85rem;box-sizing:border-box;"></textarea>
+                        <button id="addMaterialTextBtn" type="button" style="margin-top:0.4rem;padding:0.45rem 1rem;background:linear-gradient(135deg,#FFD700,#FFA500);border:none;border-radius:5px;color:#1a1a2e;font-weight:600;cursor:pointer;font-size:0.85rem;">+ Add Material</button>
+                    </div>
+                    <div class="setting-group" style="margin-top:0.8rem;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem;">
+                            <label style="margin:0;">Saved Material</label>
+                            <button id="clearAllMaterialBtn" type="button" style="background:none;border:1px solid rgba(255,68,68,0.4);color:#ff6666;border-radius:4px;padding:0.2rem 0.6rem;cursor:pointer;font-size:0.78rem;">Clear All</button>
+                        </div>
+                        <div id="materialList"><div style="color:rgba(255,255,255,0.4);font-size:0.85rem;padding:0.5rem 0;">No material added yet.</div></div>
+                    </div>
+                </div>
+
                 <div class="setting-section" style="margin-top: 1.5rem;">
                     <h4 style="color: #FFD700; margin-bottom: 1rem; border-bottom: 1px solid rgba(255, 215, 0, 0.3); padding-bottom: 0.5rem;">⚙️ General Settings</h4>
                     <div class="setting-group">
@@ -347,7 +382,9 @@
             
             // Setup proper voice system integration
             setTimeout(() => {
-                loadAvailableVoices();
+                if (typeof loadAvailableVoices === 'function') {
+                    loadAvailableVoices();
+                }
                 console.log('✅ Voice integration fixed');
             }, 1000);
             
@@ -391,9 +428,6 @@
             
             window.speechSynthesis.speak(utterance);
         };
-        
-        // Override the main speakText function
-        window.speakText = window.enhancedSpeakText;
         
         // Fix voice command processing
         window.processVoiceCommand = function(command) {
@@ -504,6 +538,11 @@
                 name: "Data Analyst",
                 systemPrompt: "You are a data analyst AI. Focus on analyzing information, finding patterns, providing insights, and helping with research. Be methodical and evidence-based in your responses.",
                 voiceSettings: { rate: 1.0, pitch: 0.9 }
+            },
+            study: {
+                name: "Study Guide",
+                systemPrompt: "You are an expert academic assistant specializing in assignment help, homework completion, and study guidance. Help students understand assignments, break down complex problems, provide step-by-step solutions with explanations, assist with essays/math/research, create study guides and practice questions. When course material is uploaded, reference it directly and prioritize it over general knowledge.",
+                voiceSettings: { rate: 0.9, pitch: 0.95 }
             }
         };
 
@@ -607,6 +646,52 @@
             
             // Load current voice settings
             loadVoiceSettings();
+
+            // Render saved course material list
+            if (typeof renderMaterialList === 'function') renderMaterialList();
+
+            // Wire material controls (once, using flags to avoid duplicate listeners)
+            const materialFileInput = document.getElementById('materialFileInput');
+            if (materialFileInput && !materialFileInput._wired) {
+                materialFileInput._wired = true;
+                materialFileInput.addEventListener('change', e => {
+                    const file = e.target.files[0];
+                    if (file && typeof handleMaterialFileUpload === 'function') {
+                        handleMaterialFileUpload(file);
+                        e.target.value = '';
+                    }
+                });
+            }
+
+            const addMaterialTextBtn = document.getElementById('addMaterialTextBtn');
+            if (addMaterialTextBtn && !addMaterialTextBtn._wired) {
+                addMaterialTextBtn._wired = true;
+                addMaterialTextBtn.addEventListener('click', () => {
+                    const content = document.getElementById('materialTextInput').value.trim();
+                    const name = document.getElementById('materialTextName').value.trim() || 'Pasted Material';
+                    if (!content) { showNotification('Paste some text first.', 2000); return; }
+                    if (typeof addPersistentMaterialItem === 'function') {
+                        addPersistentMaterialItem(name, content);
+                        document.getElementById('materialTextInput').value = '';
+                        document.getElementById('materialTextName').value = '';
+                        showNotification('Material added!', 2000);
+                    }
+                });
+            }
+
+            const clearAllMaterialBtn = document.getElementById('clearAllMaterialBtn');
+            if (clearAllMaterialBtn && !clearAllMaterialBtn._wired) {
+                clearAllMaterialBtn._wired = true;
+                clearAllMaterialBtn.addEventListener('click', () => {
+                    if (typeof persistentMaterial === 'undefined' || persistentMaterial.length === 0) return;
+                    if (confirm('Remove all uploaded material?')) {
+                        persistentMaterial.length = 0;
+                        if (typeof savePersistentMaterial === 'function') savePersistentMaterial();
+                        if (typeof renderMaterialList === 'function') renderMaterialList();
+                        showNotification('All material cleared.', 2000);
+                    }
+                });
+            }
         }
 
         function closeSettings() {
@@ -995,15 +1080,15 @@
             personalities,
             isVoiceEnabled: window.isVoiceEnabled,
             isVoiceResponseEnabled: window.isVoiceResponseEnabled,
-            processUserMessage,
-            generateResponse,
+            processUserMessage: window.processUserMessage,
+            generateResponse: window.generateAIResponse,
             showVoiceEnabledMessage,
             updateVoiceVisualizer
         };
 
         // Make key functions globally available
-        window.processUserMessage = processUserMessage;
-        window.generateResponse = generateResponse;
+        window.processUserMessage = window.processUserMessage;
+        window.generateResponse = window.generateAIResponse;
         window.showVoiceEnabledMessage = showVoiceEnabledMessage;
         window.updateVoiceVisualizer = updateVoiceVisualizer;
 

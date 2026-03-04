@@ -103,8 +103,110 @@ const personalities = {
         greeting: 'Creative thinking mode activated. Let\'s explore some ideas together.',
         style: 'creative, exploratory, non-judgmental, generates multiple perspectives and "what-if" scenarios, encourages wild ideas and unconventional thinking',
         responsePrefix: 'Let\'s explore this... '
+    },
+    study: {
+        name: 'Study Guide',
+        greeting: 'Study Guide mode activated. Upload your course material in Settings and I\'ll help you master it.',
+        style: 'expert academic assignment helper and study coach',
+        responsePrefix: ''
     }
 };
+
+// ====== PERSISTENT MATERIAL STORE ======
+let persistentMaterial = [];
+
+function loadPersistentMaterial() {
+    try {
+        const stored = localStorage.getItem('nova_persistent_material');
+        if (stored) {
+            persistentMaterial = JSON.parse(stored);
+        }
+    } catch(e) {
+        persistentMaterial = [];
+    }
+}
+
+function savePersistentMaterial() {
+    try {
+        localStorage.setItem('nova_persistent_material', JSON.stringify(persistentMaterial));
+    } catch(e) {
+        console.warn('Could not save persistent material to localStorage');
+    }
+}
+
+function addPersistentMaterialItem(name, content) {
+    persistentMaterial.push({ id: Date.now(), name, content });
+    savePersistentMaterial();
+    renderMaterialList();
+}
+
+function removePersistentMaterialItem(id) {
+    persistentMaterial = persistentMaterial.filter(m => m.id !== id);
+    savePersistentMaterial();
+    renderMaterialList();
+}
+
+function getPersistentMaterialContext() {
+    if (persistentMaterial.length === 0) return '';
+    const sections = persistentMaterial.map(m =>
+        `--- Material: ${m.name} ---\n${m.content}`
+    ).join('\n\n');
+    return `\n\n=== UPLOADED COURSE MATERIAL (always reference this when relevant) ===\n${sections}\n=== END OF COURSE MATERIAL ===`;
+}
+
+function renderMaterialList() {
+    const list = document.getElementById('materialList');
+    if (!list) return;
+    if (persistentMaterial.length === 0) {
+        list.innerHTML = '<div style="color:rgba(255,255,255,0.4);font-size:0.85rem;padding:0.5rem 0;">No material added yet.</div>';
+        return;
+    }
+    list.innerHTML = persistentMaterial.map(m => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:0.4rem 0.6rem;margin-bottom:0.4rem;background:rgba(0,170,255,0.08);border:1px solid rgba(0,170,255,0.2);border-radius:5px;">
+            <span style="color:#00aaff;font-size:0.85rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:80%;" title="${m.name}">${m.name}</span>
+            <button onclick="removePersistentMaterialItem(${m.id})" style="background:none;border:none;color:#ff4444;cursor:pointer;font-size:1rem;padding:0 0.3rem;" title="Remove">✕</button>
+        </div>
+    `).join('');
+}
+
+function handleMaterialFileUpload(file) {
+    const ext = file.name.split('.').pop().toLowerCase();
+    const textTypes = ['txt','md','json','csv','js','py','html','css','java','cpp','c'];
+    if (textTypes.includes(ext)) {
+        const reader = new FileReader();
+        reader.onload = e => {
+            addPersistentMaterialItem(file.name, e.target.result);
+            showNotification(`Material added: ${file.name}`, 3000);
+        };
+        reader.readAsText(file);
+    } else if (ext === 'pdf') {
+        const reader = new FileReader();
+        reader.onload = async e => {
+            try {
+                const typedArray = new Uint8Array(e.target.result);
+                const pdf = await pdfjsLib.getDocument({ data: typedArray }).promise;
+                let text = '';
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const content = await page.getTextContent();
+                    text += content.items.map(item => item.str).join(' ') + '\n';
+                }
+                addPersistentMaterialItem(file.name, text);
+                showNotification(`PDF material added: ${file.name}`, 3000);
+            } catch(err) {
+                showNotification('PDF parsing failed. Try a text file instead.', 4000);
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    } else {
+        showNotification('Unsupported file type. Use txt, md, pdf, or code files.', 4000);
+    }
+}
+
+window.removePersistentMaterialItem = removePersistentMaterialItem;
+
+loadPersistentMaterial();
+// ====== END PERSISTENT MATERIAL STORE ======
 
 function getRandomNovaGreeting() {
     const greetings = [
@@ -756,19 +858,13 @@ async function generateGeminiResponse(userMessage, personality) {
         const config = personalities[personality] || personalities.Nova;
         
         // Gemini uses "contents" array with "parts" instead of OpenAI's "messages"
+        const geminiPersonalityInstructions = personality === 'study'
+            ? `You are an expert academic assistant. Help with assignments, break down problems step-by-step, assist with essays/math/research, create study guides and practice questions. Reference any uploaded course material directly and prioritize it.`
+            : `Keep responses natural and conversational. Be helpful and direct.\n\nIf you are N.O.V.A: address user as "sir", use dry British humor, be witty and efficient.\nIf you are Genius Mode, focus on technical analysis.\nIf you are Professor, focus on teaching clearly.\nIf you are Data Analyst, focus on data-driven insights.`;
+
         const systemPrompt = `You are ${config.name}, a ${config.style}.
 
-Keep responses natural and conversational. Be helpful and direct - skip unnecessary formality and preamble.
-
-If you are N.O.V.A:
-- Address user as "sir" when appropriate
-- Use dry British humor and occasional witty sarcasm
-- Be intelligent and efficient
-- Think Paul Bettany's Nova: witty, helpful, authoritative but never condescending
-
-If you are Genius Mode, focus on technical analysis and problem-solving.
-If you are Professor, focus on teaching and explaining concepts clearly.
-If you are Data Analyst, focus on data-driven insights and statistics.
+${geminiPersonalityInstructions}${getPersistentMaterialContext()}
 
 SOURCE CITATION RULE:
 When your response includes specific facts, statistics, scientific concepts, historical events, or technical claims, add a "Sources & References" section at the very bottom of your response formatted as:
@@ -906,12 +1002,22 @@ function prepareOpenAIMessages(userMessage, personality) {
     // Get personality config
     const config = personalities[personality] || personalities.Nova;
     
-    // System message with personality
-    const systemMessage = {
-        role: "system",
-        content: `You are ${config.name}, a ${config.style}.
+    // Build personality-specific instructions
+    let personalityInstructions = '';
+    if (personality === 'study') {
+        personalityInstructions = `You are an expert academic assistant specializing in assignment help, homework completion, and study guidance.
 
-Keep responses natural and conversational. Be helpful and direct - skip unnecessary formality and preamble.
+Your role:
+- Help students understand assignments and break down complex problems
+- Provide step-by-step solutions with clear explanations (not just answers)
+- For essays/writing: help with outlines, thesis development, argument structure, citations (APA, MLA, Chicago)
+- For math/science: show complete working with explanations of each step
+- For research: help find relevant angles and organize information
+- Create study guides, practice questions, flashcard-style reviews on demand
+- When course material is uploaded, reference it directly and prioritize it over general knowledge
+- Encourage understanding, not just completion`;
+    } else {
+        personalityInstructions = `Keep responses natural and conversational. Be helpful and direct - skip unnecessary formality and preamble.
 
 If you are N.O.V.A:
 - Address user as "sir" when appropriate
@@ -929,7 +1035,18 @@ If you are Professor:
 
 If you are Data Analyst:
 - Data-driven insights
-- Precise and statistical
+- Precise and statistical`;
+    }
+
+    // Inject persistent course material into context
+    const materialContext = getPersistentMaterialContext();
+
+    // System message with personality
+    const systemMessage = {
+        role: "system",
+        content: `You are ${config.name}, a ${config.style}.
+
+${personalityInstructions}${materialContext}
 
 SOURCE CITATION RULE:
 When your response includes specific facts, statistics, scientific concepts, historical events, or technical claims, add a "Sources & References" section at the very bottom of your response formatted as:
@@ -1395,12 +1512,58 @@ function setupEventListeners() {
     if (settingsBtn && settingsModal) {
         settingsBtn.addEventListener('click', () => {
             settingsModal.classList.add('active');
+            renderMaterialList();
         });
     }
     
     if (closeSettings && settingsModal) {
         closeSettings.addEventListener('click', () => {
             settingsModal.classList.remove('active');
+        });
+    }
+
+    // Material upload input listener
+    const materialFileInput = document.getElementById('materialFileInput');
+    if (materialFileInput) {
+        materialFileInput.addEventListener('change', e => {
+            const file = e.target.files[0];
+            if (file) {
+                handleMaterialFileUpload(file);
+                e.target.value = '';
+            }
+        });
+    }
+
+    // Material paste/add button
+    const addMaterialTextBtn = document.getElementById('addMaterialTextBtn');
+    const materialTextInput = document.getElementById('materialTextInput');
+    const materialTextName = document.getElementById('materialTextName');
+    if (addMaterialTextBtn && materialTextInput) {
+        addMaterialTextBtn.addEventListener('click', () => {
+            const content = materialTextInput.value.trim();
+            const name = (materialTextName && materialTextName.value.trim()) || 'Pasted Material';
+            if (!content) {
+                showNotification('Paste some text first.', 2000);
+                return;
+            }
+            addPersistentMaterialItem(name, content);
+            materialTextInput.value = '';
+            if (materialTextName) materialTextName.value = '';
+            showNotification('Material added!', 2000);
+        });
+    }
+
+    // Clear all material
+    const clearAllMaterialBtn = document.getElementById('clearAllMaterialBtn');
+    if (clearAllMaterialBtn) {
+        clearAllMaterialBtn.addEventListener('click', () => {
+            if (persistentMaterial.length === 0) return;
+            if (confirm('Remove all uploaded material?')) {
+                persistentMaterial = [];
+                savePersistentMaterial();
+                renderMaterialList();
+                showNotification('All material cleared.', 2000);
+            }
         });
     }
     
