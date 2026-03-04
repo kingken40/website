@@ -1,4 +1,4 @@
-/* ========================================
+﻿/* ========================================
    N.O.V.A VOICE RECOGNITION & SYNTHESIS
    Advanced Voice Control System
 ======================================== */
@@ -17,6 +17,7 @@ let isVoiceResponseEnabled = true;
 let hasVoicePermission = false;
 let voicePermissionRequested = false;
 let pendingTranscript = '';
+let lastInterimTranscript = '';
 let wakeWordEnabled = false; // Controlled by toggle button
 let isWakeWordSession = false; // Track if current interaction is from wake word
 let currentVoiceSettings = {
@@ -143,12 +144,37 @@ function setupSpeechRecognition() {
         updateVoiceUI(true);
         isListening = true;
         window.isListening = true;
-        pendingTranscript = '';
+        // Don't clear transcripts on restart during hotkey hold - startVoiceRecognition clears them on initial press
+        if (!hotkeyListening) {
+            pendingTranscript = '';
+            lastInterimTranscript = '';
+        }
     };
     
     recognition.onend = function() {
-        console.log('🎤 Voice recognition ended, isWakeListening:', isWakeListening, 'wakeWordEnabled:', wakeWordEnabled, 'hotkeyListening:', hotkeyListening);
+        console.log('🎤 Voice recognition ended, isWakeListening:', isWakeListening, 'wakeWordEnabled:', wakeWordEnabled, 'hotkeyListening:', hotkeyListening, 'pttReleaseMode:', pttReleaseMode);
         updateVoiceUI(false);
+        
+        // PTT release: R was released, collect all results and process
+        if (pttReleaseMode) {
+            pttReleaseMode = false;
+            isListening = false;
+            window.isListening = false;
+            const transcript = [pendingTranscript.trim(), lastInterimTranscript.trim()]
+                .filter(Boolean).join(' ').trim();
+            pendingTranscript = '';
+            lastInterimTranscript = '';
+            recreateRecognition(true);
+            if (transcript) {
+                console.log('⌨️ Processing command:', transcript);
+                updateVoiceStatus('Processing command...');
+                processVoiceCommand(transcript);
+            } else {
+                console.log('⌨️ No transcript captured');
+                updateVoiceStatus('Ready - Press and hold R to speak');
+            }
+            return;
+        }
         
         // If hotkey (R key) is still being held, restart recognition immediately
         if (hotkeyListening && hotkeyActive && !restartPending) {
@@ -162,6 +188,7 @@ function setupSpeechRecognition() {
                     window.isListening = true;
                     try {
                         recognition.continuous = true;
+                        recognition.interimResults = true;
                         recognition.start();
                         console.log('🎤 Recognition restarted for continued hotkey hold');
                     } catch (e) {
@@ -207,16 +234,78 @@ function setupSpeechRecognition() {
         updateVoiceUI(false);
         isListening = false;
         window.isListening = false;
-        pendingTranscript = '';
+        
+        // If R was released and we're waiting for results, process whatever arrived
+        if (pttReleaseMode) {
+            pttReleaseMode = false;
+            const transcript = [pendingTranscript.trim(), lastInterimTranscript.trim()]
+                .filter(Boolean).join(' ').trim();
+            pendingTranscript = '';
+            lastInterimTranscript = '';
+            recreateRecognition(true);
+            if (transcript) {
+                console.log('⌨️ Processing command (error recovery):', transcript);
+                updateVoiceStatus('Processing command...');
+                processVoiceCommand(transcript);
+            } else {
+                if (event.error === 'network') {
+                    showVoiceNotification('Network error - please press R and repeat', 3000);
+                }
+                updateVoiceStatus('Ready - Press and hold R to speak');
+            }
+            return;
+        }
         
         // Show user-friendly error message
         if (event.error === 'not-allowed') {
+            pendingTranscript = '';
+            lastInterimTranscript = '';
             showVoiceNotification('Microphone access denied. Please allow microphone access.', 5000);
             isWakeListening = false;
             window.isWakeListening = false;
         } else if (event.error === 'network') {
-            showVoiceNotification('Network error. Please check your internet connection.', 3000);
-        } else if (event.error !== 'aborted' && event.error !== 'no-speech') {
+            // Network error during hold: save any transcript already captured, then
+            // recreate the recognition object (skip abort — connection already broken).
+            // If R is still held, restart recognition immediately so the user doesn't
+            // have to release and re-press.
+            const savedTranscript = (pendingTranscript + ' ' + lastInterimTranscript).trim();
+            pendingTranscript = '';
+            lastInterimTranscript = '';
+            const rStillHeld = hotkeyActive;
+            recreateRecognition(true);
+            if (rStillHeld) {
+                // Restore hotkey state and restart immediately
+                hotkeyListening = true;
+                showVoiceNotification('Reconnecting...', 1000);
+                setTimeout(() => {
+                    if (hotkeyActive && hotkeyListening) {
+                        try {
+                            if (savedTranscript) pendingTranscript = savedTranscript;
+                            recognition.continuous = true;
+                            recognition.interimResults = true;
+                            recognition.start();
+                            console.log('🎤 Recognition restarted after network error (R still held)');
+                        } catch(e) {
+                            console.log('🎤 Failed to restart after network error:', e);
+                            hotkeyListening = false;
+                            showVoiceNotification('Network issue - press R to try again', 2000);
+                        }
+                    }
+                }, 300);
+            } else {
+                showVoiceNotification('Network issue - press R to try again', 2000);
+            }
+        } else if (event.error === 'aborted') {
+            pendingTranscript = '';
+            lastInterimTranscript = '';
+            if (hotkeyActive) {
+                console.log('🎤 Spontaneous abort while R held - onend will restart recognition');
+            } else {
+                recreateRecognition(true);
+            }
+        } else if (event.error !== 'no-speech') {
+            pendingTranscript = '';
+            lastInterimTranscript = '';
             showVoiceNotification('Voice recognition error. Please try again.', 3000);
         }
         
@@ -233,7 +322,7 @@ function setupSpeechRecognition() {
                     restartPending = false;
                 }
             }, 2000);
-        } else {
+        } else if (event.error !== 'aborted' && event.error !== 'network') {
             updateVoiceStatus('Ready - Press and hold to speak');
         }
     };
@@ -266,17 +355,39 @@ function setupSpeechRecognition() {
                 updateVoiceStatus(`Listening: "${interimTranscript}"`);
             }
         } else {
-            // Push-to-talk mode - collect transcript while button is held
+            // Push-to-talk mode - accumulate transcript while button is held
             if (finalTranscript) {
-                pendingTranscript = finalTranscript;
-                console.log('🗣️ Captured final:', finalTranscript);
-                updateVoiceStatus(`Captured: "${finalTranscript}"`);
+                pendingTranscript = (pendingTranscript ? pendingTranscript + ' ' : '') + finalTranscript;
+                lastInterimTranscript = '';
+                console.log('🗣️ Captured final:', finalTranscript, '| Total:', pendingTranscript);
+                updateVoiceStatus(`Captured: "${pendingTranscript}"`);
             } else if (interimTranscript) {
+                lastInterimTranscript = interimTranscript;
                 console.log('🗣️ Interim:', interimTranscript);
                 updateVoiceStatus(`Listening: "${interimTranscript}"`);
             }
         }
     };
+}
+
+function recreateRecognition(skipAbort = false) {
+    console.log('🔄 Recreating recognition object...');
+    if (!skipAbort) {
+        try {
+            if (recognition) recognition.abort();
+        } catch (e) {}
+    }
+    
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+    
+    recognition = new SpeechRecognition();
+    window.recognition = recognition;
+    setupSpeechRecognition();
+    isListening = false;
+    window.isListening = false;
+    hotkeyListening = false;
+    console.log('✅ Recognition object recreated - ready for next R press');
 }
 
 function startWakeListening() {
@@ -1260,7 +1371,15 @@ function startVoiceRecognition() {
     }
     
     // Don't start if Nova is currently speaking
-    if (isSpeaking || isSpeechOutputActive) {
+    const synthSpeaking = window.speechSynthesis &&
+        (window.speechSynthesis.speaking || window.speechSynthesis.pending);
+    if ((isSpeaking || isSpeechOutputActive) && !synthSpeaking) {
+        isSpeaking = false;
+        isSpeechOutputActive = false;
+        window.isSpeaking = false;
+        window.isSpeechOutputActive = false;
+    }
+    if (isSpeaking || isSpeechOutputActive || synthSpeaking) {
         console.log('🎤 Cannot start recognition - Nova is speaking');
         showVoiceNotification('Wait for Nova to finish speaking', 2000);
         return;
@@ -1271,8 +1390,10 @@ function startVoiceRecognition() {
         return;
     }
     
-    // Clear any pending transcript
+    // Clear any pending transcript and release state
     pendingTranscript = '';
+    lastInterimTranscript = '';
+    pttReleaseMode = false;
     
     // Stop wake listening temporarily (will be restarted when button is released if enabled)
     const wasWakeListening = isWakeListening;
@@ -1285,6 +1406,7 @@ function startVoiceRecognition() {
     
     try {
         recognition.continuous = true;
+        recognition.interimResults = true;
         recognition.start();
     } catch (error) {
         console.error('Error starting manual voice recognition:', error);
@@ -1752,17 +1874,126 @@ function setupVoiceButtons() {
     console.log('🎤 Voice buttons initialized');
 }
 
+// ====== GROQ WHISPER PTT RECORDING ======
+let groqMediaRecorder = null;
+let groqAudioChunks = [];
+let groqRecordingActive = false;
+
+async function startGroqRecording() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        groqAudioChunks = [];
+
+        const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+            ? 'audio/webm;codecs=opus'
+            : MediaRecorder.isTypeSupported('audio/webm')
+                ? 'audio/webm'
+                : '';
+
+        groqMediaRecorder = mimeType
+            ? new MediaRecorder(stream, { mimeType })
+            : new MediaRecorder(stream);
+
+        groqMediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) groqAudioChunks.push(e.data);
+        };
+
+        groqMediaRecorder.start(100);
+        groqRecordingActive = true;
+        updateVoiceUI(true);
+        updateVoiceStatus('Listening for your command...');
+        console.log('🎤 Groq Whisper recording started');
+    } catch (err) {
+        console.error('🎤 Failed to start Groq recording:', err);
+        showVoiceNotification('Microphone access denied. Please allow microphone access.', 4000);
+        hotkeyActive = false;
+        hotkeyListening = false;
+    }
+}
+
+async function stopGroqRecordingAndTranscribe() {
+    if (!groqMediaRecorder || !groqRecordingActive) return;
+
+    groqRecordingActive = false;
+    updateVoiceUI(false);
+    updateVoiceStatus('Processing...');
+
+    return new Promise((resolve) => {
+        groqMediaRecorder.onstop = async () => {
+            groqMediaRecorder.stream.getTracks().forEach(t => t.stop());
+
+            if (groqAudioChunks.length === 0) {
+                updateVoiceStatus('Ready - Press and hold R to speak');
+                showVoiceNotification('No audio captured', 2000);
+                return resolve();
+            }
+
+            const mimeType = groqMediaRecorder.mimeType || 'audio/webm';
+            const audioBlob = new Blob(groqAudioChunks, { type: mimeType });
+            groqAudioChunks = [];
+
+            try {
+                const formData = new FormData();
+                const ext = mimeType.includes('ogg') ? 'ogg' : 'webm';
+                formData.append('file', audioBlob, `recording.${ext}`);
+                formData.append('model', 'whisper-large-v3-turbo');
+                formData.append('language', 'en');
+                formData.append('response_format', 'json');
+
+                const apiKey = (typeof GROQ_API_KEY !== 'undefined' && GROQ_API_KEY) || '';
+
+                const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${apiKey}` },
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errText = await response.text();
+                    throw new Error(`Groq API ${response.status}: ${errText}`);
+                }
+
+                const data = await response.json();
+                const transcript = data.text && data.text.trim();
+
+                if (transcript) {
+                    console.log('🎤 Groq Whisper transcript:', transcript);
+                    updateVoiceStatus('Processing command...');
+                    processVoiceCommand(transcript);
+                } else {
+                    updateVoiceStatus('Ready - Press and hold R to speak');
+                    showVoiceNotification('No speech detected - try again', 2000);
+                }
+            } catch (err) {
+                console.error('🎤 Groq Whisper transcription error:', err);
+                showVoiceNotification('Transcription failed - please try again', 3000);
+                updateVoiceStatus('Ready - Press and hold R to speak');
+            }
+
+            resolve();
+        };
+
+        groqMediaRecorder.stop();
+    });
+}
+// ====== END GROQ WHISPER PTT RECORDING ======
+
 // ====== HOTKEY 'R' FOR PUSH-TO-TALK ======
 let hotkeyActive = false;
 let hotkeyListening = false;
+let pttReleaseMode = false;
 
 function setupPushToTalkHotkey() {
     console.log('⌨️ Setting up push-to-talk hotkey (R)...');
     
     document.addEventListener('keydown', async function(e) {
-        // Ignore if user is typing in an input field
         const target = e.target;
-        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        const isInInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+        
+        // If R is pressed while focused in an input, blur the input and start voice recognition
+        if (e.key.toLowerCase() === 'r' && isInInput && !hotkeyActive) {
+            target.blur();
+        } else if (isInInput) {
             return;
         }
         
@@ -1778,25 +2009,6 @@ function setupPushToTalkHotkey() {
             window.isWakeWordSession = false;
             console.log('⌨️ Push-to-talk hotkey mode - isWakeWordSession = false');
             
-            if (!isVoiceSupported) {
-                showVoiceNotification('Voice recognition not supported in this browser', 3000);
-                return;
-            }
-            
-            if (!hasVoicePermission) {
-                console.log('⌨️ Requesting microphone permission...');
-                const granted = await requestVoicePermission();
-                if (!granted) {
-                    console.log('⌨️ Permission denied');
-                    hotkeyActive = false;
-                    return;
-                }
-                console.log('⌨️ Permission granted, ready to start listening');
-                showVoiceNotification('Microphone ready! Hold R to speak', 3000);
-                hotkeyActive = false;
-                return;
-            }
-            
             // Visual feedback
             updateVoiceStatus('Hold R to speak - Release when done');
             showVoiceNotification('Listening...', 2000);
@@ -1807,19 +2019,13 @@ function setupPushToTalkHotkey() {
                 voiceBtn.classList.add('recording');
             }
             
-            // Start voice recognition
+            // Use Groq Whisper for reliable PTT recording (works over file://)
             hotkeyListening = true;
-            startVoiceRecognition();
+            startGroqRecording();
         }
     });
     
     document.addEventListener('keyup', function(e) {
-        // Ignore if user is typing in an input field
-        const target = e.target;
-        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
-            return;
-        }
-        
         // Check if 'R' key is released
         if (e.key.toLowerCase() === 'r' && hotkeyActive) {
             e.preventDefault();
@@ -1833,33 +2039,17 @@ function setupPushToTalkHotkey() {
                 voiceBtn.classList.remove('recording');
             }
             
-            if (hotkeyListening && recognition) {
-                try {
-                    recognition.stop();
-                    console.log('⌨️ Recognition stopped - waiting for final results');
-                } catch (err) {
-                    console.log('⌨️ Recognition already stopped');
+            if (hotkeyListening) {
+                hotkeyListening = false;
+                if (groqRecordingActive) {
+                    stopGroqRecordingAndTranscribe();
+                } else if (recognition && isListening) {
+                    updateVoiceStatus('Processing...');
+                    pttReleaseMode = true;
+                    isListening = false;
+                    window.isListening = false;
+                    try { recognition.stop(); } catch(e) {}
                 }
-                
-                // Process after recognition has time to finalize
-                setTimeout(() => {
-                    if (pendingTranscript) {
-                        const transcript = pendingTranscript;
-                        pendingTranscript = '';
-                        isListening = false;
-                        window.isListening = false;
-                        hotkeyListening = false;
-                        console.log('⌨️ Processing command on hotkey release:', transcript);
-                        updateVoiceStatus('Processing command...');
-                        processVoiceCommand(transcript);
-                    } else {
-                        console.log('⌨️ No transcript captured');
-                        isListening = false;
-                        window.isListening = false;
-                        hotkeyListening = false;
-                        updateVoiceStatus('Ready - Press and hold R to speak');
-                    }
-                }, 500);
             }
         }
     });

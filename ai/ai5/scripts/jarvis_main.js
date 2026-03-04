@@ -1,4 +1,4 @@
-// N.O.V.A Main Interface - Enhanced Debug Version
+﻿// N.O.V.A Main Interface - Enhanced Debug Version
 
 // ========================================
 // API CONFIGURATION - MULTI-PROVIDER SUPPORT
@@ -7,16 +7,18 @@
 // Users can enter their own keys through Settings -> API Configuration
 
 // Load API keys from localStorage or use defaults
-function loadApiKey(keyName, defaultValue = 'YOUR_API_KEY_HERE') {
-    const stored = localStorage.getItem(keyName);
-    if (stored && stored !== 'YOUR_API_KEY_HERE' && stored.trim() !== '') {
-        return stored;
-    }
+function loadApiKey(keyName, defaultValue = '') {
+    try {
+        const stored = localStorage.getItem(keyName);
+        if (stored && stored.trim() !== '' && !stored.startsWith('YOUR_') && stored.length > 20) {
+            return stored.trim();
+        }
+    } catch(e) {}
     return defaultValue;
 }
 
-let OPENAI_API_KEY = loadApiKey('openai_api_key', 'YOUR_OPENAI_API_KEY_HERE');
-let GROQ_API_KEY = loadApiKey('groq_api_key', 'YOUR_GROQ_API_KEY_HERE');
+let OPENAI_API_KEY = loadApiKey('openai_api_key', '');
+let GROQ_API_KEY = loadApiKey('groq_api_key', '');
 let COHERE_API_KEY = loadApiKey('cohere_api_key', 'YOUR_COHERE_API_KEY_HERE');
 let GEMINI_API_KEY = loadApiKey('gemini_api_key', 'YOUR_GEMINI_API_KEY_HERE');
 let HUGGINGFACE_API_KEY = loadApiKey('huggingface_api_key', 'YOUR_HUGGINGFACE_API_KEY_HERE');
@@ -37,9 +39,10 @@ const providerConfig = {
         maxTokens: 800
     },
     groq: {
-        apiKey: GROQ_API_KEY,
+        get apiKey() { return GROQ_API_KEY; },
+        set apiKey(v) { GROQ_API_KEY = v; },
         apiUrl: GROQ_API_URL,
-        model: 'llama-3.3-70b-versatile', // Fast and high quality (updated model)
+        model: 'llama-3.3-70b-versatile',
         maxTokens: 2048
     },
     gemini: {
@@ -765,7 +768,17 @@ If you are N.O.V.A:
 
 If you are Genius Mode, focus on technical analysis and problem-solving.
 If you are Professor, focus on teaching and explaining concepts clearly.
-If you are Data Analyst, focus on data-driven insights and statistics.`;
+If you are Data Analyst, focus on data-driven insights and statistics.
+
+SOURCE CITATION RULE:
+When your response includes specific facts, statistics, scientific concepts, historical events, or technical claims, add a "Sources & References" section at the very bottom of your response formatted as:
+
+---
+**Sources & References**
+- [Source name or type, e.g. "General relativity — Einstein, 1915"]
+- [Textbook / field, e.g. "Quantum Mechanics — Standard physics curriculum"]
+
+Only include this section when citing factual claims is genuinely useful. For casual conversation or simple questions, omit it. Never fabricate specific URLs or DOIs.`;
 
         // Build conversation history in Gemini format
         const contents = [];
@@ -916,7 +929,17 @@ If you are Professor:
 
 If you are Data Analyst:
 - Data-driven insights
-- Precise and statistical`
+- Precise and statistical
+
+SOURCE CITATION RULE:
+When your response includes specific facts, statistics, scientific concepts, historical events, or technical claims, add a "Sources & References" section at the very bottom of your response formatted as:
+
+---
+**Sources & References**
+- [Source name or type, e.g. "General relativity — Einstein, 1915"]
+- [Textbook / field, e.g. "Quantum Mechanics — Standard physics curriculum"]
+
+Only include this section when citing factual claims is genuinely useful. For casual conversation or simple questions, omit it. Never fabricate specific URLs or DOIs.`
     };
     
     // Build messages array starting with system message
