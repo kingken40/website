@@ -119,9 +119,35 @@
                     .catch((error) => console.error("Error loading navbar:", error));
             });
         </script>
+
+        <!-- Bottom navigation button -->
+        <div style="position: fixed; left: 0; right: 0; bottom: 20px; display: flex; justify-content: center; z-index: 2147483647; pointer-events: none;">
+            <a
+                href="nav.html"
+                id="open-new-site-button"
+                class="bottom-nav-button"
+                style="
+                    pointer-events: auto;
+                    background-color: #111;
+                    color: #fff;
+                    text-decoration: none;
+                    border: 1px solid rgba(255,255,255,0.2);
+                    padding: 12px 22px;
+                    border-radius: 10px;
+                    font-size: 16px;
+                    cursor: pointer;
+                    box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+                "
+            >
+                Open New Site
+            </a>
+        </div>
+
+
         <footer>
             <p>Copyright 2025 Kenneth Okwunwanne</p>
         </footer>
     </div>
 </body>
 </html>
+
