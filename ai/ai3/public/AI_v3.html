@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Enhanced AI Chat Bot v3 - Unique Sessions</title>
+    <title>Enhanced AI Chatbot</title>
     <link rel="stylesheet" href="../styles/ai_v3_styles.css">
     
     <!-- File processing libraries -->
@@ -15,7 +15,7 @@
     
     <a href="../../../Projects.html" style="position: absolute; top: 20px; left: 20px; padding: 10px 20px; background-color: #0078d4; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">← Back to Projects</a>
     
-    <h1>🤖 Enhanced AI Chat Bot</h1>
+    <h1>🤖 Enhanced AI Chatbot!</h1>
 
     <div class="chat-controls">
         <button class="control-btn new-chat-btn" onclick="startNewChat()">✨ New Chat</button>
@@ -27,7 +27,7 @@
     
     <!-- AI Personality Selector -->
     <div class="personality-container">
-        <label class="personality-label">🎭 Choose AI Personality <button class="help-icon" onclick="togglePersonalityHelp(event)" title="What do these mean?">?</button></label>
+        <label class="personality-label">🎭 Choose the AI's Personality<button class="help-icon" onclick="togglePersonalityHelp(event)" title="What do these mean?">?</button></label>
         <div class="personality-grid">
             <button class="personality-option selected" data-personality="assistant">
                 <span class="personality-emoji">🤖</span>
@@ -65,7 +65,7 @@
 
     <!-- Chat messages will appear here -->
     <div id="chatContainer"></div>
-    
+     
     <div class="input-container">
         <div class="input-wrapper">
             <textarea class="chat-input" placeholder="Type your message here..." rows="1"></textarea>
@@ -80,7 +80,7 @@
         <button onclick="uploadFile('csv')">📊 CSV File</button>
         <button onclick="uploadFile('txt')">📝 Text File</button>
         <button onclick="uploadFile('audio')">🎤 Audio File</button>
-        <button onclick="uploadFile('image')">🖼️ Image File</button>
+        <button onclick="uploadFile('image')">🖼️ Image</button>
     </div>
     
     <!-- Hidden file input element -->
@@ -117,6 +117,15 @@
         </div>
     </div>
 
+    <script>
+        // Optional: set to your deployed Flask (or proxy) backend.
+        // Example (local Flask):
+        // window.AI3_BACKEND_URL = 'http://127.0.0.1:5001/api/chat';
+        // If unset, the frontend falls back to '/api/chat' (only works if your host provides that route).
+        // Force local backend for debugging (avoids '/api/chat' not found)
+        window.AI3_BACKEND_URL = 'http://127.0.0.1:5001/api/chat';
+
+    </script>
     <script src="../scripts/ai_v3_main.js"></script>
 </body>
 </html>

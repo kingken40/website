@@ -21,9 +21,17 @@ const fileInput = document.getElementById('fileInput');
 // ========================================
 // API CONFIGURATION
 // ========================================
-const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-    ? 'http://127.0.0.1:5001/api/chat' 
-    : '/api/chat';
+// IMPORTANT:
+// If this page is hosted as static HTML (e.g. Vercel static), '/api/chat' will NOT exist unless you also deploy an API route.
+// Set AI3_BACKEND_URL to the real backend URL to avoid 'Network error'.
+// - Local: http://127.0.0.1:5001/api/chat
+// - Example production backend: https://your-backend-domain.com/api/chat
+const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname === '127.0.0.2' || window.location.hostname === '127.0.0.0'
+    ? 'http://127.0.0.1:5001/api/chat'
+    : (window.AI3_BACKEND_URL || '/api/chat');
+
+// Expose for debugging
+window.__AI3_API_URL__ = API_URL;
 
 // ========================================
 // AI PERSONALITY SYSTEM
