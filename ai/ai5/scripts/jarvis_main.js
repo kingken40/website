@@ -25,7 +25,7 @@ let HUGGINGFACE_API_KEY = loadApiKey('huggingface_api_key', 'YOUR_HUGGINGFACE_AP
 
 const API_URL = 'https://api.openai.com/v1/chat/completions';
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
 // AI Provider Configuration
 let currentProvider = 'groq'; // Options: 'openai', 'groq', 'gemini' - Using Groq (FREE, fastest)
@@ -46,9 +46,10 @@ const providerConfig = {
         maxTokens: 2048
     },
     gemini: {
-        apiKey: GEMINI_API_KEY,
+        get apiKey() { return GEMINI_API_KEY; },
+        set apiKey(v) { GEMINI_API_KEY = v; },
         apiUrl: GEMINI_API_URL,
-        model: 'gemini-1.5-flash',
+        model: 'gemini-2.0-flash',
         maxTokens: 2048
     }
 };
@@ -780,8 +781,22 @@ async function generateAIResponse(userMessage, personality) {
                 return; // Success - exit early
             } catch (geminiError) {
                 console.error('🔧 Gemini fallback also failed:', geminiError);
-                geminiError.isRetry = true; // Mark to prevent infinite loop
-                // Continue to regular error handling below
+                removeThinkingIndicator();
+                let geminiErrorMsg;
+                const geminiMsg = geminiError.message || '';
+                if (geminiMsg.includes('400') || geminiMsg.includes('API_KEY_INVALID') || geminiMsg.includes('401') || (geminiMsg.includes('invalid') && !geminiMsg.includes('RESOURCE_EXHAUSTED'))) {
+                    geminiErrorMsg = '🔑 Gemini API Key Error - The Gemini API key appears to be invalid. Please open Settings and re-enter your key from aistudio.google.com/apikey';
+                } else if (geminiMsg.includes('RESOURCE_EXHAUSTED') || geminiMsg.includes('quota')) {
+                    geminiErrorMsg = '💳 Groq & Gemini daily quota exhausted. Your free-tier limits have been reached for today. Get a fresh Groq key at console.groq.com/keys or a fresh Gemini key at aistudio.google.com/apikey';
+                } else if (geminiMsg.includes('429')) {
+                    geminiErrorMsg = '⏳ Both Groq and Gemini are rate-limited right now. Please wait 1–2 minutes and try again.';
+                } else if (geminiMsg.includes('fetch') || geminiMsg.includes('Failed to fetch') || geminiMsg.includes('network')) {
+                    geminiErrorMsg = '🌐 Network error reaching Gemini API. Check your connection and try again.';
+                } else {
+                    geminiErrorMsg = `💳 Groq quota exceeded and Gemini fallback failed: ${geminiMsg}`;
+                }
+                addMessage(geminiErrorMsg, 'Nova');
+                return; // Don't fall through to Groq error handler
             }
         }
         
@@ -802,9 +817,9 @@ async function generateAIResponse(userMessage, personality) {
             errorMsg = '🚫 Rate limit exceeded - Too many requests. Please wait a moment before trying again.';
         } else if (error.message.includes('insufficient_quota') || error.message.includes('billing')) {
             if (hasGeminiKey) {
-                errorMsg = '💳 API Quota Exceeded - Both Groq and Gemini providers are unavailable. Please try again later or add a valid API key.';
+                errorMsg = '💳 Groq daily quota exhausted. Get a fresh key at console.groq.com/keys or wait for your quota to reset.';
             } else {
-                errorMsg = '💳 API Quota Exceeded - Groq quota reached. Add a Gemini API key for automatic fallback (free at https://aistudio.google.com/apikey)';
+                errorMsg = '💳 Groq daily quota exhausted. Add a Gemini API key in Settings for automatic fallback (free at aistudio.google.com/apikey) or get a fresh Groq key at console.groq.com/keys';
             }
         } else if (error.message.includes('500') || error.message.includes('502') || error.message.includes('503')) {
             errorMsg = '🔧 Server error - The service is temporarily unavailable. Please try again in a moment.';
@@ -824,24 +839,62 @@ async function generateAIResponse(userMessage, personality) {
         } catch (e) {
             console.error('Failed to add error message to chat:', e);
         }
-        
+
+        // Ensure voice listening restarts after AI errors
+        // (Quota/network errors can otherwise leave mic/recognition in a non-listening state)
+        function restartListeningAfterError() {
+            try {
+                if (window.isWakeWordSession && typeof window.restoreWakeListeningAfterResponse === 'function') {
+                    console.log('🔊 AI Error: Restoring wake listening after error...');
+                    window.restoreWakeListeningAfterResponse();
+                    return;
+                }
+
+                if (typeof window.startWakeListening === 'function') {
+                    console.log('🔊 AI Error: Calling startWakeListening() after error...');
+                    window.isWakeListening = true;
+                    window.startWakeListening();
+                    return;
+                }
+
+                if (typeof window.startListeningDirect === 'function') {
+                    console.log('🔊 AI Error: Calling startListeningDirect() after error...');
+                    window.startListeningDirect();
+                    return;
+                }
+
+                console.warn('🔊 AI Error: No listening restart method available');
+            } catch (e) {
+                console.error('🔧 AI Error: Failed to restart listening after error:', e);
+            }
+        }
+
         // Speak error message if voice is enabled (for voice command flow)
         if (typeof window.speakText === 'function') {
             console.log('🔊 AI Error: Speaking error message with coordination...');
             console.log('🔊 AI Error: isWakeWordSession =', window.isWakeWordSession);
-            
+
             // Only add restoration callback if this is a wake word session
             if (window.isWakeWordSession && typeof window.restoreWakeListeningAfterResponse === 'function') {
                 window.speakText(errorMsg, () => {
                     console.log('🔊 AI Error: Error message voice output completed');
                     console.log('🔊 AI Error complete - restoring wake listening');
-                    window.restoreWakeListeningAfterResponse();
+                    restartListeningAfterError();
                 });
             } else {
                 window.speakText(errorMsg, () => {
                     console.log('🔊 AI Error: Error message voice output completed (push-to-talk mode)');
+                    restartListeningAfterError();
                 });
             }
+
+            // Safety fallback in case speech callback doesn't fire
+            setTimeout(() => {
+                restartListeningAfterError();
+            }, 1500);
+        } else {
+            // No speech synthesis available; still attempt to restore listening
+            setTimeout(() => restartListeningAfterError(), 1000);
         }
     }
 }
@@ -2191,6 +2244,7 @@ function setupApiKeyManagement() {
     const saveApiKeyBtn = document.getElementById('saveApiKey');
     const groqApiKeyInput = document.getElementById('groqApiKey');
     const openaiApiKeyInput = document.getElementById('openaiApiKey');
+    const geminiApiKeyInput = document.getElementById('geminiApiKey');
     const apiKeySavedMsg = document.getElementById('apiKeySaved');
     const settingsBtn = document.getElementById('settingsBtn');
     const settingsModal = document.getElementById('settingsModal');
@@ -2208,6 +2262,12 @@ function setupApiKeyManagement() {
                 const savedKey = localStorage.getItem('openai_api_key');
                 if (savedKey && savedKey !== 'YOUR_OPENAI_API_KEY_HERE' && savedKey.trim() !== '') {
                     openaiApiKeyInput.value = savedKey;
+                }
+            }
+            if (geminiApiKeyInput) {
+                const savedKey = localStorage.getItem('gemini_api_key');
+                if (savedKey && savedKey !== 'YOUR_GEMINI_API_KEY_HERE' && savedKey.trim() !== '') {
+                    geminiApiKeyInput.value = savedKey;
                 }
             }
         });
@@ -2253,6 +2313,22 @@ function setupApiKeyManagement() {
                     
                     saved = true;
                     console.log('✅ OpenAI API key saved successfully!');
+                }
+            }
+            
+            // Save Gemini API key (optional - for Groq fallback)
+            if (geminiApiKeyInput) {
+                const apiKey = geminiApiKeyInput.value.trim();
+                if (apiKey && apiKey !== '') {
+                    localStorage.setItem('gemini_api_key', apiKey);
+                    GEMINI_API_KEY = apiKey;
+                    
+                    if (providerConfig.gemini) {
+                        providerConfig.gemini.apiKey = apiKey;
+                    }
+                    
+                    saved = true;
+                    console.log('✅ Gemini API key saved successfully!');
                 }
             }
             

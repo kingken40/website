@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -80,6 +80,11 @@
                 <div class="mode-icon">📊</div>
                 <div class="mode-name">Data Analyst</div>
                 <div class="mode-desc">Research & Analysis</div>
+            </div>
+            <div class="mode-card" data-personality="study">
+                <div class="mode-icon">📝</div>
+                <div class="mode-name">Study Guide</div>
+                <div class="mode-desc">Assignment Helper</div>
             </div>
         </div>
     </div>
@@ -187,6 +192,34 @@
                 </div>
                 
                 <div class="setting-section" style="margin-top: 1.5rem;">
+                    <h4 style="color: #FFD700; margin-bottom: 1rem; border-bottom: 1px solid rgba(255, 215, 0, 0.3); padding-bottom: 0.5rem;">📚 Course Material</h4>
+                    <p style="color:rgba(255,255,255,0.6);font-size:0.82rem;margin-bottom:0.8rem;">Add notes, slides, or readings that N.O.V.A will reference across all chats. Great for Study Guide mode.</p>
+
+                    <div class="setting-group">
+                        <label>Upload a file (txt, md, pdf, code)</label>
+                        <div style="display:flex;gap:0.5rem;align-items:center;margin-top:0.3rem;">
+                            <button onclick="document.getElementById('materialFileInput').click()" style="padding:0.45rem 1rem;background:linear-gradient(135deg,#00aaff,#0066cc);border:none;border-radius:5px;color:#fff;cursor:pointer;font-size:0.85rem;">📂 Choose File</button>
+                            <input type="file" id="materialFileInput" accept=".txt,.md,.json,.csv,.js,.py,.html,.css,.java,.cpp,.c,.pdf" style="display:none;">
+                        </div>
+                    </div>
+
+                    <div class="setting-group" style="margin-top:0.8rem;">
+                        <label>Or paste text</label>
+                        <input type="text" id="materialTextName" placeholder="Label (e.g. Chapter 3 Notes)" style="width:100%;padding:0.4rem 0.6rem;background:rgba(0,170,255,0.08);border:1px solid rgba(0,170,255,0.25);border-radius:5px;color:#00aaff;margin-bottom:0.4rem;">
+                        <textarea id="materialTextInput" rows="4" placeholder="Paste your notes or course content here..." style="width:100%;padding:0.5rem 0.6rem;background:rgba(0,170,255,0.08);border:1px solid rgba(0,170,255,0.25);border-radius:5px;color:#e0e0e0;resize:vertical;font-size:0.85rem;"></textarea>
+                        <button id="addMaterialTextBtn" style="margin-top:0.4rem;padding:0.45rem 1rem;background:linear-gradient(135deg,#FFD700,#FFA500);border:none;border-radius:5px;color:#1a1a2e;font-weight:600;cursor:pointer;font-size:0.85rem;">+ Add Material</button>
+                    </div>
+
+                    <div class="setting-group" style="margin-top:0.8rem;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem;">
+                            <label style="margin:0;">Saved Material</label>
+                            <button id="clearAllMaterialBtn" style="background:none;border:1px solid rgba(255,68,68,0.4);color:#ff6666;border-radius:4px;padding:0.2rem 0.6rem;cursor:pointer;font-size:0.78rem;">Clear All</button>
+                        </div>
+                        <div id="materialList"><div style="color:rgba(255,255,255,0.4);font-size:0.85rem;padding:0.5rem 0;">No material added yet.</div></div>
+                    </div>
+                </div>
+
+                <div class="setting-section" style="margin-top: 1.5rem;">
                     <h4 style="color: #FFD700; margin-bottom: 1rem; border-bottom: 1px solid rgba(255, 215, 0, 0.3); padding-bottom: 0.5rem;">⚙️ General Settings</h4>
                     <div class="setting-group">
                         <label for="animationsEnabled">UI Animations</label>
@@ -272,7 +305,6 @@
         // initializeNova is now in jarvis_main.js
 
         function setupEventListeners() {
-            console.log('🔧 Setting up event listeners...');
             
             // Voice buttons are now handled by setupVoiceButtons() in jarvis_voice.js
             // They use push-to-talk (mousedown/mouseup) instead of click
@@ -285,27 +317,14 @@
                 }
             });
             
-            // Mode selection - with enhanced debug logging
+            // Mode selection
             const modeCards = document.querySelectorAll('.mode-card');
-            console.log('🎯 Found', modeCards.length, 'mode cards');
-            
-            modeCards.forEach((card, index) => {
+            modeCards.forEach(card => {
                 const personality = card.dataset.personality;
-                console.log(`🎯 Setting up mode card ${index + 1}:`, personality, card);
-                
                 card.addEventListener('click', function(e) {
-                    console.log('🎯 Mode card CLICKED:', personality);
-                    console.log('🎯 Event:', e);
-                    console.log('🎯 Target:', e.target);
-                    console.log('🎯 Current target:', e.currentTarget);
                     selectPersonality(personality);
                     e.preventDefault();
                     e.stopPropagation();
-                });
-                
-                // Add a test click handler to make sure events work at all
-                card.addEventListener('mousedown', function() {
-                    console.log('🎯 Mode card MOUSEDOWN:', personality);
                 });
             });
             
@@ -402,23 +421,18 @@
             const input = document.getElementById('messageInput');
             const message = input.value.trim();
             
-            console.log('📤 sendMessage called with:', message);
             
             if (!message) {
-                console.log('📤 Empty message, ignoring');
                 return;
             }
             
             // Clear input
             input.value = '';
-            console.log('📤 Input cleared, calling processUserMessage...');
             
             // Use processUserMessage from jarvis_main.js which handles OpenAI integration
             if (typeof processUserMessage === 'function') {
-                console.log('📤 processUserMessage called successfully');
                 processUserMessage(message);
             } else {
-                console.error('❌ processUserMessage function not found!');
                 addMessage(message, 'user');
                 addMessage('System error: AI integration not loaded properly. Please refresh the page.', 'Nova');
             }
@@ -432,7 +446,6 @@
             if (typeof addMessage === 'function') {
                 addMessage(text, sender);
             } else {
-                console.error('addMessage function not found from jarvis_main.js');
             }
         }
 
@@ -517,23 +530,16 @@
         }
 
         function toggleFileMenu(event) {
-            console.log('📎 Toggle file menu clicked');
             const menu = document.getElementById('fileMenu');
-            console.log('📎 Menu element:', menu);
             
             if (!menu) {
-                console.error('📎 ERROR: fileMenu element not found!');
                 alert('File menu not found. Please refresh the page.');
                 return;
             }
             
-            console.log('📎 Menu classList:', menu.classList);
-            console.log('📎 Menu current display:', window.getComputedStyle(menu).display);
             
             menu.classList.toggle('active');
             
-            console.log('📎 Menu active after toggle:', menu.classList.contains('active'));
-            console.log('📎 Menu new display:', window.getComputedStyle(menu).display);
             
             if (event) {
                 event.stopPropagation();
@@ -630,7 +636,6 @@
                     showNotification('Push-to-Talk hotkey disabled', 2000);
                 }
                 
-                console.log('🔑 Hotkey', hotkeyEnabled ? 'enabled' : 'disabled');
             });
             
             // Hotkey capture
@@ -667,7 +672,6 @@
                 localStorage.setItem('jarvis_hotkey', JSON.stringify(hotkey));
                 
                 showNotification('Hotkey set to: ' + formatted, 2000);
-                console.log('🔑 Hotkey configured:', hotkey);
                 
                 // Auto-enable if not already enabled
                 if (!hotkeyEnabled) {
@@ -713,7 +717,6 @@
                 e.stopPropagation();
                 
                 hotkeyPressed = true;
-                console.log('🔑 Hotkey pressed - starting voice recognition');
                 
                 // Start voice recognition
                 if (typeof startVoiceRecognition === 'function') {
@@ -744,7 +747,6 @@
                 e.stopPropagation();
                 
                 hotkeyPressed = false;
-                console.log('🔑 Hotkey released - stopping voice recognition');
                 
                 // Stop voice recognition
                 if (window.recognition && window.isListening) {
@@ -790,40 +792,7 @@
         window.showVoiceEnabledMessage = showVoiceEnabledMessage;
         window.updateVoiceVisualizer = updateVoiceVisualizer;
 
-        // Add a backup testSpeech function in case the other one doesn't load
-        window.testSpeechBackup = function() {
-            console.log('🔊 Backup speech test...');
-            console.log('🔊 speakText available:', typeof window.speakText);
-            if (typeof window.speakText === 'function') {
-                window.speakText('Testing speech from backup function, sir.');
-            } else {
-                console.error('🔊 speakText not available');
-            }
-        };
 
-        // Add debug function to test mode cards manually
-        window.testModeClick = function(personality) {
-            console.log('🎯 Manual test - selecting personality:', personality);
-            selectPersonality(personality || 'genius');
-        };
-
-        // Debug function to check mode cards
-        window.checkModeCards = function() {
-            const cards = document.querySelectorAll('.mode-card');
-            console.log('🎯 Found', cards.length, 'mode cards:');
-            cards.forEach((card, i) => {
-                console.log(`Card ${i + 1}:`, card.dataset.personality, 'clickable?', window.getComputedStyle(card).pointerEvents);
-                console.log('Position:', card.getBoundingClientRect());
-            });
-        };
-
-        console.log('🚀 N.O.V.A v5 loaded successfully');
-        console.log('🚀 Available test functions:');
-        console.log('  - testSpeech() - Main speech test');
-        console.log('  - testSpeechBackup() - Backup speech test');
-        console.log('  - testModeClick("genius") - Test mode selection');
-        console.log('  - checkModeCards() - Check mode card status');
-        console.log('🚀 Main functions loaded:', typeof testSpeech !== 'undefined' ? '✅' : '❌');
     </script>
 </body>
 </html>

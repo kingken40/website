@@ -173,6 +173,11 @@
                         <input type="password" id="openaiApiKey" placeholder="Enter your OpenAI API key" style="width: 100%; padding: 0.5rem; background: rgba(0, 170, 255, 0.1); border: 1px solid rgba(0, 170, 255, 0.3); border-radius: 5px; color: #00aaff;">
                         <small style="display: block; margin-top: 0.5rem; color: rgba(255, 255, 255, 0.6);">Required only for audio file transcription. Get your key at <a href="https://platform.openai.com/api-keys" target="_blank" style="color: #FFD700;">platform.openai.com/api-keys</a></small>
                     </div>
+                    <div class="setting-group" style="margin-top: 1rem;">
+                        <label for="geminiApiKey">Gemini API Key (Optional - for Groq Fallback)</label>
+                        <input type="password" id="geminiApiKey" placeholder="Enter your Gemini API key" style="width: 100%; padding: 0.5rem; background: rgba(0, 170, 255, 0.1); border: 1px solid rgba(0, 170, 255, 0.3); border-radius: 5px; color: #00aaff;">
+                        <small style="display: block; margin-top: 0.5rem; color: rgba(255, 255, 255, 0.6);">Used as automatic fallback when Groq quota is exceeded. Get your free key at <a href="https://aistudio.google.com/apikey" target="_blank" style="color: #FFD700;">aistudio.google.com/apikey</a></small>
+                    </div>
                     <div class="setting-group">
                         <button id="saveApiKey" style="padding: 0.6rem 1.2rem; background: linear-gradient(135deg, #FFD700, #FFA500); border: none; border-radius: 5px; color: #1a1a2e; font-weight: 600; cursor: pointer; transition: all 0.3s;">Save API Keys</button>
                         <span id="apiKeySaved" style="margin-left: 1rem; color: #4CAF50; display: none;">✓ Saved!</span>
