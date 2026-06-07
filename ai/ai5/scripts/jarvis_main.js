@@ -50,6 +50,45 @@ const providerConfig = {
     }
 };
 
+// Debug helper: never logs full API keys, only trimmed/placeholder-safe indicators
+function getKeyDebugInfo(keyName, inMemoryValue) {
+    let stored = null;
+    try { stored = localStorage.getItem(keyName); } catch(e) {}
+
+    const normalize = (v) => (typeof v === 'string' ? v.trim() : '');
+    const s = normalize(stored);
+    const m = normalize(inMemoryValue);
+
+    const isPlaceholder = (v) => v.startsWith('YOUR_') || v.startsWith('YOUR');
+    const mask = (v) => {
+        if (!v) return 'EMPTY';
+        if (isPlaceholder(v)) return 'PLACEHOLDER';
+        return `${v.substring(0, 4)}...${v.substring(Math.max(0, v.length - 4))} (${v.length} chars)`;
+    };
+
+    return {
+        keyName,
+        stored: mask(s),
+        inMemory: mask(m)
+    };
+}
+
+function debugLogProviderAndKeys(contextLabel) {
+    try {
+        const groqInfo = getKeyDebugInfo('groq_api_key', GROQ_API_KEY);
+        const geminiInfo = getKeyDebugInfo('gemini_api_key', GEMINI_API_KEY);
+
+        console.log(`🧪 [ai5 debug] ${contextLabel}`);
+        console.log('🧪 [ai5 debug] currentProvider:', currentProvider);
+        console.log('🧪 [ai5 debug] providerConfig.groq.apiKey:', groqInfo.inMemory);
+        console.log('🧪 [ai5 debug] providerConfig.gemini.apiKey:', geminiInfo.inMemory);
+        console.log('🧪 [ai5 debug] localStorage.groq_api_key:', groqInfo.stored);
+        console.log('🧪 [ai5 debug] localStorage.gemini_api_key:', geminiInfo.stored);
+    } catch (e) {
+        console.warn('🧪 [ai5 debug] Failed to log provider/key debug info:', e);
+    }
+}
+
 let currentPersonality = 'Nova';
 
 // Initialize conversation history
