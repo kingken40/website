@@ -1629,9 +1629,9 @@ function setupVoiceButtons() {
                     console.log('🎤 Permission denied');
                     return;
                 }
-                console.log('🎤 Permission granted, ready to start listening');
-                showVoiceNotification('Microphone ready! Press and hold button to speak', 3000);
-                return;
+                console.log('🎤 Permission granted - starting listening now');
+                showVoiceNotification('Microphone ready! Listening...', 2000);
+                // Fall through to start listening immediately
             }
             
             newVoiceBtn.classList.add('recording');
@@ -1723,9 +1723,9 @@ function setupVoiceButtons() {
                     console.log('🎤 Permission denied');
                     return;
                 }
-                console.log('🎤 Permission granted, ready to start listening');
-                showVoiceNotification('Microphone ready! Press and hold button to speak', 3000);
-                return;
+                console.log('🎤 Permission granted - starting listening now');
+                showVoiceNotification('Microphone ready! Listening...', 2000);
+                // Fall through to start listening immediately
             }
             
             newVoiceInputBtn.classList.add('recording');
@@ -1990,10 +1990,8 @@ function setupPushToTalkHotkey() {
         const target = e.target;
         const isInInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
         
-        // If R is pressed while focused in an input, blur the input and start voice recognition
-        if (e.key.toLowerCase() === 'r' && isInInput && !hotkeyActive) {
-            target.blur();
-        } else if (isInInput) {
+        // Never intercept R while user is typing in any input/textarea
+        if (isInInput) {
             return;
         }
         
@@ -2004,24 +2002,38 @@ function setupPushToTalkHotkey() {
             
             console.log('⌨️ Hotkey R pressed - starting voice recognition...');
             
+            if (!isVoiceSupported) {
+                showVoiceNotification('Voice recognition not supported in this browser', 3000);
+                hotkeyActive = false;
+                return;
+            }
+            
             // Ensure this is NOT a wake word session (push-to-talk mode)
             isWakeWordSession = false;
             window.isWakeWordSession = false;
-            console.log('⌨️ Push-to-talk hotkey mode - isWakeWordSession = false');
+            
+            const voiceBtn = document.getElementById('voiceBtn');
+            
+            // Request mic permission if needed, then start listening
+            if (!hasVoicePermission) {
+                requestVoicePermission().then(granted => {
+                    if (!granted) { hotkeyActive = false; return; }
+                    hotkeyListening = true;
+                    updateVoiceStatus('Hold R to speak - Release when done');
+                    showVoiceNotification('Listening...', 2000);
+                    if (voiceBtn) voiceBtn.classList.add('recording');
+                    startVoiceRecognition();
+                });
+                return;
+            }
             
             // Visual feedback
             updateVoiceStatus('Hold R to speak - Release when done');
             showVoiceNotification('Listening...', 2000);
+            if (voiceBtn) voiceBtn.classList.add('recording');
             
-            // Add visual indicator to mic button if it exists
-            const voiceBtn = document.getElementById('voiceBtn');
-            if (voiceBtn) {
-                voiceBtn.classList.add('recording');
-            }
-            
-            // Use Groq Whisper for reliable PTT recording (works over file://)
             hotkeyListening = true;
-            startGroqRecording();
+            startVoiceRecognition();
         }
     });
     

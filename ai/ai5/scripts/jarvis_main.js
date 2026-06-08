@@ -17,40 +17,36 @@ function loadApiKey(keyName, defaultValue = '') {
     return defaultValue;
 }
 
+let OPENROUTER_API_KEY = loadApiKey('openrouter_api_key', '');
 let OPENAI_API_KEY = loadApiKey('openai_api_key', '');
-let GROQ_API_KEY = loadApiKey('groq_api_key', '');
-let COHERE_API_KEY = loadApiKey('cohere_api_key', 'YOUR_COHERE_API_KEY_HERE');
-let GEMINI_API_KEY = loadApiKey('gemini_api_key', 'YOUR_GEMINI_API_KEY_HERE');
-let HUGGINGFACE_API_KEY = loadApiKey('huggingface_api_key', 'YOUR_HUGGINGFACE_API_KEY_HERE');
+let HUGGINGFACE_API_KEY = loadApiKey('huggingface_api_key', '');
 
-const API_URL = 'https://api.openai.com/v1/chat/completions';
-const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 
 // AI Provider Configuration
-let currentProvider = 'groq'; // Options: 'openai', 'groq', 'gemini' - Using Groq (FREE, fastest)
-let currentModel = 'llama-3.3-70b-versatile'; // Default model
+let currentProvider = 'openrouter'; // Primary: OpenRouter, Fallback: openai
+let currentModel = 'openai/gpt-4o-mini'; // Default OpenRouter model
 
 const providerConfig = {
+    openrouter: {
+        get apiKey() { return OPENROUTER_API_KEY; },
+        set apiKey(v) { OPENROUTER_API_KEY = v; },
+        apiUrl: OPENROUTER_API_URL,
+        model: 'openai/gpt-4o-mini',
+        maxTokens: 2048,
+        extraHeaders: {
+            'HTTP-Referer': window.location.origin,
+            'X-Title': 'N.O.V.A AI Assistant'
+        }
+    },
     openai: {
-        apiKey: OPENAI_API_KEY,
-        apiUrl: API_URL,
+        get apiKey() { return OPENAI_API_KEY; },
+        set apiKey(v) { OPENAI_API_KEY = v; },
+        apiUrl: OPENAI_API_URL,
         model: 'gpt-4o-mini',
-        maxTokens: 800
-    },
-    groq: {
-        get apiKey() { return GROQ_API_KEY; },
-        set apiKey(v) { GROQ_API_KEY = v; },
-        apiUrl: GROQ_API_URL,
-        model: 'llama-3.3-70b-versatile',
-        maxTokens: 2048
-    },
-    gemini: {
-        get apiKey() { return GEMINI_API_KEY; },
-        set apiKey(v) { GEMINI_API_KEY = v; },
-        apiUrl: GEMINI_API_URL,
-        model: 'gemini-2.0-flash',
-        maxTokens: 2048
+        maxTokens: 2048,
+        extraHeaders: {}
     }
 };
 
@@ -155,6 +151,72 @@ function getPersistentMaterialContext() {
     return `\n\n=== UPLOADED COURSE MATERIAL (always reference this when relevant) ===\n${sections}\n=== END OF COURSE MATERIAL ===`;
 }
 
+// ====== USER PROFILE / PERSONALIZATION ======
+let userProfile = { preferredName: '', customFacts: [] };
+
+function loadUserProfile() {
+    try {
+        const stored = localStorage.getItem('nova_user_profile');
+        if (stored) userProfile = JSON.parse(stored);
+    } catch(e) { userProfile = { preferredName: '', customFacts: [] }; }
+}
+
+function saveUserProfile() {
+    try {
+        localStorage.setItem('nova_user_profile', JSON.stringify(userProfile));
+    } catch(e) {}
+}
+
+// Detect if user is telling Nova their name or a preference, then remember it
+function detectAndSavePersonalization(userMessage) {
+    const msg = userMessage.trim().toLowerCase();
+
+    // Name correction patterns: "my name is X", "call me X", "I'm X", "it's X not Y"
+    const namePatterns = [
+        /(?:my name is|call me|i(?:'m| am)|i go by)\s+([a-z][a-z\s'-]{1,30}?)(?:\s*[,.]|$)/i,
+        /(?:it'?s|its)\s+([a-z][a-z\s'-]{1,30}?)\s*(?:not|,|$)/i
+    ];
+    for (const pattern of namePatterns) {
+        const match = userMessage.match(pattern);
+        if (match) {
+            const name = match[1].trim().replace(/\s+/g, ' ');
+            // Filter out common false-positives
+            const skip = ['a', 'an', 'the', 'not', 'just', 'sir', 'okay', 'fine', 'good', 'here'];
+            if (!skip.includes(name.toLowerCase()) && name.length >= 2) {
+                userProfile.preferredName = name;
+                saveUserProfile();
+                console.log('👤 User profile updated - name:', name);
+                return;
+            }
+        }
+    }
+
+    // Generic fact: "remember that...", "note that...", "keep in mind..."
+    const factMatch = userMessage.match(/(?:remember|note|keep in mind)[:\s]+(.{10,200})/i);
+    if (factMatch) {
+        const fact = factMatch[1].trim();
+        if (!userProfile.customFacts.includes(fact)) {
+            userProfile.customFacts.push(fact);
+            if (userProfile.customFacts.length > 10) userProfile.customFacts.shift(); // keep last 10
+            saveUserProfile();
+            console.log('👤 User profile updated - added fact:', fact);
+        }
+    }
+}
+
+function getUserProfileContext() {
+    const parts = [];
+    if (userProfile.preferredName) {
+        parts.push(`The user's name is ${userProfile.preferredName}. Always address them as "${userProfile.preferredName}" (not "sir" or generic terms) unless context makes another address more appropriate.`);
+    }
+    if (userProfile.customFacts && userProfile.customFacts.length > 0) {
+        parts.push(`Remembered user preferences/facts:\n${userProfile.customFacts.map(f => `- ${f}`).join('\n')}`);
+    }
+    if (parts.length === 0) return '';
+    return `\n\n=== USER PROFILE (always honor these) ===\n${parts.join('\n')}\n=== END USER PROFILE ===`;
+}
+// ====== END USER PROFILE ======
+
 function renderMaterialList() {
     const list = document.getElementById('materialList');
     if (!list) return;
@@ -207,6 +269,7 @@ function handleMaterialFileUpload(file) {
 window.removePersistentMaterialItem = removePersistentMaterialItem;
 
 loadPersistentMaterial();
+loadUserProfile();
 // ====== END PERSISTENT MATERIAL STORE ======
 
 function getRandomNovaGreeting() {
@@ -488,6 +551,9 @@ function processUserMessage(userMessage) {
     console.log('💭 ==========================================');
     
     try {
+        // Detect and save any personalization info from the message
+        detectAndSavePersonalization(userMessage);
+        
         // Add user message to chat
         addMessage(userMessage, 'user');
         
@@ -620,10 +686,77 @@ function clearFileAttachment() {
 // Make clearFileAttachment globally available for onclick handler
 window.clearFileAttachment = clearFileAttachment;
 
+// Try the server-side /api/chat proxy (uses OPENROUTER_API_KEY or OPENAI_API_KEY env variable on Vercel)
+async function generateViaServerProxy(userMessage, personality) {
+    const messages = prepareOpenAIMessages(userMessage, personality);
+    const requestPayload = {
+        messages: messages,
+        max_tokens: 2048,
+        temperature: personality === 'brainstorm' ? 0.95 : 0.7,
+        stream: false
+    };
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+    const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestPayload),
+        signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+        const errText = await response.text().catch(() => '');
+        throw new Error(`Server proxy error (${response.status}): ${errText}`);
+    }
+
+    const responseData = await response.json();
+    if (!responseData.choices || !responseData.choices[0] || !responseData.choices[0].message) {
+        throw new Error('Invalid server proxy response format');
+    }
+    return responseData.choices[0].message.content;
+}
+
 // Enhanced AI integration with multi-provider support and improved error handling
 async function generateAIResponse(userMessage, personality) {
     console.log('🤖 Generating AI response for personality:', personality);
     
+    // Check if user has configured a provider API key
+    const hasUserKey = (OPENROUTER_API_KEY && OPENROUTER_API_KEY.trim() !== '') ||
+                       (OPENAI_API_KEY && OPENAI_API_KEY.trim() !== '');
+
+    // Try server-side proxy first when no user key is configured
+    if (!hasUserKey) {
+        console.log('🌐 No user API key configured — trying server proxy (/api/chat)...');
+        try {
+            await new Promise(resolve => setTimeout(resolve, 400));
+            const reply = await generateViaServerProxy(userMessage, personality);
+            removeThinkingIndicator();
+            addMessage(reply, 'Nova');
+            conversationHistory.push({ role: 'assistant', content: reply, personality, timestamp: new Date().toISOString() });
+            if (typeof window.speakText === 'function') {
+                if (window.isWakeWordSession && typeof window.restoreWakeListeningAfterResponse === 'function') {
+                    window.speakText(reply, () => { window.restoreWakeListeningAfterResponse(); });
+                } else {
+                    window.speakText(reply, () => {});
+                }
+            }
+            return;
+        } catch (proxyErr) {
+            console.warn('🌐 Server proxy unavailable:', proxyErr.message);
+            // Server proxy failed (likely no env key set) — fall through to show config message
+            removeThinkingIndicator();
+            addMessage(
+                '⚙️ N.O.V.A requires an AI API key to respond. Please click the ⚙️ Settings button and enter your OpenRouter API key (get one free at <a href="https://openrouter.ai/keys" target="_blank" style="color:#FFD700">openrouter.ai/keys</a>).',
+                'Nova'
+            );
+            return;
+        }
+    }
+
     // Get current provider configuration
     const provider = providerConfig[currentProvider];
     console.log('🚀 Sending request to', currentProvider.toUpperCase(), 'API (', provider.model, ')...');
@@ -656,7 +789,8 @@ async function generateAIResponse(userMessage, personality) {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${provider.apiKey}`
+                "Authorization": `Bearer ${provider.apiKey}`,
+                ...(provider.extraHeaders || {})
             },
             body: JSON.stringify(requestPayload),
             signal: controller.signal
@@ -750,53 +884,29 @@ async function generateAIResponse(userMessage, personality) {
         console.error('🔧 DEBUG - Error message:', error.message);
         console.error('🔧 DEBUG - Error stack:', error.stack);
         
-        // Check if this is a quota/length error and Gemini fallback is available
-        const isQuotaError = error.message.includes('insufficient_quota') || 
-                           error.message.includes('billing') || 
-                           error.message.includes('429');
-        const isLengthError = error.message.includes('reduce the length') || 
-                            error.message.includes('too long') ||
-                            error.message.includes('maximum context length');
-        const isGroqProvider = currentProvider === 'groq';
-        const hasGeminiKey = providerConfig.gemini.apiKey && 
-                           providerConfig.gemini.apiKey !== 'YOUR_GEMINI_API_KEY_HERE';
-        
-        // AUTO-FALLBACK: If Groq quota/length error and Gemini is available, retry with Gemini
-        if ((isQuotaError || isLengthError) && isGroqProvider && hasGeminiKey && !error.isRetry) {
-            const reason = isLengthError ? 'Message too long' : 'Quota exceeded';
-            console.log(`🔄 Groq ${reason} - Auto-switching to Gemini fallback...`);
-            
-            // Show notification
-            showNotification(`⚠️ Groq ${reason.toLowerCase()}. Switching to Gemini...`, 3000);
-            
-            // Add temporary message
-            addMessage(`🔄 Groq API ${reason.toLowerCase()}. Switching to Gemini (larger context window)...`, 'Nova');
-            
-            // Add thinking indicator back
+        // AUTO-FALLBACK: If OpenRouter fails and user has an OpenAI key, retry with OpenAI
+        const isOpenRouterProvider = currentProvider === 'openrouter';
+        const hasOpenAIKey = OPENAI_API_KEY && OPENAI_API_KEY.trim() !== '';
+        const isAuthOrQuotaError = error.message.includes('401') || error.message.includes('429') ||
+                                   error.message.includes('insufficient_quota') || error.message.includes('billing') ||
+                                   error.message.includes('403');
+
+        if (isOpenRouterProvider && hasOpenAIKey && isAuthOrQuotaError && !error.isRetry) {
+            console.log('🔄 OpenRouter failed — auto-switching to OpenAI fallback...');
+            showNotification('⚠️ OpenRouter unavailable. Switching to OpenAI...', 3000);
+            addMessage('🔄 OpenRouter unavailable. Retrying with OpenAI...', 'Nova');
             addThinkingIndicator();
-            
-            // Retry with Gemini
             try {
-                await generateGeminiResponse(userMessage, personality);
-                return; // Success - exit early
-            } catch (geminiError) {
-                console.error('🔧 Gemini fallback also failed:', geminiError);
+                const savedProvider = currentProvider;
+                currentProvider = 'openai';
+                await generateAIResponse(userMessage, personality);
+                currentProvider = savedProvider;
+                return;
+            } catch (openaiErr) {
+                console.error('🔧 OpenAI fallback also failed:', openaiErr);
                 removeThinkingIndicator();
-                let geminiErrorMsg;
-                const geminiMsg = geminiError.message || '';
-                if (geminiMsg.includes('400') || geminiMsg.includes('API_KEY_INVALID') || geminiMsg.includes('401') || (geminiMsg.includes('invalid') && !geminiMsg.includes('RESOURCE_EXHAUSTED'))) {
-                    geminiErrorMsg = '🔑 Gemini API Key Error - The Gemini API key appears to be invalid. Please open Settings and re-enter your key from aistudio.google.com/apikey';
-                } else if (geminiMsg.includes('RESOURCE_EXHAUSTED') || geminiMsg.includes('quota')) {
-                    geminiErrorMsg = '💳 Groq & Gemini daily quota exhausted. Your free-tier limits have been reached for today. Get a fresh Groq key at console.groq.com/keys or a fresh Gemini key at aistudio.google.com/apikey';
-                } else if (geminiMsg.includes('429')) {
-                    geminiErrorMsg = '⏳ Both Groq and Gemini are rate-limited right now. Please wait 1–2 minutes and try again.';
-                } else if (geminiMsg.includes('fetch') || geminiMsg.includes('Failed to fetch') || geminiMsg.includes('network')) {
-                    geminiErrorMsg = '🌐 Network error reaching Gemini API. Check your connection and try again.';
-                } else {
-                    geminiErrorMsg = `💳 Groq quota exceeded and Gemini fallback failed: ${geminiMsg}`;
-                }
-                addMessage(geminiErrorMsg, 'Nova');
-                return; // Don't fall through to Groq error handler
+                addMessage('❌ Both OpenRouter and OpenAI are unavailable. Please check your API keys in Settings.', 'Nova');
+                return;
             }
         }
         
@@ -811,16 +921,10 @@ async function generateAIResponse(userMessage, personality) {
         
         if (error.name === 'AbortError') {
             errorMsg = '⏱️ Request timed out - The AI response is taking too long. Please try again.';
-        } else if (error.message.includes('401') || error.message.includes('Unauthorized')) {
-            errorMsg = '🔑 Authentication Error - API configuration issue. Please check your API keys.';
-        } else if (error.message.includes('429')) {
-            errorMsg = '🚫 Rate limit exceeded - Too many requests. Please wait a moment before trying again.';
         } else if (error.message.includes('insufficient_quota') || error.message.includes('billing')) {
-            if (hasGeminiKey) {
-                errorMsg = '💳 Groq daily quota exhausted. Get a fresh key at console.groq.com/keys or wait for your quota to reset.';
-            } else {
-                errorMsg = '💳 Groq daily quota exhausted. Add a Gemini API key in Settings for automatic fallback (free at aistudio.google.com/apikey) or get a fresh Groq key at console.groq.com/keys';
-            }
+            errorMsg = '💳 API quota exhausted. Please check your OpenRouter or OpenAI account billing.';
+        } else if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+            errorMsg = '🔑 Invalid API key. Please open Settings and update your OpenRouter or OpenAI key.';
         } else if (error.message.includes('500') || error.message.includes('502') || error.message.includes('503')) {
             errorMsg = '🔧 Server error - The service is temporarily unavailable. Please try again in a moment.';
         } else if (error.message.includes('fetch') || error.message.includes('Failed to fetch')) {
@@ -899,155 +1003,6 @@ async function generateAIResponse(userMessage, personality) {
     }
 }
 
-// Gemini-specific API handler (different format than OpenAI)
-async function generateGeminiResponse(userMessage, personality) {
-    console.log('🤖 Generating Gemini AI response for personality:', personality);
-    
-    const provider = providerConfig.gemini;
-    console.log('🚀 Sending request to GEMINI API (', provider.model, ')...');
-    
-    try {
-        // Prepare messages for Gemini format
-        const config = personalities[personality] || personalities.Nova;
-        
-        // Gemini uses "contents" array with "parts" instead of OpenAI's "messages"
-        const geminiPersonalityInstructions = personality === 'study'
-            ? `You are an expert academic assistant. Help with assignments, break down problems step-by-step, assist with essays/math/research, create study guides and practice questions. Reference any uploaded course material directly and prioritize it.`
-            : `Keep responses natural and conversational. Be helpful and direct.\n\nIf you are N.O.V.A: address user as "sir", use dry British humor, be witty and efficient.\nIf you are Genius Mode, focus on technical analysis.\nIf you are Professor, focus on teaching clearly.\nIf you are Data Analyst, focus on data-driven insights.`;
-
-        const systemPrompt = `You are ${config.name}, a ${config.style}.
-
-${geminiPersonalityInstructions}${getPersistentMaterialContext()}
-
-SOURCE CITATION RULE:
-When your response includes specific facts, statistics, scientific concepts, historical events, or technical claims, add a "Sources & References" section at the very bottom of your response formatted as:
-
----
-**Sources & References**
-- [Source name or type, e.g. "General relativity — Einstein, 1915"]
-- [Textbook / field, e.g. "Quantum Mechanics — Standard physics curriculum"]
-
-Only include this section when citing factual claims is genuinely useful. For casual conversation or simple questions, omit it. Never fabricate specific URLs or DOIs.`;
-
-        // Build conversation history in Gemini format
-        const contents = [];
-        
-        // Add system context as first user message (Gemini doesn't have system role)
-        contents.push({
-            role: "user",
-            parts: [{ text: systemPrompt }]
-        });
-        contents.push({
-            role: "model",
-            parts: [{ text: "Understood. I will respond in character." }]
-        });
-        
-        // Add recent conversation history (last 10 messages)
-        const recentHistory = conversationHistory.slice(-10);
-        recentHistory.forEach(msg => {
-            if (msg.role === 'user') {
-                contents.push({
-                    role: "user",
-                    parts: [{ text: msg.content }]
-                });
-            } else if (msg.role === 'assistant') {
-                contents.push({
-                    role: "model",
-                    parts: [{ text: msg.content }]
-                });
-            }
-        });
-        
-        // Add current user message
-        contents.push({
-            role: "user",
-            parts: [{ text: userMessage }]
-        });
-        
-        const requestPayload = {
-            contents: contents,
-            generationConfig: {
-                temperature: personality === 'brainstorm' ? 0.95 : 0.7,
-                maxOutputTokens: provider.maxTokens,
-            }
-        };
-        
-        console.log('🤖 GEMINI Request:');
-        console.log('🔑 Using API Key:', provider.apiKey ? (provider.apiKey.substring(0, 10) + '...') : 'NONE');
-        console.log('📤 Contents array length:', contents.length);
-        
-        // Gemini uses API key as query parameter
-        const apiUrlWithKey = `${provider.apiUrl}?key=${provider.apiKey}`;
-        
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000);
-        
-        const response = await fetch(apiUrlWithKey, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(requestPayload),
-            signal: controller.signal
-        });
-        
-        clearTimeout(timeoutId);
-        
-        console.log('📡 Gemini Response received - Status:', response.status, response.statusText);
-        
-        if (!response.ok) {
-            let errorText = 'Unknown error';
-            try {
-                errorText = await response.text();
-                console.error('🔧 DEBUG - Gemini error response:', errorText);
-            } catch (e) {
-                console.error('🔧 DEBUG - Could not read error response:', e);
-            }
-            throw new Error(`GEMINI API Error (${response.status}): ${errorText}`);
-        }
-        
-        const responseData = await response.json();
-        console.log('📦 GEMINI Response:', responseData);
-        
-        // Extract text from Gemini response format
-        if (!responseData.candidates || !responseData.candidates[0] || 
-            !responseData.candidates[0].content || !responseData.candidates[0].content.parts) {
-            throw new Error('Invalid GEMINI response format');
-        }
-        
-        const reply = responseData.candidates[0].content.parts[0].text;
-        console.log('✅ GEMINI Response Success - Length:', reply.length, 'characters');
-        
-        // Remove thinking indicator
-        removeThinkingIndicator();
-        
-        // Add response to chat
-        addMessage(reply, 'Nova');
-        
-        // Save to conversation history
-        conversationHistory.push({
-            role: 'assistant',
-            content: reply,
-            personality: personality,
-            timestamp: new Date().toISOString()
-        });
-        
-        // Speak response if voice is enabled
-        if (typeof window.speakText === 'function') {
-            if (window.isWakeWordSession && typeof window.restoreWakeListeningAfterResponse === 'function') {
-                window.speakText(reply, () => {
-                    window.restoreWakeListeningAfterResponse();
-                });
-            } else {
-                window.speakText(reply);
-            }
-        }
-        
-    } catch (error) {
-        console.error('🔧 Gemini Error:', error);
-        throw error; // Re-throw to be caught by main error handler
-    }
-}
 
 function prepareOpenAIMessages(userMessage, personality) {
     console.log('📝 Preparing messages for OpenAI with personality:', personality);
@@ -1091,15 +1046,16 @@ If you are Data Analyst:
 - Precise and statistical`;
     }
 
-    // Inject persistent course material into context
+    // Inject persistent course material and user profile into context
     const materialContext = getPersistentMaterialContext();
+    const profileContext = getUserProfileContext();
 
     // System message with personality
     const systemMessage = {
         role: "system",
         content: `You are ${config.name}, a ${config.style}.
 
-${personalityInstructions}${materialContext}
+${personalityInstructions}${materialContext}${profileContext}
 
 SOURCE CITATION RULE:
 When your response includes specific facts, statistics, scientific concepts, historical events, or technical claims, add a "Sources & References" section at the very bottom of your response formatted as:
@@ -2242,9 +2198,8 @@ function setupApiKeyManagement() {
     console.log('🔑 Setting up API key management...');
     
     const saveApiKeyBtn = document.getElementById('saveApiKey');
-    const groqApiKeyInput = document.getElementById('groqApiKey');
+    const openrouterApiKeyInput = document.getElementById('openrouterApiKey');
     const openaiApiKeyInput = document.getElementById('openaiApiKey');
-    const geminiApiKeyInput = document.getElementById('geminiApiKey');
     const apiKeySavedMsg = document.getElementById('apiKeySaved');
     const settingsBtn = document.getElementById('settingsBtn');
     const settingsModal = document.getElementById('settingsModal');
@@ -2252,22 +2207,16 @@ function setupApiKeyManagement() {
     // Load saved API keys into inputs when settings open
     if (settingsBtn && settingsModal) {
         settingsBtn.addEventListener('click', () => {
-            if (groqApiKeyInput) {
-                const savedKey = localStorage.getItem('groq_api_key');
-                if (savedKey && savedKey !== 'YOUR_API_KEY_HERE' && savedKey.trim() !== '') {
-                    groqApiKeyInput.value = savedKey;
+            if (openrouterApiKeyInput) {
+                const savedKey = localStorage.getItem('openrouter_api_key');
+                if (savedKey && savedKey.trim() !== '') {
+                    openrouterApiKeyInput.value = savedKey;
                 }
             }
             if (openaiApiKeyInput) {
                 const savedKey = localStorage.getItem('openai_api_key');
                 if (savedKey && savedKey !== 'YOUR_OPENAI_API_KEY_HERE' && savedKey.trim() !== '') {
                     openaiApiKeyInput.value = savedKey;
-                }
-            }
-            if (geminiApiKeyInput) {
-                const savedKey = localStorage.getItem('gemini_api_key');
-                if (savedKey && savedKey !== 'YOUR_GEMINI_API_KEY_HERE' && savedKey.trim() !== '') {
-                    geminiApiKeyInput.value = savedKey;
                 }
             }
         });
@@ -2278,62 +2227,38 @@ function setupApiKeyManagement() {
         saveApiKeyBtn.addEventListener('click', () => {
             let saved = false;
             
-            // Save Groq API key
-            if (groqApiKeyInput) {
-                const apiKey = groqApiKeyInput.value.trim();
+            // Save OpenRouter API key (primary)
+            if (openrouterApiKeyInput) {
+                const apiKey = openrouterApiKeyInput.value.trim();
                 if (apiKey && apiKey !== '') {
-                    localStorage.setItem('groq_api_key', apiKey);
-                    GROQ_API_KEY = apiKey;
-                    
-                    if (providerConfig.groq) {
-                        providerConfig.groq.apiKey = apiKey;
+                    localStorage.setItem('openrouter_api_key', apiKey);
+                    OPENROUTER_API_KEY = apiKey;
+                    if (providerConfig.openrouter) {
+                        providerConfig.openrouter.apiKey = apiKey;
                     }
-                    
                     saved = true;
-                    console.log('✅ Groq API key saved successfully!');
-                    
-                    // Remove any existing warning
+                    console.log('✅ OpenRouter API key saved successfully!');
                     const warning = document.querySelector('.api-key-warning');
-                    if (warning) {
-                        warning.remove();
-                    }
+                    if (warning) warning.remove();
                 }
             }
             
-            // Save OpenAI API key (optional)
+            // Save OpenAI API key (fallback)
             if (openaiApiKeyInput) {
                 const apiKey = openaiApiKeyInput.value.trim();
                 if (apiKey && apiKey !== '') {
                     localStorage.setItem('openai_api_key', apiKey);
                     OPENAI_API_KEY = apiKey;
-                    
                     if (providerConfig.openai) {
                         providerConfig.openai.apiKey = apiKey;
                     }
-                    
                     saved = true;
                     console.log('✅ OpenAI API key saved successfully!');
                 }
             }
             
-            // Save Gemini API key (optional - for Groq fallback)
-            if (geminiApiKeyInput) {
-                const apiKey = geminiApiKeyInput.value.trim();
-                if (apiKey && apiKey !== '') {
-                    localStorage.setItem('gemini_api_key', apiKey);
-                    GEMINI_API_KEY = apiKey;
-                    
-                    if (providerConfig.gemini) {
-                        providerConfig.gemini.apiKey = apiKey;
-                    }
-                    
-                    saved = true;
-                    console.log('✅ Gemini API key saved successfully!');
-                }
-            }
-            
             if (!saved) {
-                alert('Please enter at least the Groq API key');
+                alert('Please enter at least the OpenRouter API key');
                 return;
             }
             
@@ -2350,13 +2275,14 @@ function setupApiKeyManagement() {
 
 function checkApiKeyStatus() {
     console.log('🔍 Checking API key status...');
-    
-    // Check if Groq API key is configured (since it's the default provider)
-    if (!GROQ_API_KEY || GROQ_API_KEY === 'YOUR_API_KEY_HERE' || GROQ_API_KEY.trim() === '') {
-        console.warn('⚠️ Groq API key not configured');
-        showApiKeyWarning();
+    // Server proxy (/api/chat) handles requests when no user key is set,
+    // so we only log a console warning rather than showing a UI banner.
+    const hasUserKey = (OPENROUTER_API_KEY && OPENROUTER_API_KEY.trim() !== '') ||
+                       (OPENAI_API_KEY && OPENAI_API_KEY.trim() !== '');
+    if (hasUserKey) {
+        console.log('✅ User API key is configured');
     } else {
-        console.log('✅ API key is configured');
+        console.log('ℹ️ No user API key — will use server proxy (/api/chat)');
     }
 }
 
@@ -2375,10 +2301,10 @@ function showApiKeyWarning() {
         </div>
         <div class="message-content" style="background: rgba(255, 193, 7, 0.1); border-left: 3px solid #FFC107; padding: 1rem;">
             <strong>API Key Required</strong><br>
-            Please configure your Groq API key to use N.O.V.A:<br>
+            Please configure your OpenRouter API key to use N.O.V.A:<br>
             1. Click the ⚙️ Settings button above<br>
-            2. Enter your Groq API key (get one free at <a href="https://console.groq.com/keys" target="_blank" style="color: #FFD700;">console.groq.com/keys</a>)<br>
-            3. Click "Save API Key"
+            2. Enter your OpenRouter API key (get one free at <a href="https://openrouter.ai/keys" target="_blank" style="color: #FFD700;">openrouter.ai/keys</a>)<br>
+            3. Click "Save API Keys"
         </div>
     `;
     
