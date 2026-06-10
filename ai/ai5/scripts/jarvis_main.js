@@ -1531,6 +1531,15 @@ function setupEventListeners() {
         });
     }
 
+    // Close settings when clicking outside the modal box
+    if (settingsModal) {
+        settingsModal.addEventListener('click', (e) => {
+            if (e.target === settingsModal) {
+                settingsModal.classList.remove('active');
+            }
+        });
+    }
+
     // Material upload input listener
     const materialFileInput = document.getElementById('materialFileInput');
     if (materialFileInput) {
