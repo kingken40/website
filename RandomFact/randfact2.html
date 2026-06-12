@@ -8,11 +8,11 @@
 </head>
 <body>
   <div class="refresh" id="refresh">
-        <button onclick="window.location.href='//127.0.0.1:5500/RandomFact/randfact.html'">Refresh</button>
+        &nbsp;&nbsp;&nbsp;<button onclick="location.reload(true);">Refresh</button>
   </div>
   <div class="container">
     <div class="goBack">
-        <button class="return" onclick="window.location.href='//127.0.0.1:5500/Games.html'">Return to Games page</button>
+        <button class="return" onclick="location.href='../Games.html'">Return to Games page</button>
     </div>
     
     <h1>Random Facts Generator</h1>
@@ -21,9 +21,16 @@
       <button type="submit">Get Fact</button>
     </form>
     <p id="output"></p>
-    <h2 id="factHistory" class="factHistory" style="position:absolute;">Previous Facts</h2>
+    <!-- <h2 id="factHistory" class="factHistory" style="position:absolute;">Previous Facts</h2> -->
     <ul id="factList"></ul>
   </div>
   <script src="scripts2.js"></script>
+  <script>
+        // Function to refresh the page
+        function refreshPage() {
+            // Reloads the current page from the server
+            location.reload(true);
+        }
+    </script>
 </body>
 </html>

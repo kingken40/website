@@ -1,5 +1,7 @@
 {
-    "liveServer.settings.port": 5501,
+    "liveServer.settings.port": 5502,
     "zencoder.enableRepoIndexing": true,
-    "bitoAI.codeCompletion.enableAutoCompletion": false
+    "bitoAI.codeCompletion.enableAutoCompletion": false,
+    "AICodeCompanion.apiKey": "OpenAI",
+    "AICodeCompanion.modelName": "gpt-4o-mini"
 }

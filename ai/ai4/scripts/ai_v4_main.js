@@ -461,6 +461,9 @@ const sendMessage = async () => {
     saveCurrentSession(); // Save session after user message
     input.value = "";
     updateCharCounter();
+    // Clear clipboard image preview if present
+    const clipPreview = document.getElementById('clipboardImagePreview');
+    if (clipPreview) clipPreview.remove();
     
     // Scroll to show user message
     ensureLastMessageVisible();
@@ -559,7 +562,8 @@ const sendMessage = async () => {
         // Format and display response
         const formattedText = formatBotResponse(reply);
         
-        await addMessage(formattedText, false, true);
+        const msgDiv = await addMessage(formattedText, false, true);
+        appendSourceValidation(msgDiv, reply); // validate any URLs/DOIs in the raw response
         saveToHistory(formattedText, false, true); // Save formatted HTML content
         console.log('💾 Saved AI response with HTML formatting:', formattedText.length, 'characters');
         saveCurrentSession(); // Save session after AI response
@@ -733,6 +737,143 @@ const formatBotResponse = (text) => {
 
     return formattedText;
 };
+
+// ========================================
+// SOURCE VALIDATION SYSTEM
+// ========================================
+
+function extractSources(text) {
+    const sources = [];
+    const seen = new Set();
+
+    // Extract full URLs (http/https)
+    const urlRegex = /https?:\/\/[^\s\)\]"'<>]+/g;
+    let match;
+    while ((match = urlRegex.exec(text)) !== null) {
+        let url = match[0].replace(/[.,;:!?)]+$/, '');
+        if (seen.has(url)) continue;
+        seen.add(url);
+
+        // Check if URL already contains a DOI path — treat as DOI
+        const doiInUrl = url.match(/\/\/(doi\.org|dx\.doi\.org)\/(10\.\d{4,}\/.+)/);
+        if (doiInUrl) {
+            const doi = doiInUrl[2].replace(/[.,;]+$/, '');
+            sources.push({ type: 'doi', raw: doi, url: `https://doi.org/${doi}` });
+        } else {
+            sources.push({ type: 'url', raw: url, url });
+        }
+    }
+
+    // Extract bare DOIs not already captured as URLs (e.g. "DOI: 10.1000/xyz")
+    const doiRegex = /\b(10\.\d{4,}\/[^\s\)\]"',<>]+)/g;
+    while ((match = doiRegex.exec(text)) !== null) {
+        const doi = match[1].replace(/[.,;:)]+$/, '');
+        const url = `https://doi.org/${doi}`;
+        if (seen.has(doi) || seen.has(url)) continue;
+        seen.add(doi);
+        sources.push({ type: 'doi', raw: doi, url });
+    }
+
+    return sources;
+}
+
+async function validateSource(source) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 7000);
+
+    try {
+        if (source.type === 'doi') {
+            // doi.org /api/handles is CORS-enabled
+            const res = await fetch(`https://doi.org/api/handles/${source.raw}`, {
+                signal: controller.signal
+            });
+            clearTimeout(timer);
+            const data = await res.json();
+            return data.responseCode === 1 ? 'valid' : 'invalid';
+        } else {
+            // no-cors: opaque success = host reachable; TypeError = DNS/network failure
+            await fetch(source.url, {
+                method: 'HEAD',
+                mode: 'no-cors',
+                signal: controller.signal
+            });
+            clearTimeout(timer);
+            return 'reachable';
+        }
+    } catch (e) {
+        clearTimeout(timer);
+        if (e.name === 'AbortError') return 'timeout';
+        return 'unreachable';
+    }
+}
+
+function appendSourceValidation(messageDiv, rawText) {
+    const sources = extractSources(rawText);
+    if (!sources.length) return;
+
+    const panel = document.createElement('div');
+    panel.style.cssText = [
+        'margin-top:14px',
+        'padding:10px 14px',
+        'background:rgba(0,120,212,0.07)',
+        'border:1px solid rgba(0,120,212,0.25)',
+        'border-radius:8px',
+        'font-size:12.5px',
+        'line-height:1.6'
+    ].join(';');
+
+    const header = document.createElement('div');
+    header.style.cssText = 'font-weight:700;margin-bottom:8px;color:#FFD700;font-size:13px;';
+    header.textContent = '🔍 Source Validation';
+    panel.appendChild(header);
+
+    sources.forEach((source, i) => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:flex-start;gap:8px;margin-bottom:5px;';
+
+        const statusSpan = document.createElement('span');
+        statusSpan.textContent = '🟡';
+        statusSpan.title = 'Checking...';
+        statusSpan.style.cssText = 'flex-shrink:0;font-size:13px;margin-top:1px;';
+
+        const label = source.type === 'doi'
+            ? `DOI: ${source.raw}`
+            : source.url.length > 70 ? source.url.substring(0, 67) + '…' : source.url;
+
+        const link = document.createElement('a');
+        link.href = source.url;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.title = source.url;
+        link.textContent = label;
+        link.style.cssText = 'color:#00aaff;text-decoration:none;word-break:break-all;flex:1;';
+
+        row.appendChild(statusSpan);
+        row.appendChild(link);
+        panel.appendChild(row);
+
+        // Validate asynchronously — update status icon when done
+        validateSource(source).then(result => {
+            if (result === 'valid' || result === 'reachable') {
+                statusSpan.textContent = '✅';
+                statusSpan.title = source.type === 'doi'
+                    ? 'DOI resolved — source confirmed'
+                    : 'URL host reachable';
+            } else if (result === 'timeout') {
+                statusSpan.textContent = '⏱️';
+                statusSpan.title = 'Validation timed out — source may still exist';
+            } else if (result === 'invalid') {
+                statusSpan.textContent = '❌';
+                statusSpan.title = 'DOI not found — possibly hallucinated';
+            } else {
+                statusSpan.textContent = '❌';
+                statusSpan.title = 'Host unreachable — URL may be hallucinated or require login';
+            }
+        });
+    });
+
+    messageDiv.appendChild(panel);
+}
 
 // ========================================
 // VISUAL CONTENT GENERATION SYSTEM
@@ -1524,6 +1665,39 @@ async function extractImageContent(file) {
     });
 }
 
+// Clipboard image preview shown above the textarea
+function showClipboardImagePreview(base64, fileName) {
+    const existing = document.getElementById('clipboardImagePreview');
+    if (existing) existing.remove();
+
+    const preview = document.createElement('div');
+    preview.id = 'clipboardImagePreview';
+    preview.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 12px;margin-bottom:6px;background:rgba(0,120,212,0.12);border:1px solid rgba(0,120,212,0.35);border-radius:8px;';
+
+    preview.innerHTML = `
+        <img src="${base64}" alt="Pasted image" style="height:52px;width:auto;max-width:90px;border-radius:4px;object-fit:cover;border:1px solid rgba(255,255,255,0.15);">
+        <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">🖼️ ${fileName}</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px;">Clipboard image — ready to send</div>
+        </div>
+        <button id="removeClipboardImage" title="Remove image" style="background:none;border:none;color:rgba(255,255,255,0.5);font-size:18px;cursor:pointer;padding:0 4px;line-height:1;">✕</button>
+    `;
+
+    const inputContainer = document.querySelector('.input-container') || document.querySelector('.input-wrapper');
+    if (inputContainer) inputContainer.insertBefore(preview, inputContainer.firstChild);
+
+    document.getElementById('removeClipboardImage').addEventListener('click', () => {
+        preview.remove();
+        window.uploadedImageData = null;
+        window.uploadedFileContent = null;
+        // Remove the filename marker from the textarea
+        if (input) {
+            input.value = input.value.replace(new RegExp(`\\*\\*📎 ${fileName}\\*\\*\\n?`), '');
+            updateCharCounter();
+        }
+    });
+}
+
 // File processing UI indicators
 function showFileProcessingIndicator(fileName, fileSize = 0) {
     const indicator = document.createElement('div');
@@ -1597,18 +1771,19 @@ const updateCharCounter = () => {
 // ========================================
 
 const switchPersonality = (personality) => {
-    // Update current personality
+    if (!personalities[personality]) {
+        personality = 'assistant';
+    }
+    
     currentPersonality = personality;
     
-    // Update UI - remove selected class from all options
     document.querySelectorAll('.personality-option').forEach(option => {
         option.classList.remove('selected');
     });
     
-    // Add selected class to clicked option
-    document.querySelector(`[data-personality="${personality}"]`).classList.add('selected');
+    const targetEl = document.querySelector(`[data-personality="${personality}"]`);
+    if (targetEl) targetEl.classList.add('selected');
     
-    // Show notification with personality switch
     const personalityName = personalities[personality].name;
     showNotification(`🎭 Switched to ${personalityName}!`, 3000);
     
@@ -1961,7 +2136,47 @@ document.addEventListener('DOMContentLoaded', () => {
         input.style.height = 'auto';
         input.style.height = Math.min(input.scrollHeight, 120) + 'px';
     });
-    
+
+    // Clipboard paste - accept images pasted with Ctrl+V
+    input.addEventListener("paste", (e) => {
+        const items = e.clipboardData && e.clipboardData.items;
+        if (!items) return;
+
+        for (const item of items) {
+            if (!item.type.startsWith('image/')) continue;
+
+            e.preventDefault(); // Don't paste raw data-url text
+
+            const blob = item.getAsFile();
+            if (!blob) continue;
+
+            const mimeType = item.type;
+            const fileName = `clipboard-image-${Date.now()}.png`;
+
+            const reader = new FileReader();
+            reader.onload = function (ev) {
+                const base64 = ev.target.result;
+
+                // Store same format as extractImageContent() / uploadFile('image')
+                window.uploadedImageData = { fileName, base64, mimeType };
+                window.uploadedFileContent = { fileName, content: '[IMAGE_MARKER]' };
+
+                // Show thumbnail preview above the textarea
+                showClipboardImagePreview(base64, fileName);
+
+                // Append the filename marker into the input (same as file upload)
+                input.value += (input.value && !input.value.endsWith('\n') ? '\n' : '') + `**📎 ${fileName}**\n`;
+                updateCharCounter();
+                input.style.height = 'auto';
+                input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+
+                showNotification('🖼️ Image pasted! Will use GPT-4o Vision for analysis.', 3000);
+            };
+            reader.readAsDataURL(blob);
+            break; // Only handle first image item
+        }
+    });
+
     // Show welcome message
     setTimeout(() => {
         showNotification('🎓 Welcome to AI Professor v4! Choose your preferred teaching personality above.', 4000);
@@ -2015,9 +2230,14 @@ const showChatHistory = () => {
         return;
     }
     
-    console.log('📜 Opening chat history (most recent first)...');
+    const sessions = JSON.parse(localStorage.getItem('chatSessions') || '[]');
+    console.log('📜 Opening chat history -', sessions.length, 'sessions found');
     
-    // Load and display chat sessions
+    const modalTitle = modal.querySelector('h3');
+    if (modalTitle) {
+        modalTitle.textContent = `📜 Chat History (${sessions.length} session${sessions.length !== 1 ? 's' : ''})`;
+    }
+    
     loadChatHistory(historyList);
     
     modal.classList.add('show');
@@ -2112,6 +2332,9 @@ const loadChatHistory = (container) => {
                 <div class="history-session-details">
                     <span class="history-personality">${personality.name}</span>
                     <span class="history-message-count">${session.messageCount || 0} messages</span>
+                    <button onclick="event.stopPropagation(); copyContinuationPrompt('${session.id}')" 
+                        style="padding: 2px 8px; background: rgba(255,215,0,0.15); border: 1px solid rgba(255,215,0,0.3); border-radius: 4px; color: #FFD700; cursor: pointer; font-size: 11px;" 
+                        title="Copy a prompt to continue this chat in a new session">📋 Continue</button>
                 </div>
             </div>
         `;
@@ -2419,6 +2642,73 @@ function getCurrentCourseContext() {
 window.showChatHistory = showChatHistory;
 window.hideChatHistory = hideChatHistory;
 window.loadSession = loadSession;
+
+// ========================================
+// CONTINUATION PROMPT GENERATOR
+// ========================================
+
+const generateContinuationPrompt = (sessionMessages, sessionTitle, personality) => {
+    if (!sessionMessages || sessionMessages.length === 0) return '';
+    
+    const lastMessages = sessionMessages.slice(-6);
+    const summaryLines = lastMessages.map(msg => {
+        const role = msg.isUser ? 'User' : 'AI';
+        const text = (msg.text || '').replace(/<[^>]*>/g, '').trim().substring(0, 200);
+        return `${role}: ${text}`;
+    }).join('\n');
+    
+    return `Continue this AI conversation from where we left off.\n\nSession: "${sessionTitle}"\nPersonality: ${personality || 'assistant'}\n\nLast exchanges:\n${summaryLines}\n\nPlease continue naturally from this point.`;
+};
+
+const copyContinuationPrompt = (sessionId) => {
+    const sessions = JSON.parse(localStorage.getItem('chatSessions') || '[]');
+    const session = sessions.find(s => s.id === sessionId);
+    if (!session) {
+        showNotification('❌ Session not found', 2000);
+        return;
+    }
+    
+    const prompt = generateContinuationPrompt(session.messages, session.title, session.personality);
+    
+    navigator.clipboard.writeText(prompt).then(() => {
+        showNotification('📋 Continuation prompt copied! Paste it in a new chat.', 3000);
+    }).catch(() => {
+        const textarea = document.createElement('textarea');
+        textarea.value = prompt;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        showNotification('📋 Continuation prompt copied!', 3000);
+    });
+};
+
+const copyCurrentContinuationPrompt = () => {
+    if (chatHistory.length === 0) {
+        showNotification('❌ No conversation to copy', 2000);
+        return;
+    }
+    const title = chatHistory.find(m => m.isUser)?.text?.substring(0, 50) || 'Current session';
+    const prompt = generateContinuationPrompt(chatHistory, title, currentPersonality);
+    navigator.clipboard.writeText(prompt).then(() => {
+        showNotification('📋 Continuation prompt copied! Paste it in a new chat.', 3000);
+    }).catch(() => {
+        const textarea = document.createElement('textarea');
+        textarea.value = prompt;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        showNotification('📋 Continuation prompt copied!', 3000);
+    });
+};
+
+window.copyContinuationPrompt = copyContinuationPrompt;
+window.copyCurrentContinuationPrompt = copyCurrentContinuationPrompt;
 
 // ========================================
 // CONTEXT SESSIONS - Include Past Chats

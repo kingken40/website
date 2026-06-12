@@ -50,45 +50,6 @@ const providerConfig = {
     }
 };
 
-// Debug helper: never logs full API keys, only trimmed/placeholder-safe indicators
-function getKeyDebugInfo(keyName, inMemoryValue) {
-    let stored = null;
-    try { stored = localStorage.getItem(keyName); } catch(e) {}
-
-    const normalize = (v) => (typeof v === 'string' ? v.trim() : '');
-    const s = normalize(stored);
-    const m = normalize(inMemoryValue);
-
-    const isPlaceholder = (v) => v.startsWith('YOUR_') || v.startsWith('YOUR');
-    const mask = (v) => {
-        if (!v) return 'EMPTY';
-        if (isPlaceholder(v)) return 'PLACEHOLDER';
-        return `${v.substring(0, 4)}...${v.substring(Math.max(0, v.length - 4))} (${v.length} chars)`;
-    };
-
-    return {
-        keyName,
-        stored: mask(s),
-        inMemory: mask(m)
-    };
-}
-
-function debugLogProviderAndKeys(contextLabel) {
-    try {
-        const groqInfo = getKeyDebugInfo('groq_api_key', GROQ_API_KEY);
-        const geminiInfo = getKeyDebugInfo('gemini_api_key', GEMINI_API_KEY);
-
-        console.log(`🧪 [ai5 debug] ${contextLabel}`);
-        console.log('🧪 [ai5 debug] currentProvider:', currentProvider);
-        console.log('🧪 [ai5 debug] providerConfig.groq.apiKey:', groqInfo.inMemory);
-        console.log('🧪 [ai5 debug] providerConfig.gemini.apiKey:', geminiInfo.inMemory);
-        console.log('🧪 [ai5 debug] localStorage.groq_api_key:', groqInfo.stored);
-        console.log('🧪 [ai5 debug] localStorage.gemini_api_key:', geminiInfo.stored);
-    } catch (e) {
-        console.warn('🧪 [ai5 debug] Failed to log provider/key debug info:', e);
-    }
-}
-
 let currentPersonality = 'Nova';
 
 // Initialize conversation history
@@ -112,26 +73,26 @@ if (typeof window.isVoiceEnabled === 'undefined') {
 const personalities = {
     Nova: {
         name: 'N.O.V.A',
-        greeting: null,
+        greeting: 'Hello Mr. Ken. I, Nova, am at your service. How may I assist you today?',
         style: 'British AI assistant with dry wit - conversational yet sophisticated, helpful and efficient',
         responsePrefix: 'Certainly, sir. '
     },
     genius: {
         name: 'Genius Mode',
-        greeting: 'Genius mode activated. Ready for advanced problem solving.',
-        style: 'analytical, technical, solution-focused',
+        greeting: 'Genius mode activated. Ready to solve complex problems.',
+        style: 'analytical, technical, and solution-focused',
         responsePrefix: 'Analyzing... '
     },
     professor: {
         name: 'Professor',
         greeting: 'Welcome to class. Ready to learn something new today?',
-        style: 'educational, patient, explanatory',
+        style: 'educational, patient, and explanatory',
         responsePrefix: 'Let me explain... '
     },
     analyst: {
         name: 'Data Analyst',
         greeting: 'Data analysis systems online. Ready to process information.',
-        style: 'data-driven, precise, statistical',
+        style: 'data-driven, precise, and statistical',
         responsePrefix: 'Based on the data... '
     },
     brainstorm: {
@@ -255,6 +216,87 @@ function getUserProfileContext() {
     return `\n\n=== USER PROFILE (always honor these) ===\n${parts.join('\n')}\n=== END USER PROFILE ===`;
 }
 // ====== END USER PROFILE ======
+
+// ====== REAL-TIME CONTEXT (Time & Weather) ======
+let realtimeWeather = null;
+let weatherLastFetched = 0;
+const WEATHER_CACHE_MS = 15 * 60 * 1000; // 15 minutes
+
+function getCurrentTimeString() {
+    const now = new Date();
+    const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const hours = now.getHours();
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const hours12 = hours % 12 || 12;
+    return `${dayNames[now.getDay()]}, ${monthNames[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()} at ${hours12}:${minutes} ${ampm} (${tz})`;
+}
+
+const WMO_DESCRIPTIONS = {
+    0:'Clear sky',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',
+    45:'Foggy',48:'Icy fog',
+    51:'Light drizzle',53:'Moderate drizzle',55:'Dense drizzle',
+    61:'Slight rain',63:'Moderate rain',65:'Heavy rain',
+    71:'Slight snow',73:'Moderate snow',75:'Heavy snow',77:'Snow grains',
+    80:'Slight rain showers',81:'Moderate rain showers',82:'Violent rain showers',
+    85:'Slight snow showers',86:'Heavy snow showers',
+    95:'Thunderstorm',96:'Thunderstorm with hail',99:'Thunderstorm with heavy hail'
+};
+
+async function fetchWeatherData() {
+    if (!navigator.geolocation) return;
+    if (realtimeWeather && Date.now() - weatherLastFetched < WEATHER_CACHE_MS) return;
+
+    return new Promise((resolve) => {
+        navigator.geolocation.getCurrentPosition(async (position) => {
+            const { latitude, longitude } = position.coords;
+            try {
+                const [weatherRes, geoRes] = await Promise.all([
+                    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=auto`),
+                    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`, { headers: { 'User-Agent': 'NOVA-AI-Assistant/1.0' } })
+                ]);
+                const weatherData = await weatherRes.json();
+                const geoData = await geoRes.json();
+
+                const addr = geoData.address || {};
+                const city = addr.city || addr.town || addr.village || addr.county || 'your area';
+                const location = addr.state ? `${city}, ${addr.state}` : city;
+                const c = weatherData.current;
+
+                realtimeWeather = {
+                    location,
+                    temp: Math.round(c.temperature_2m),
+                    feelsLike: Math.round(c.apparent_temperature),
+                    humidity: c.relative_humidity_2m,
+                    windSpeed: Math.round(c.wind_speed_10m),
+                    condition: WMO_DESCRIPTIONS[c.weather_code] || 'Unknown conditions'
+                };
+                weatherLastFetched = Date.now();
+                console.log('🌤️ Weather updated:', realtimeWeather);
+            } catch (e) {
+                console.warn('🌤️ Weather fetch failed:', e.message);
+            }
+            resolve();
+        }, (err) => {
+            console.warn('🌤️ Geolocation unavailable:', err.message);
+            resolve();
+        }, { timeout: 8000, maximumAge: WEATHER_CACHE_MS });
+    });
+}
+
+function getRealtimeContextString() {
+    let ctx = `\n\n=== REAL-TIME CONTEXT ===\nCurrent date/time: ${getCurrentTimeString()}`;
+    if (realtimeWeather) {
+        ctx += `\nCurrent weather in ${realtimeWeather.location}: ${realtimeWeather.condition}, ${realtimeWeather.temp}°F (feels like ${realtimeWeather.feelsLike}°F), humidity ${realtimeWeather.humidity}%, wind ${realtimeWeather.windSpeed} mph`;
+    } else {
+        ctx += `\nWeather: Location access not granted — weather unavailable`;
+    }
+    ctx += `\nIMPORTANT: You have real-time date/time and weather above. Use it naturally. Never claim you lack access to the current time or weather.\n=== END REAL-TIME CONTEXT ===`;
+    return ctx;
+}
+// ====== END REAL-TIME CONTEXT ======
 
 function renderMaterialList() {
     const list = document.getElementById('materialList');
@@ -1085,16 +1127,17 @@ If you are Data Analyst:
 - Precise and statistical`;
     }
 
-    // Inject persistent course material and user profile into context
+    // Inject persistent course material, user profile, and real-time data into context
     const materialContext = getPersistentMaterialContext();
     const profileContext = getUserProfileContext();
+    const realtimeContext = getRealtimeContextString();
 
     // System message with personality
     const systemMessage = {
         role: "system",
         content: `You are ${config.name}, a ${config.style}.
 
-${personalityInstructions}${materialContext}${profileContext}
+${personalityInstructions}${materialContext}${profileContext}${realtimeContext}
 
 SOURCE CITATION RULE:
 When your response includes specific facts, statistics, scientific concepts, historical events, or technical claims, add a "Sources & References" section at the very bottom of your response formatted as:
@@ -2370,6 +2413,10 @@ function initializeMainSystem() {
     setupApiKeyManagement();
     setupFileUploadListeners();
     setupChatHistoryListeners();
+
+    // Fetch weather in background; refresh every 15 min
+    fetchWeatherData();
+    setInterval(fetchWeatherData, WEATHER_CACHE_MS);
     
     // Wait for voices to load
     setTimeout(() => {

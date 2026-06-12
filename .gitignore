@@ -6,7 +6,11 @@ __pycache__/
 *.pyc 
 .DS_Store 
 *.log 
- 
+
+# guides 
+AI_Development_Guide_Simple_Version.docx
+AI_Development_Guide_v1_and_v2.docx
+
 # dependencies 
 /node_modules 
 /.pnp 

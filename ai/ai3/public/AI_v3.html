@@ -118,13 +118,10 @@
     </div>
 
     <script>
-        // Optional: set to your deployed Flask (or proxy) backend.
-        // Example (local Flask):
+        // AI3_BACKEND_URL is intentionally unset so production uses '/api/chat'
+        // (the Vercel serverless function at api/chat.py).
+        // For local Flask development, uncomment the line below:
         // window.AI3_BACKEND_URL = 'http://127.0.0.1:5001/api/chat';
-        // If unset, the frontend falls back to '/api/chat' (only works if your host provides that route).
-        // Force local backend for debugging (avoids '/api/chat' not found)
-        window.AI3_BACKEND_URL = 'http://127.0.0.1:5001/api/chat';
-
     </script>
     <script src="../scripts/ai_v3_main.js"></script>
 </body>
