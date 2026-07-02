@@ -1,0 +1,646 @@
+{
+    "Effects": [
+        {
+            "AllowOnlyFirst": false,
+            "AutoStart": true,
+            "Brightness": 100,
+            "ControllerZones": [
+                {
+                    "description": "Virtual controller provided by VisualMap plugin",
+                    "is_segment": false,
+                    "location": "Somewhere over the rainbow",
+                    "name": "PC Layout",
+                    "reverse": false,
+                    "segment_idx": -1,
+                    "self_brightness": 100,
+                    "serial": "VISUAL_MAP_VISUAL_CONTROLLER_SERIAL",
+                    "vendor": "VisualMap plugin",
+                    "version": "1.0.0",
+                    "zone_idx": 0
+                }
+            ],
+            "CustomName": "",
+            "CustomSettings": {
+                "audio_settings": {
+                    "amplitude": 100,
+                    "audio_device": 2,
+                    "avg_mode": 0,
+                    "avg_size": 8,
+                    "decay": 80,
+                    "equalizer": [
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "filter_constant": 1.0,
+                    "nrml_ofst": 0.03999999910593033,
+                    "nrml_scl": 0.5,
+                    "window_mode": 0
+                },
+                "height": 128,
+                "invert_time": false,
+                "shader_name": "CausticsAndWater",
+                "shader_program": {
+                    "height": 128,
+                    "main_pass": {
+                        "fragment_shader": "// Found this on GLSL sandbox. I really liked it, changed a few things and made it tileable.\n// :)\n// by David Hoskins.\n\n\n// Water turbulence effect by joltz0r 2013-07-04, improved 2013-07-07\n\n\n// Redefine below to see the tiling...\n//#define SHOW_TILING\n\n#define TAU 6.28318530718\n#define MAX_ITER 5\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord ) \n{\n\tfloat time = iTime * .5+23.0;\n    // uv should be the 0-1 uv of texture...\n\tvec2 uv = fragCoord.xy / iResolution.xy;\n    \n#ifdef SHOW_TILING\n\tvec2 p = mod(uv*TAU*2.0, TAU)-250.0;\n#else\n    vec2 p = mod(uv*TAU, TAU)-250.0;\n#endif\n\tvec2 i = vec2(p);\n\tfloat c = 1.0;\n\tfloat inten = .005;\n\n\tfor (int n = 0; n < MAX_ITER; n++) \n\t{\n\t\tfloat t = time * (1.0 - (3.5 / float(n+1)));\n\t\ti = p + vec2(cos(t - i.x) + sin(t + i.y), sin(t - i.y) + cos(t + i.x));\n\t\tc += 1.0/length(vec2(p.x / (sin(i.x+t)/inten),p.y / (cos(i.y+t)/inten)));\n\t}\n\tc /= float(MAX_ITER);\n\tc = 1.17-pow(c, 1.4);\n\tvec3 colour = vec3(pow(abs(c), 8.0));\n    colour = clamp(colour + vec3(0.0, 0.35, 0.5), 0.0, 1.0);\n    \n\n\t#ifdef SHOW_TILING\n\t// Flash tile borders...\n\tvec2 pixel = 2.0 / iResolution.xy;\n\tuv *= 2.0;\n\n\tfloat f = floor(mod(iTime*.5, 2.0)); \t// Flash value.\n\tvec2 first = step(pixel, uv) * f;\t\t   \t// Rule out first screen pixels and flash.\n\tuv  = step(fract(uv), pixel);\t\t\t\t// Add one line of pixels per tile.\n\tcolour = mix(colour, vec3(1.0, 1.0, 0.0), (uv.x + uv.y) * first.x * first.y); // Yellow line\n\t\n\t#endif\n\tfragColor = vec4(colour, 1.0);\n}",
+                        "texture_path": "",
+                        "type": 2
+                    },
+                    "passes": [],
+                    "version": "110",
+                    "width": 128
+                },
+                "show_rendering": false,
+                "use_audio": true,
+                "width": 128
+            },
+            "EffectClassName": "Shaders",
+            "FPS": 60,
+            "RandomColors": false,
+            "Slider2Val": 1,
+            "Speed": 1000,
+            "Temperature": 0,
+            "Tint": -100
+        },
+        {
+            "AllowOnlyFirst": false,
+            "AutoStart": false,
+            "Brightness": 100,
+            "ControllerZones": [
+                {
+                    "description": "Corsair Vengeance Pro RGB Device",
+                    "is_segment": false,
+                    "location": "I2C: /dev/i2c-18, address 0x58",
+                    "name": "Corsair Vengeance Pro RGB",
+                    "reverse": false,
+                    "segment_idx": -1,
+                    "self_brightness": 100,
+                    "serial": "",
+                    "vendor": "Corsair",
+                    "version": "",
+                    "zone_idx": 0
+                },
+                {
+                    "description": "Corsair Vengeance Pro RGB Device",
+                    "is_segment": false,
+                    "location": "I2C: /dev/i2c-18, address 0x59",
+                    "name": "Corsair Vengeance Pro RGB",
+                    "reverse": false,
+                    "segment_idx": -1,
+                    "self_brightness": 100,
+                    "serial": "",
+                    "vendor": "Corsair",
+                    "version": "",
+                    "zone_idx": 0
+                },
+                {
+                    "description": "Corsair Vengeance Pro RGB Device",
+                    "is_segment": false,
+                    "location": "I2C: /dev/i2c-18, address 0x5A",
+                    "name": "Corsair Vengeance Pro RGB",
+                    "reverse": false,
+                    "segment_idx": -1,
+                    "self_brightness": 100,
+                    "serial": "",
+                    "vendor": "Corsair",
+                    "version": "",
+                    "zone_idx": 0
+                },
+                {
+                    "description": "Corsair Vengeance Pro RGB Device",
+                    "is_segment": false,
+                    "location": "I2C: /dev/i2c-18, address 0x5B",
+                    "name": "Corsair Vengeance Pro RGB",
+                    "reverse": false,
+                    "segment_idx": -1,
+                    "self_brightness": 100,
+                    "serial": "",
+                    "vendor": "Corsair",
+                    "version": "",
+                    "zone_idx": 0
+                },
+                {
+                    "description": "ENE SMBus Device",
+                    "is_segment": false,
+                    "location": "I2C: /dev/i2c-11, address 0x67",
+                    "name": "ASUS TUF GeForce RTX 4070 Ti Gaming OC",
+                    "reverse": false,
+                    "segment_idx": -1,
+                    "self_brightness": 100,
+                    "serial": "",
+                    "vendor": "ASUS",
+                    "version": "AUMA0-E6K5-1107",
+                    "zone_idx": 0
+                },
+                {
+                    "description": "SteelSeries Mouse Device",
+                    "is_segment": false,
+                    "location": "HID: /dev/hidraw3",
+                    "name": "SteelSeries Aerox 5 Wireless",
+                    "reverse": false,
+                    "segment_idx": -1,
+                    "self_brightness": 100,
+                    "serial": "",
+                    "vendor": "SteelSeries",
+                    "version": "",
+                    "zone_idx": 0
+                },
+                {
+                    "description": "SteelSeries Mouse Device",
+                    "is_segment": false,
+                    "location": "HID: /dev/hidraw3",
+                    "name": "SteelSeries Aerox 5 Wireless",
+                    "reverse": false,
+                    "segment_idx": -1,
+                    "self_brightness": 100,
+                    "serial": "",
+                    "vendor": "SteelSeries",
+                    "version": "",
+                    "zone_idx": 1
+                },
+                {
+                    "description": "SteelSeries Mouse Device",
+                    "is_segment": false,
+                    "location": "HID: /dev/hidraw3",
+                    "name": "SteelSeries Aerox 5 Wireless",
+                    "reverse": false,
+                    "segment_idx": -1,
+                    "self_brightness": 100,
+                    "serial": "",
+                    "vendor": "SteelSeries",
+                    "version": "",
+                    "zone_idx": 2
+                },
+                {
+                    "description": "Corsair Commander Core Device",
+                    "is_segment": false,
+                    "location": "HID: /dev/hidraw24",
+                    "name": "Corsair Commander Core",
+                    "reverse": false,
+                    "segment_idx": -1,
+                    "self_brightness": 100,
+                    "serial": "",
+                    "vendor": "Corsair",
+                    "version": "v2.11.221",
+                    "zone_idx": 0
+                },
+                {
+                    "description": "Corsair Commander Core Device",
+                    "is_segment": false,
+                    "location": "HID: /dev/hidraw24",
+                    "name": "Corsair Commander Core",
+                    "reverse": false,
+                    "segment_idx": -1,
+                    "self_brightness": 100,
+                    "serial": "",
+                    "vendor": "Corsair",
+                    "version": "v2.11.221",
+                    "zone_idx": 1
+                },
+                {
+                    "description": "Corsair Commander Core Device",
+                    "is_segment": false,
+                    "location": "HID: /dev/hidraw24",
+                    "name": "Corsair Commander Core",
+                    "reverse": false,
+                    "segment_idx": -1,
+                    "self_brightness": 100,
+                    "serial": "",
+                    "vendor": "Corsair",
+                    "version": "v2.11.221",
+                    "zone_idx": 2
+                },
+                {
+                    "description": "Corsair Commander Core Device",
+                    "is_segment": false,
+                    "location": "HID: /dev/hidraw24",
+                    "name": "Corsair Commander Core",
+                    "reverse": false,
+                    "segment_idx": -1,
+                    "self_brightness": 100,
+                    "serial": "",
+                    "vendor": "Corsair",
+                    "version": "v2.11.221",
+                    "zone_idx": 3
+                },
+                {
+                    "description": "Corsair Commander Core Device",
+                    "is_segment": false,
+                    "location": "HID: /dev/hidraw24",
+                    "name": "Corsair Commander Core",
+                    "reverse": false,
+                    "segment_idx": -1,
+                    "self_brightness": 100,
+                    "serial": "",
+                    "vendor": "Corsair",
+                    "version": "v2.11.221",
+                    "zone_idx": 4
+                },
+                {
+                    "description": "Corsair Commander Core Device",
+                    "is_segment": false,
+                    "location": "HID: /dev/hidraw24",
+                    "name": "Corsair Commander Core",
+                    "reverse": false,
+                    "segment_idx": -1,
+                    "self_brightness": 100,
+                    "serial": "",
+                    "vendor": "Corsair",
+                    "version": "v2.11.221",
+                    "zone_idx": 5
+                },
+                {
+                    "description": "Corsair Commander Core Device",
+                    "is_segment": false,
+                    "location": "HID: /dev/hidraw24",
+                    "name": "Corsair Commander Core",
+                    "reverse": false,
+                    "segment_idx": -1,
+                    "self_brightness": 100,
+                    "serial": "",
+                    "vendor": "Corsair",
+                    "version": "v2.11.221",
+                    "zone_idx": 6
+                },
+                {
+                    "description": "MSI Mystic Light Device (185-byte)",
+                    "is_segment": false,
+                    "location": "HID: /dev/hidraw5",
+                    "name": "MSI MAG Z690 TOMAHAWK WIFI DDR4 (MS-7D32)",
+                    "reverse": false,
+                    "segment_idx": -1,
+                    "self_brightness": 100,
+                    "serial": "A02021081802",
+                    "vendor": "MSI",
+                    "version": "AP/LD 0.2 / 1.5",
+                    "zone_idx": 0
+                },
+                {
+                    "description": "MSI Mystic Light Device (185-byte)",
+                    "is_segment": false,
+                    "location": "HID: /dev/hidraw5",
+                    "name": "MSI MAG Z690 TOMAHAWK WIFI DDR4 (MS-7D32)",
+                    "reverse": false,
+                    "segment_idx": -1,
+                    "self_brightness": 100,
+                    "serial": "A02021081802",
+                    "vendor": "MSI",
+                    "version": "AP/LD 0.2 / 1.5",
+                    "zone_idx": 1
+                },
+                {
+                    "description": "MSI Mystic Light Device (185-byte)",
+                    "is_segment": false,
+                    "location": "HID: /dev/hidraw5",
+                    "name": "MSI MAG Z690 TOMAHAWK WIFI DDR4 (MS-7D32)",
+                    "reverse": false,
+                    "segment_idx": -1,
+                    "self_brightness": 100,
+                    "serial": "A02021081802",
+                    "vendor": "MSI",
+                    "version": "AP/LD 0.2 / 1.5",
+                    "zone_idx": 2
+                },
+                {
+                    "description": "MSI Mystic Light Device (185-byte)",
+                    "is_segment": false,
+                    "location": "HID: /dev/hidraw5",
+                    "name": "MSI MAG Z690 TOMAHAWK WIFI DDR4 (MS-7D32)",
+                    "reverse": false,
+                    "segment_idx": -1,
+                    "self_brightness": 100,
+                    "serial": "A02021081802",
+                    "vendor": "MSI",
+                    "version": "AP/LD 0.2 / 1.5",
+                    "zone_idx": 3
+                },
+                {
+                    "description": "Virtual controller provided by VisualMap plugin",
+                    "is_segment": false,
+                    "location": "Somewhere over the rainbow",
+                    "name": "PC Layout Jarvis 2",
+                    "reverse": false,
+                    "segment_idx": -1,
+                    "self_brightness": 100,
+                    "serial": "VISUAL_MAP_VISUAL_CONTROLLER_SERIAL",
+                    "vendor": "VisualMap plugin",
+                    "version": "1.0.0",
+                    "zone_idx": 0
+                }
+            ],
+            "CustomName": "Jarvis Thinking",
+            "CustomSettings": {
+                "groups": [
+                    {
+                        "composer_fn": 1,
+                        "layers": [
+                            {
+                                "composer_fn": 1,
+                                "effect_settings": {
+                                    "AllowOnlyFirst": false,
+                                    "Brightness": 10,
+                                    "CustomName": "",
+                                    "EffectClassName": "GradientWave",
+                                    "FPS": 60,
+                                    "RandomColors": false,
+                                    "Slider2Val": 1,
+                                    "Speed": 20,
+                                    "Temperature": 0,
+                                    "Tint": 0,
+                                    "UserColors": [
+                                        5992193,
+                                        5992193
+                                    ]
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "composer_fn": 1,
+                        "layers": [
+                            {
+                                "composer_fn": 1,
+                                "effect_settings": {
+                                    "AllowOnlyFirst": false,
+                                    "Brightness": 22,
+                                    "CustomName": "",
+                                    "CustomSettings": {
+                                        "colors": [
+                                            5992193
+                                        ]
+                                    },
+                                    "EffectClassName": "Breathing",
+                                    "FPS": 60,
+                                    "RandomColors": false,
+                                    "Slider2Val": 1,
+                                    "Speed": 80,
+                                    "Temperature": 0,
+                                    "Tint": 0
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "composer_fn": 1,
+                        "layers": [
+                            {
+                                "composer_fn": 0,
+                                "effect_settings": {
+                                    "AllowOnlyFirst": false,
+                                    "Brightness": 100,
+                                    "CustomName": "",
+                                    "CustomSettings": {
+                                        "audio_settings": {
+                                            "amplitude": 300,
+                                            "audio_device": 3,
+                                            "avg_mode": 0,
+                                            "avg_size": 8,
+                                            "decay": 75,
+                                            "equalizer": [
+                                                1.0,
+                                                1.0,
+                                                1.0,
+                                                1.0,
+                                                1.0,
+                                                1.0,
+                                                1.0,
+                                                1.0,
+                                                1.0,
+                                                1.0,
+                                                1.0,
+                                                1.0,
+                                                1.0,
+                                                1.0,
+                                                1.0,
+                                                1.0
+                                            ],
+                                            "filter_constant": 1.0,
+                                            "nrml_ofst": 0.03999999910593033,
+                                            "nrml_scl": 0.5,
+                                            "window_mode": 0
+                                        },
+                                        "height": 128,
+                                        "invert_time": false,
+                                        "shader_name": "Jarvis",
+                                        "shader_program": {
+                                            "height": 128,
+                                            "main_pass": {
+                                                "fragment_shader": "// --- JARVIS TWEAK PANEL ---\n#define JARVIS_COLOR      vec3(0.0, 0.435, 0.353) // #006f5a\n#define IDLE_SIZE         0.001  // Microscopic starting point\n#define MAX_REACH         0.9    // 1.0 is screen edge, 1.5 reaches corners\n#define SENSITIVITY       1.0    // Global volume gain\n#define GROWTH_EXPONENT   1.0    // HIGHER = stays small longer, then explodes faster\n#define THICKNESS_BASE    1.5    // How fat the ring is\n#define WARP_MULT         0.4    // How much the jaggedness scales with volume\n// ---------------------------\n\nfloat hash(vec2 p) {\n    p = fract(p * vec2(234.34, 435.345));\n    p += dot(p, p + 34.23);\n    return fract(p.x * p.y);\n}\n\nfloat noise(vec2 p) {\n    vec2 i = floor(p);\n    vec2 f = fract(p);\n    f = f * f * (3.0 - 2.0 * f);\n    float n = mix(mix(hash(i + vec2(0.0, 0.0)), hash(i + vec2(1.0, 0.0)), f.x),\n                  mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);\n    return n;\n}\n\nfloat fbm(vec2 p) {\n    float total = 0.0;\n    float amplitude = 0.8;\n    for (int i = 0; i < 4; i++) {\n        total += noise(p) * amplitude;\n        p *= 2.0;\n        amplitude *= 0.5;\n    }\n    return total;\n}\n\nvoid mainImage( out vec4 fragColor, in vec2 fragCoord )\n{\n    vec2 uv = fragCoord.xy / iResolution.xy;\n    vec2 p = uv * 2.0 - 1.0;\n    p.x *= iResolution.x / iResolution.y;\n    float d = length(p);\n    float a = atan(p.y, p.x);\n\n    // 1. Aggressive Volume Sampling\n    float rawVol = (texture(iChannel0, vec2(0.07, 0.0)).x + \n                    texture(iChannel0, vec2(0.15, 0.0)).x + \n                    texture(iChannel0, vec2(0.30, 0.0)).x) / 3.0;\n    \n    float vol = clamp(rawVol * SENSITIVITY, 0.0, 1.0);\n\n    // 2. Exponential Expansion Logic\n    // This is the \"Secret Sauce\": pow(vol, exponent) keeps it small at low values\n    float expansion = pow(vol, GROWTH_EXPONENT) * MAX_REACH;\n    \n    // Displacement (Warp) is now multiplied by vol so it's 0 at idle\n    float displacement = fbm(vec2(a * 3.0, d - iTime * 1.5)) * (vol * WARP_MULT);\n    \n    float radius = IDLE_SIZE + expansion + displacement;\n\n    // 3. Dynamic Ring Rendering\n    float distToRing = abs(d - radius);\n    \n    // Thickness also scales exponentially so it feels \"meaty\" when large\n    float thickness = (THICKNESS_BASE * pow(vol, 2.0)) + 0.005;\n    float ringSharp = smoothstep(thickness, 0.0, distToRing);\n    \n    // Glow that flares up only when the ring expands\n    float glow = 0.05 / (distToRing + 0.005) * (vol * 4.0);\n    \n    vec3 finalColor = JARVIS_COLOR * (ringSharp + glow);\n\n    // 4. Force Blackout at Idle\n    if (vol < 0.01) finalColor = vec3(0.0);\n\n    fragColor = vec4(finalColor, 1.0);\n}",
+                                                "texture_path": "",
+                                                "type": 2
+                                            },
+                                            "passes": [
+                                                {
+                                                    "fragment_shader": "",
+                                                    "texture_path": "",
+                                                    "type": 1
+                                                }
+                                            ],
+                                            "version": "330",
+                                            "width": 128
+                                        },
+                                        "show_rendering": true,
+                                        "use_audio": true,
+                                        "width": 128
+                                    },
+                                    "EffectClassName": "Shaders",
+                                    "FPS": 60,
+                                    "RandomColors": false,
+                                    "Slider2Val": 1,
+                                    "Speed": 100,
+                                    "Temperature": 0,
+                                    "Tint": 0
+                                }
+                            }
+                        ]
+                    }
+                ]
+            },
+            "EffectClassName": "Layers",
+            "FPS": 60,
+            "RandomColors": false,
+            "Slider2Val": 1,
+            "Speed": 1,
+            "Temperature": 0,
+            "Tint": 0
+        },
+        {
+            "AllowOnlyFirst": false,
+            "AutoStart": false,
+            "Brightness": 100,
+            "ControllerZones": [
+                {
+                    "description": "Virtual controller provided by VisualMap plugin",
+                    "is_segment": false,
+                    "location": "Somewhere over the rainbow",
+                    "name": "PC Layout Jarvis 1",
+                    "reverse": false,
+                    "segment_idx": -1,
+                    "self_brightness": 100,
+                    "serial": "VISUAL_MAP_VISUAL_CONTROLLER_SERIAL",
+                    "vendor": "VisualMap plugin",
+                    "version": "1.0.0",
+                    "zone_idx": 0
+                }
+            ],
+            "CustomName": "",
+            "CustomSettings": {
+                "glow": 11,
+                "h_speed": 83,
+                "thickness": 4,
+                "v_speed": 56
+            },
+            "EffectClassName": "CrossingBeams",
+            "FPS": 60,
+            "RandomColors": false,
+            "Slider2Val": 1,
+            "Speed": 5,
+            "Temperature": 0,
+            "Tint": 0,
+            "UserColors": [
+                13762304,
+                13762304
+            ]
+        },
+        {
+            "AllowOnlyFirst": false,
+            "AutoStart": false,
+            "Brightness": 100,
+            "ControllerZones": [
+                {
+                    "description": "Virtual controller provided by VisualMap plugin",
+                    "is_segment": false,
+                    "location": "Somewhere over the rainbow",
+                    "name": "PC Layout Jarvis 3",
+                    "reverse": false,
+                    "segment_idx": -1,
+                    "self_brightness": 100,
+                    "serial": "VISUAL_MAP_VISUAL_CONTROLLER_SERIAL",
+                    "vendor": "VisualMap plugin",
+                    "version": "1.0.0",
+                    "zone_idx": 0
+                }
+            ],
+            "CustomName": "",
+            "CustomSettings": {
+                "background": 2764801,
+                "bubbles_thickness": 21,
+                "max_bubbles": 6,
+                "max_expansion": 100,
+                "rarity": 1,
+                "speed_mult": 44
+            },
+            "EffectClassName": "Bubbles",
+            "FPS": 60,
+            "RandomColors": false,
+            "Slider2Val": 1,
+            "Speed": 1,
+            "Temperature": 0,
+            "Tint": 0,
+            "UserColors": [
+                13762304,
+                6911748,
+                4410370,
+                13762304,
+                6911748
+            ]
+        },
+        {
+            "AllowOnlyFirst": false,
+            "AutoStart": false,
+            "Brightness": 100,
+            "ControllerZones": [],
+            "CustomName": "",
+            "EffectClassName": "BreathingCircle",
+            "FPS": 60,
+            "RandomColors": false,
+            "Slider2Val": 5,
+            "Speed": 48,
+            "Temperature": 0,
+            "Tint": 0,
+            "UserColors": [
+                13757198
+            ]
+        },
+        {
+            "AllowOnlyFirst": false,
+            "AutoStart": false,
+            "Brightness": 100,
+            "ControllerZones": [
+                {
+                    "description": "Virtual controller provided by VisualMap plugin",
+                    "is_segment": false,
+                    "location": "Somewhere over the rainbow",
+                    "name": "PC Layout Jarvis 4",
+                    "reverse": false,
+                    "segment_idx": -1,
+                    "self_brightness": 100,
+                    "serial": "VISUAL_MAP_VISUAL_CONTROLLER_SERIAL",
+                    "vendor": "VisualMap plugin",
+                    "version": "1.0.0",
+                    "zone_idx": 0
+                }
+            ],
+            "CustomName": "",
+            "CustomSettings": {
+                "colors": [
+                    13762304
+                ],
+                "rarity": 41
+            },
+            "EffectClassName": "Mosaic",
+            "FPS": 60,
+            "RandomColors": false,
+            "Slider2Val": 1,
+            "Speed": 135,
+            "Temperature": 0,
+            "Tint": 0
+        },
+        {
+            "AllowOnlyFirst": false,
+            "AutoStart": false,
+            "Brightness": 100,
+            "ControllerZones": [
+                {
+                    "description": "Virtual controller provided by VisualMap plugin",
+                    "is_segment": false,
+                    "location": "Somewhere over the rainbow",
+                    "name": "PC Layout Jarvis 5",
+                    "reverse": false,
+                    "segment_idx": -1,
+                    "self_brightness": 100,
+                    "serial": "VISUAL_MAP_VISUAL_CONTROLLER_SERIAL",
+                    "vendor": "VisualMap plugin",
+                    "version": "1.0.0",
+                    "zone_idx": 0
+                }
+            ],
+            "CustomName": "",
+            "EffectClassName": "Fill",
+            "FPS": 60,
+            "RandomColors": false,
+            "Slider2Val": 1,
+            "Speed": 100,
+            "Temperature": 0,
+            "Tint": 0,
+            "UserColors": [
+                13762304
+            ]
+        }
+    ],
+    "version": 2
+}

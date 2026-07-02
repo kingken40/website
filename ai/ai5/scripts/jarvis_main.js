@@ -55,6 +55,19 @@ let currentPersonality = 'Nova';
 // Initialize conversation history
 let conversationHistory = [];
 
+const JARVIS_STYLE_PHRASES_PATH = '../Jarvis-main/phrases.txt';
+const JARVIS_STYLE_REFERENCE_LIMIT = 24;
+const JARVIS_STYLE_FALLBACK_PHRASES = [
+    'At your service.',
+    'Ready when you are.',
+    'Systems are now fully operational.',
+    'Shall we rethink that approach?',
+    'Technically possible, strategically questionable.',
+    'I would advise against that.'
+];
+let jarvisStylePhrases = [...JARVIS_STYLE_FALLBACK_PHRASES];
+let jarvisStylePhrasesLoaded = false;
+
 // File attachment state
 let currentFileAttachment = null; // Stores { name, type, content, extension }
 
@@ -78,7 +91,7 @@ const personalities = {
         responsePrefix: 'Certainly, sir. '
     },
     genius: {
-        name: 'Genius Mode',
+        name: 'Genius',
         greeting: 'Genius mode activated. Ready to solve complex problems.',
         style: 'analytical, technical, and solution-focused',
         responsePrefix: 'Analyzing... '
@@ -96,7 +109,7 @@ const personalities = {
         responsePrefix: 'Based on the data... '
     },
     brainstorm: {
-        name: 'Brainstorm Mode',
+        name: 'Brainstorm',
         greeting: 'Creative thinking mode activated. Let\'s explore some ideas together.',
         style: 'creative, exploratory, non-judgmental, generates multiple perspectives and "what-if" scenarios, encourages wild ideas and unconventional thinking',
         responsePrefix: 'Let\'s explore this... '
@@ -108,6 +121,72 @@ const personalities = {
         responsePrefix: ''
     }
 };
+
+function parseJarvisStylePhrases(rawText) {
+    if (!rawText || typeof rawText !== 'string') return [];
+
+    const cleaned = rawText
+        .split(/\r?\n/)
+        .map(line =>
+            line
+                .replace(/^\s*\d+\.\s*/, '')
+                .replace(/^\s*-\s*/, '')
+                .replace(/^["']+/, '')
+                .replace(/["']+\s*$/, '')
+                .trim()
+        )
+        .filter(line => line && line.length > 3);
+
+    return Array.from(new Set(cleaned));
+}
+
+async function loadJarvisStylePhrases() {
+    if (jarvisStylePhrasesLoaded) {
+        return jarvisStylePhrases;
+    }
+
+    jarvisStylePhrasesLoaded = true;
+
+    try {
+        const response = await fetch(JARVIS_STYLE_PHRASES_PATH, { cache: 'no-store' });
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const rawText = await response.text();
+        const parsed = parseJarvisStylePhrases(rawText);
+        if (parsed.length > 0) {
+            jarvisStylePhrases = parsed;
+            console.log(`🎭 Loaded ${parsed.length} JARVIS style phrases from Jarvis-main`);
+        }
+    } catch (error) {
+        console.warn('🎭 Could not load Jarvis-main phrases.txt, using fallback phrases:', error);
+    }
+
+    window.jarvisStylePhrases = [...jarvisStylePhrases];
+    return jarvisStylePhrases;
+}
+
+function getRandomJarvisStylePhrase() {
+    const source = Array.isArray(jarvisStylePhrases) && jarvisStylePhrases.length > 0
+        ? jarvisStylePhrases
+        : JARVIS_STYLE_FALLBACK_PHRASES;
+
+    return source[Math.floor(Math.random() * source.length)];
+}
+
+function getJarvisStyleReferenceContext(personality) {
+    if (personality !== 'Nova') return '';
+
+    const source = Array.isArray(jarvisStylePhrases) && jarvisStylePhrases.length > 0
+        ? jarvisStylePhrases
+        : JARVIS_STYLE_FALLBACK_PHRASES;
+    const sampled = source.slice(0, JARVIS_STYLE_REFERENCE_LIMIT);
+    if (sampled.length === 0) return '';
+
+    const referenceBlock = sampled.map((line, index) => `${index + 1}. ${line}`).join('\n');
+    return `\n\nJARVIS STYLE REFERENCE (from Jarvis-main/phrases.txt; tone inspiration only - do not copy long lines verbatim):\n${referenceBlock}\n`;
+}
 
 // ====== PERSISTENT MATERIAL STORE ======
 let persistentMaterial = [];
@@ -1099,14 +1178,17 @@ function prepareOpenAIMessages(userMessage, personality) {
 Your role:
 - Help students understand assignments and break down complex problems
 - Provide step-by-step solutions with clear explanations (not just answers)
+- Teach for understanding first: define terms, explain why each step matters, and connect ideas to core concepts
 - For essays/writing: help with outlines, thesis development, argument structure, citations (APA, MLA, Chicago)
 - For math/science: show complete working with explanations of each step
 - For research: help find relevant angles and organize information
-- Create study guides, practice questions, flashcard-style reviews on demand
+- Create study guides, practice questions, flashcard-style reviews, and concise summaries on demand
 - When course material is uploaded, reference it directly and prioritize it over general knowledge
+- Use worked examples, analogies, and check-for-understanding questions when they help learning
 - Encourage understanding, not just completion`;
     } else {
         personalityInstructions = `Keep responses natural and conversational. Be helpful and direct - skip unnecessary formality and preamble.
+When the user is trying to learn, teach clearly: explain step by step, define important terms, use examples, and note uncertainty when appropriate.
 
 If you are N.O.V.A:
 - Address user as "sir" when appropriate
@@ -1128,6 +1210,7 @@ If you are Data Analyst:
     }
 
     // Inject persistent course material, user profile, and real-time data into context
+    const jarvisStyleContext = getJarvisStyleReferenceContext(personality);
     const materialContext = getPersistentMaterialContext();
     const profileContext = getUserProfileContext();
     const realtimeContext = getRealtimeContextString();
@@ -1137,18 +1220,24 @@ If you are Data Analyst:
         role: "system",
         content: `You are ${config.name}, a ${config.style}.
 
-${personalityInstructions}${materialContext}${profileContext}${realtimeContext}
+${personalityInstructions}${jarvisStyleContext}${materialContext}${profileContext}${realtimeContext}
 
 SOURCE CITATION RULE:
-When your response includes specific facts, statistics, scientific concepts, historical events, or technical claims, add a "Sources & References" section at the very bottom of your response formatted as:
+For educational, research, or fact-heavy responses that rely on specific facts, statistics, scientific concepts, historical events, or technical claims, add a "Sources & References" section at the very bottom of your response formatted as:
 
 ---
 **Sources & References**
-- [Source name or type, e.g. "General relativity — Einstein, 1915"]
-- [Textbook / field, e.g. "Quantum Mechanics — Standard physics curriculum"]
+- Source title or organization name
+ Link: [https://example.com](https://example.com)
+- Source title or organization name
+ Link: [https://example.com](https://example.com)
 
-Only include this section when citing factual claims is genuinely useful. For casual conversation or simple questions, omit it. Never fabricate specific URLs or DOIs.`
-    };
+Every source item must include BOTH:
+1. A human-readable source title
+2. A full URL shown in markdown link format so the interface can render a clickable link
+
+Do not output title-only sources. If you cannot provide a reliable public URL, say "No verified public link available" instead of inventing one. For casual conversation or simple questions, omit the section. Never fabricate specific URLs or DOIs.`
+   };
     
     // Build messages array starting with system message
     const messages = [systemMessage];
@@ -1241,6 +1330,21 @@ function autoResizeTextarea(textarea) {
     textarea.style.height = newHeight + 'px';
 }
 
+function getJarvisAudioPackOptions() {
+    if (Array.isArray(window.JARVIS_AUDIO_PACKS) && window.JARVIS_AUDIO_PACKS.length > 0) {
+        return window.JARVIS_AUDIO_PACKS;
+    }
+
+    return [
+        { id: 'jarvis-pack-cfx', name: 'JARVIS Pack - CFX' },
+        { id: 'jarvis-pack-ghv4', name: 'JARVIS Pack - GHV4' },
+        { id: 'jarvis-pack-proffie', name: 'JARVIS Pack - ProffieOS V2' },
+        { id: 'jarvis-pack-sn4', name: 'JARVIS Pack - SN4' },
+        { id: 'jarvis-pack-xeno2', name: 'JARVIS Pack - Xeno2' },
+        { id: 'jarvis-pack-xeno3', name: 'JARVIS Pack - Xeno3' }
+    ];
+}
+
 function populateVoiceSelection() {
     const voiceSelect = document.getElementById('voiceSelection');
     if (!voiceSelect) {
@@ -1308,6 +1412,19 @@ function populateVoiceSelection() {
     console.log('🤖 Nova-suitable voices:', NovaVoices.length);
     console.log('⭐ Best Nova voices:', bestNovaVoices.length);
     
+    const jarvisPacks = getJarvisAudioPackOptions();
+    if (jarvisPacks.length > 0) {
+        const packGroup = document.createElement('optgroup');
+        packGroup.label = 'JARVIS Audio Packs (.wav)';
+        jarvisPacks.forEach(pack => {
+            const option = document.createElement('option');
+            option.value = `pack:${pack.id}`;
+            option.textContent = `${pack.name} 🎵`;
+            packGroup.appendChild(option);
+        });
+        voiceSelect.appendChild(packGroup);
+    }
+
     // Add best Nova voices first (British + suitable characteristics)
     if (bestNovaVoices.length > 0) {
         const bestGroup = document.createElement('optgroup');
@@ -1368,22 +1485,32 @@ function populateVoiceSelection() {
         });
         voiceSelect.appendChild(otherGroup);
     }
-    
+
     // Try to restore saved voice preference
     let voiceToSelect = null;
     try {
-        const savedPreference = localStorage.getItem('NovaVoicePreference');
-        if (savedPreference) {
+        const savedPreferenceKeys = ['NovaVoicePreference', 'jarvisVoicePreference'];
+        for (const preferenceKey of savedPreferenceKeys) {
+            const savedPreference = localStorage.getItem(preferenceKey);
+            if (!savedPreference) {
+                continue;
+            }
+
             const pref = JSON.parse(savedPreference);
             voiceToSelect = voices.find(voice => voice.name === pref.name && voice.lang === pref.lang);
             if (voiceToSelect) {
                 window.selectedVoice = voiceToSelect;
                 console.log('🔊 Restored saved voice:', voiceToSelect.name);
+                break;
             }
         }
     } catch (e) {
         console.warn('Could not restore voice preference:', e);
     }
+
+    const savedMode = localStorage.getItem('Nova_voice_mode');
+    const savedPack = localStorage.getItem('Nova_selected_jarvis_pack');
+    const savedPackValue = savedPack ? `pack:${savedPack}` : null;
     
     // Auto-select best Nova voice if no preference is saved
     if (!voiceToSelect && !window.selectedVoice) {
@@ -1408,11 +1535,22 @@ function populateVoiceSelection() {
     }
     
     // Set current voice in dropdown
-    if (window.selectedVoice) {
+    if (savedMode === 'jarvis-pack' && savedPackValue && Array.from(voiceSelect.options).some(option => option.value === savedPackValue)) {
+        voiceSelect.value = savedPackValue;
+        if (typeof window.setVoiceModeSelection === 'function') {
+            window.setVoiceModeSelection('jarvis-pack', savedPack);
+        }
+    } else if (window.selectedVoice) {
         voiceSelect.value = window.selectedVoice.name;
+        if (typeof window.setVoiceModeSelection === 'function') {
+            window.setVoiceModeSelection('tts', null);
+        }
     } else if (voiceToSelect) {
         voiceSelect.value = voiceToSelect.name;
         window.selectedVoice = voiceToSelect;
+        if (typeof window.setVoiceModeSelection === 'function') {
+            window.setVoiceModeSelection('tts', null);
+        }
     }
 }
 
@@ -1426,45 +1564,81 @@ function setupVoiceSettings() {
     const voiceSelect = document.getElementById('voiceSelection');
     if (voiceSelect) {
         voiceSelect.addEventListener('change', function() {
-            const voiceName = this.value;
-            console.log('🔊 Voice selection changed to:', voiceName);
-            
-            if (voiceName) {
-                const voices = window.speechSynthesis.getVoices();
-                const selectedVoice = voices.find(voice => voice.name === voiceName);
-                if (selectedVoice) {
-                    window.selectedVoice = selectedVoice;
-                    console.log('🔊 Voice object set:', selectedVoice);
-                    console.log('🔊 Voice details - Name:', selectedVoice.name, 'Lang:', selectedVoice.lang, 'Local:', selectedVoice.localService);
-                    
-                    // Store in localStorage for persistence
-                    try {
-                        localStorage.setItem('NovaVoicePreference', JSON.stringify({
-                            name: selectedVoice.name,
-                            lang: selectedVoice.lang
-                        }));
-                    } catch (e) {
-                        console.warn('Could not save voice preference:', e);
-                    }
-                    
-                    showNotification(`Voice changed to: ${selectedVoice.name}`, 2000);
-                    
-                    // Immediate test to confirm voice change
-                    setTimeout(() => {
-                        window.testVoiceResponse(`Voice changed to ${selectedVoice.name}, sir.`);
-                    }, 500);
+            const selectedValue = this.value;
+            console.log('🔊 Voice selection changed to:', selectedValue);
+
+            if (selectedValue === 'jarvis-single-voice') {
+                if (typeof window.setVoiceModeSelection === 'function') {
+                    window.setVoiceModeSelection('tts', null);
                 }
-            } else {
+                localStorage.setItem('Nova_local_voice_bridge_enabled', 'true');
+                showNotification('JARVIS voice mode enabled', 2000);
+                return;
+            }
+            
+            if (!selectedValue) {
                 window.selectedVoice = null;
                 console.log('🔊 Using default voice');
                 showNotification('Using default system voice', 2000);
+                if (typeof window.setVoiceModeSelection === 'function') {
+                    window.setVoiceModeSelection('tts', null);
+                }
                 
                 // Clear saved preference
                 try {
                     localStorage.removeItem('NovaVoicePreference');
+                    localStorage.removeItem('jarvisVoicePreference');
                 } catch (e) {
                     console.warn('Could not clear voice preference:', e);
                 }
+                return;
+            }
+
+            if (selectedValue.startsWith('pack:')) {
+                const packId = selectedValue.replace('pack:', '');
+                const selectedPack = getJarvisAudioPackOptions().find(pack => pack.id === packId);
+                if (typeof window.setVoiceModeSelection === 'function') {
+                    window.setVoiceModeSelection('jarvis-pack', packId);
+                }
+
+                showNotification(`Voice changed to: ${selectedPack ? selectedPack.name : 'JARVIS audio pack'}`, 2000);
+                setTimeout(() => {
+                    if (typeof window.speakText === 'function') {
+                        window.speakText('Voice pack selected, sir.');
+                    }
+                }, 300);
+                return;
+            }
+
+            const voiceName = selectedValue.startsWith('tts:') ? selectedValue.replace('tts:', '') : selectedValue;
+            const voices = window.speechSynthesis.getVoices();
+            const selectedVoice = voices.find(voice => voice.name === voiceName);
+            if (selectedVoice) {
+                window.selectedVoice = selectedVoice;
+                console.log('🔊 Voice object set:', selectedVoice);
+                console.log('🔊 Voice details - Name:', selectedVoice.name, 'Lang:', selectedVoice.lang, 'Local:', selectedVoice.localService);
+                if (typeof window.setVoiceModeSelection === 'function') {
+                    window.setVoiceModeSelection('tts', null);
+                }
+                
+                // Store in localStorage for persistence
+                try {
+                    const voicePreference = JSON.stringify({
+                        name: selectedVoice.name,
+                        lang: selectedVoice.lang
+                    });
+                    localStorage.setItem('NovaVoicePreference', voicePreference);
+                    localStorage.setItem('jarvisVoicePreference', voicePreference);
+                } catch (e) {
+                    console.warn('Could not save voice preference:', e);
+                }
+                
+                showNotification(`Voice changed to: ${selectedVoice.name}`, 2000);
+                
+                // Immediate test to confirm voice change
+                setTimeout(() => {
+                    window.testVoiceResponse(`Voice changed to ${selectedVoice.name}, sir.`);
+                }, 500);
             }
         });
     }
@@ -2405,11 +2579,13 @@ function showApiKeyWarning() {
 // Initialize when DOM is loaded
 function initializeMainSystem() {
     console.log('🚀 Initializing N.O.V.A main system...');
+    loadJarvisStylePhrases().catch(error => {
+        console.warn('🎭 Failed loading JARVIS style phrases:', error);
+    });
     
     // Initialize core systems
     initializeNova();
     setupEventListeners();
-    setupVoiceSettings();
     setupApiKeyManagement();
     setupFileUploadListeners();
     setupChatHistoryListeners();
@@ -2486,6 +2662,7 @@ window.processUserMessage = processUserMessage;
 window.generateAIResponse = generateAIResponse;
 window.addMessage = addMessage;
 window.currentPersonality = currentPersonality;
+window.getRandomJarvisStylePhrase = getRandomJarvisStylePhrase;
 console.log('🌐 ✅ window.processUserMessage:', typeof window.processUserMessage);
 console.log('🌐 ✅ window.generateAIResponse:', typeof window.generateAIResponse);
 console.log('🌐 ✅ window.addMessage:', typeof window.addMessage);
@@ -2664,7 +2841,9 @@ function setNovaVoice(voiceName) {
             name: voice.name,
             lang: voice.lang
         };
-        localStorage.setItem('NovaVoicePreference', JSON.stringify(voicePreference));
+        const serializedPreference = JSON.stringify(voicePreference);
+        localStorage.setItem('NovaVoicePreference', serializedPreference);
+        localStorage.setItem('jarvisVoicePreference', serializedPreference);
         console.log('💾 Voice preference saved');
     } catch (e) {
         console.warn('⚠️ Could not save voice preference:', e);
@@ -2673,7 +2852,11 @@ function setNovaVoice(voiceName) {
     // Update dropdown if it exists
     const voiceSelect = document.getElementById('voiceSelection');
     if (voiceSelect) {
-        voiceSelect.value = voice.name;
+        if (Array.from(voiceSelect.options).some(option => option.value === voice.name)) {
+            voiceSelect.value = voice.name;
+        } else if (Array.from(voiceSelect.options).some(option => option.value === `tts:${voice.name}`)) {
+            voiceSelect.value = `tts:${voice.name}`;
+        }
     }
     
     // Test the new voice
@@ -3089,16 +3272,61 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+function sanitizeMessageUrl(url) {
+    try {
+        const normalizedUrl = String(url || '').trim().replace(/[),.;!?]+$/g, '');
+        const parsedUrl = new URL(normalizedUrl);
+        if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+            return null;
+        }
+        return parsedUrl.href;
+    } catch (error) {
+        return null;
+    }
+}
+
+function stripHtmlTags(text) {
+    return String(text || '').replace(/<[^>]*>/g, '').trim();
+}
+
+function buildSafeMessageLink(url, label) {
+    const safeUrl = sanitizeMessageUrl(url);
+    if (!safeUrl) {
+        return null;
+    }
+
+    const safeLabel = stripHtmlTags(label) || safeUrl;
+    return `<a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer" class="message-link">${escapeHtml(safeLabel)}</a>`;
+}
+
 // Format message content with proper line breaks and markdown-style formatting
 function formatMessageContent(text) {
     if (!text) return '';
     
     let formatted = text;
+    const placeholders = [];
+
+    function storePlaceholder(value) {
+        placeholders.push(value);
+        return `###PLACEHOLDER${placeholders.length - 1}###`;
+    }
+
+    // Preserve safe raw HTML links generated by app messages or model output
+    formatted = formatted.replace(/<a\s+[^>]*href=(["'])(https?:\/\/[^"'<>]+)\1[^>]*>(.*?)<\/a>/gi, (match, quote, url, label) => {
+        const safeLink = buildSafeMessageLink(url, label);
+        return safeLink ? storePlaceholder(safeLink) : match;
+    });
     
     // Convert numbered lists with bold formatting (before general bold processing)
     // Match patterns like "**1:" or "**1." followed by content
     formatted = formatted.replace(/\*\*(\d+)[:.]\s*/g, '\n<strong>$1.</strong> ');
     
+    // Convert markdown-style links to safe clickable HTML
+    formatted = formatted.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (match, label, url) => {
+        const safeLink = buildSafeMessageLink(url, label);
+        return safeLink ? storePlaceholder(safeLink) : match;
+    });
+
     // Convert markdown-style bold (**text**) to HTML (non-greedy)
     formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
     
@@ -3116,6 +3344,12 @@ function formatMessageContent(text) {
     
     // Convert single newlines to line breaks
     formatted = formatted.replace(/\n/g, '<br>');
+
+    // Convert bare URLs to safe clickable HTML
+    formatted = formatted.replace(/(^|[\s>(])((https?:\/\/[^\s<]+))/gi, (match, prefix, url) => {
+        const safeLink = buildSafeMessageLink(url, url);
+        return safeLink ? `${prefix}${storePlaceholder(safeLink)}` : match;
+    });
     
     // Clean up multiple consecutive <br> tags (more than 2)
     formatted = formatted.replace(/(<br>){3,}/g, '<br><br>');
@@ -3132,10 +3366,8 @@ function formatMessageContent(text) {
     const tagPattern = new RegExp(`<(\\/?)(${ allowedTags.join('|')})>`, 'gi');
     
     // Temporarily replace allowed tags with placeholders
-    const placeholders = [];
     formatted = formatted.replace(tagPattern, (match) => {
-        placeholders.push(match);
-        return `###PLACEHOLDER${placeholders.length - 1}###`;
+        return storePlaceholder(match);
     });
     
     // Escape remaining HTML

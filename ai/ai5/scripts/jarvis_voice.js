@@ -18,16 +18,164 @@ let hasVoicePermission = false;
 let voicePermissionRequested = false;
 let pendingTranscript = '';
 let lastInterimTranscript = '';
-let wakeWordEnabled = false; // Controlled by toggle button
+let wakeWordEnabled = localStorage.getItem('Nova_wake_word_enabled') !== 'false'; // Default on unless explicitly disabled
 let isWakeWordSession = false; // Track if current interaction is from wake word
+let alwaysListeningHotkeyMode = false; // R+T toggled continuous listening
+let alwaysListeningTurnActive = false;
 let currentVoiceSettings = {
     rate: 0.9,   // Measured, articulate pace - sophisticated yet natural
     pitch: 0.9,  // Mid-range British tone - authoritative without being too deep (like Paul Bettany)
     volume: 0.85 // Clear, confident presence - butler-like authority
 };
 
+// JARVIS custom audio-pack voices (WAV-based, separate from browser TTS voices)
+const JARVIS_AUDIO_PACKS = [
+    { id: 'jarvis-pack-cfx', name: 'JARVIS Pack - CFX', basePath: '../JARVIS/CFX_UI_J.A.R.V.I.S' },
+    { id: 'jarvis-pack-ghv4', name: 'JARVIS Pack - GHV4', basePath: '../JARVIS/GHV4_UI_J.A.R.V.I.S' },
+    { id: 'jarvis-pack-proffie', name: 'JARVIS Pack - ProffieOS V2', basePath: '../JARVIS/ProffieOS_V2_Voicepack_J.A.R.V.I.S' },
+    { id: 'jarvis-pack-sn4', name: 'JARVIS Pack - SN4', basePath: '../JARVIS/SN4_UI_J.A.R.V.I.S' },
+    { id: 'jarvis-pack-xeno2', name: 'JARVIS Pack - Xeno2', basePath: '../JARVIS/Xeno2_UI_J.A.R.V.I.S' },
+    { id: 'jarvis-pack-xeno3', name: 'JARVIS Pack - Xeno3', basePath: '../JARVIS/Xeno3_UI_J.A.R.V.I.S' }
+];
+
+let selectedVoiceMode = 'tts'; // 'tts' | 'jarvis-pack'
+let selectedJarvisPackId = null;
+let currentPackAudio = null;
+let lastJarvisPackClipByPack = {};
+const defaultBridgeEnabled = localStorage.getItem('Nova_local_voice_bridge_enabled');
+let localVoiceBridgeEnabled = defaultBridgeEnabled === null ? true : defaultBridgeEnabled === 'true';
+let localVoiceBridgeUrl = localStorage.getItem('Nova_local_voice_bridge_url') || 'http://127.0.0.1:8765';
+let currentBridgeAudio = null;
+let lastBridgeFailureNoticeMs = 0;
+
+function isUsableSpeechVoice(voice) {
+    return !!(voice && typeof voice.name === 'string' && typeof voice.lang === 'string');
+}
+
+function getBestAvailableNovaVoice() {
+    if (Array.isArray(window.availableNovaVoices) && window.availableNovaVoices.length > 0) {
+        return window.availableNovaVoices[0];
+    }
+
+    if (isUsableSpeechVoice(currentVoiceSettings.voice)) {
+        return currentVoiceSettings.voice;
+    }
+
+    return null;
+}
+
+function ensureJarvisResponseVoice() {
+    const bestVoice = getBestAvailableNovaVoice();
+    if (isUsableSpeechVoice(bestVoice)) {
+        currentVoiceSettings.voice = bestVoice;
+        window.selectedVoice = bestVoice;
+        currentVoiceSettings.rate = 0.85;
+        currentVoiceSettings.pitch = 0.75;
+        currentVoiceSettings.volume = 0.85;
+        console.log('🎯 JARVIS response TTS voice set to:', bestVoice.name, `(${bestVoice.lang})`);
+        return bestVoice;
+    }
+
+    console.warn('🎯 No usable JARVIS response TTS voice available');
+    return null;
+}
+
+function normalizeBridgeUrl(url) {
+    if (!url || typeof url !== 'string') return 'http://127.0.0.1:8765';
+    return url.trim().replace(/\/+$/, '');
+}
+
+function getBridgeVoiceName() {
+    if (isUsableSpeechVoice(currentVoiceSettings.voice)) {
+        return currentVoiceSettings.voice.name;
+    }
+    if (isUsableSpeechVoice(window.selectedVoice)) {
+        return window.selectedVoice.name;
+    }
+    return null;
+}
+
+async function playViaLocalVoiceBridge(text, onEndCallback) {
+    if (!localVoiceBridgeEnabled) {
+        return false;
+    }
+
+    const bridgeUrl = normalizeBridgeUrl(localVoiceBridgeUrl);
+    if (!bridgeUrl) {
+        return false;
+    }
+
+    try {
+        const response = await fetch(`${bridgeUrl}/speak`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                text,
+                voice_name: getBridgeVoiceName(),
+                rate: currentVoiceSettings.rate,
+                volume: currentVoiceSettings.volume
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Bridge HTTP ${response.status}`);
+        }
+
+        const audioBlob = await response.blob();
+        if (!audioBlob || audioBlob.size === 0) {
+            throw new Error('Bridge returned empty audio');
+        }
+
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+        currentBridgeAudio = audio;
+
+        isSpeaking = true;
+        window.isSpeaking = true;
+        isSpeechOutputActive = true;
+        window.isSpeechOutputActive = true;
+        updateSpeakingUI(true);
+
+        audio.onended = function () {
+            URL.revokeObjectURL(audioUrl);
+            currentBridgeAudio = null;
+            isSpeaking = false;
+            window.isSpeaking = false;
+            isSpeechOutputActive = false;
+            window.isSpeechOutputActive = false;
+            updateSpeakingUI(false);
+            if (onEndCallback) onEndCallback();
+        };
+
+        audio.onerror = function (event) {
+            URL.revokeObjectURL(audioUrl);
+            currentBridgeAudio = null;
+            isSpeaking = false;
+            window.isSpeaking = false;
+            isSpeechOutputActive = false;
+            window.isSpeechOutputActive = false;
+            updateSpeakingUI(false);
+            console.error('🔊 Local voice bridge audio playback error:', event);
+            if (onEndCallback) onEndCallback();
+        };
+
+        await audio.play();
+        return true;
+    } catch (error) {
+        const now = Date.now();
+        if (now - lastBridgeFailureNoticeMs > 6000) {
+            lastBridgeFailureNoticeMs = now;
+            showVoiceNotification('Local JARVIS bridge unavailable. Start Start_Voice_Bridge.bat in Jarvis-main.', 4500);
+        }
+        console.warn('🔊 Local voice bridge unavailable, falling back to browser TTS:', error.message);
+        return false;
+    }
+}
+
 // Wake phrase detection
-const wakePhrases = ['Hey Nova', 'Nova', 'Hello Nova'];
+const wakePhrases = ['hey nova', 'nova'];
+const wakePhrasePatterns = wakePhrases.map((phrase) => new RegExp(`\\b${phrase.replace(/\s+/g, '\\s+')}\\b`));
+const wakePhraseCompactPatterns = wakePhrases.map((phrase) => phrase.replace(/\s+/g, ''));
 let wakeListeningTimeout = null;
 let restartPending = false; // Prevent multiple restart attempts
 let isSpeechOutputActive = false; // Track if Nova is currently speaking
@@ -171,7 +319,35 @@ function setupSpeechRecognition() {
                 processVoiceCommand(transcript);
             } else {
                 console.log('⌨️ No transcript captured');
-                updateVoiceStatus('Ready - Press and hold R to speak');
+                updateVoiceStatus(getDefaultReadyStatus());
+            }
+            return;
+        }
+
+        // R+T mode: process one natural turn, then wait for response to finish
+        // and resume listening in restoreWakeListeningAfterResponse.
+        if (alwaysListeningHotkeyMode && alwaysListeningTurnActive) {
+            alwaysListeningTurnActive = false;
+            isListening = false;
+            window.isListening = false;
+            const transcript = [pendingTranscript.trim(), lastInterimTranscript.trim()]
+                .filter(Boolean).join(' ').trim();
+            pendingTranscript = '';
+            lastInterimTranscript = '';
+            if (transcript) {
+                console.log('🎙️ Always-listening turn captured:', transcript);
+                isWakeWordSession = true;
+                window.isWakeWordSession = true;
+                updateVoiceStatus('Processing command...');
+                processVoiceCommand(transcript);
+            } else {
+                console.log('🎙️ Always-listening turn ended with no transcript');
+                updateVoiceStatus(getAlwaysListeningStatus());
+                setTimeout(() => {
+                    if (alwaysListeningHotkeyMode && !isListening) {
+                        startAlwaysListeningTurn();
+                    }
+                }, 300);
             }
             return;
         }
@@ -251,8 +427,21 @@ function setupSpeechRecognition() {
                 if (event.error === 'network') {
                     showVoiceNotification('Network error - please press R and repeat', 3000);
                 }
-                updateVoiceStatus('Ready - Press and hold R to speak');
+                updateVoiceStatus(getDefaultReadyStatus());
             }
+            return;
+        }
+
+        if (alwaysListeningHotkeyMode) {
+            alwaysListeningTurnActive = false;
+            if (event.error !== 'aborted' && event.error !== 'no-speech') {
+                showVoiceNotification(`Voice recognition error: ${event.error}`, 2500);
+            }
+            setTimeout(() => {
+                if (alwaysListeningHotkeyMode && !isListening && !isSpeechOutputActive) {
+                    startAlwaysListeningTurn();
+                }
+            }, event.error === 'network' ? 1200 : 300);
             return;
         }
         
@@ -328,6 +517,11 @@ function setupSpeechRecognition() {
     };
     
     recognition.onresult = function(event) {
+        if (isSpeechOutputActive || (window.speechSynthesis && (window.speechSynthesis.speaking || window.speechSynthesis.pending))) {
+            console.log('🎤 Ignoring recognition result while speech output is active');
+            return;
+        }
+
         let finalTranscript = '';
         let interimTranscript = '';
         
@@ -343,8 +537,18 @@ function setupSpeechRecognition() {
         
         // Handle wake phrase detection when wake listening is active
         if (isWakeListening && wakeWordEnabled) {
-            const combinedText = (finalTranscript + interimTranscript).toLowerCase();
-            if (wakePhrases.some(phrase => combinedText.includes(phrase))) {
+            const combinedText = [finalTranscript, interimTranscript]
+                .filter(Boolean)
+                .join(' ')
+                .toLowerCase()
+                .replace(/[^\w\s]/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+            const compactCombinedText = combinedText.replace(/\s+/g, '');
+            const wakeDetected =
+                wakePhrasePatterns.some(pattern => pattern.test(combinedText)) ||
+                wakePhraseCompactPatterns.some(phrase => compactCombinedText.includes(phrase));
+            if (wakeDetected) {
                 console.log('🎯 Wake phrase detected:', combinedText);
                 handleWakePhrase();
                 return;
@@ -483,6 +687,19 @@ function restoreWakeListeningAfterResponse() {
     console.log('🔄 isListening:', isListening);
     console.log('🔄 isWakeWordSession:', isWakeWordSession);
     
+    if (alwaysListeningHotkeyMode) {
+        console.log('🔄 R+T always-listening mode active - restoring continuous listening');
+        isWakeWordSession = false;
+        window.isWakeWordSession = false;
+        updateVoiceStatus(getAlwaysListeningStatus());
+        setTimeout(() => {
+            if (alwaysListeningHotkeyMode && !isListening && !isSpeechOutputActive) {
+                startAlwaysListeningTurn();
+            }
+        }, 400);
+        return;
+    }
+
     if (!wakeWordEnabled) {
         console.log('🔄 Wake word disabled - not restoring');
         // Reset session flag
@@ -896,7 +1113,7 @@ function selectBestVoice(voices) {
         const bestVoice = NovaVoices[0]; // Already sorted by preference
         
         // Validate the voice object before using it
-        if (bestVoice && bestVoice instanceof SpeechSynthesisVoice) {
+        if (isUsableSpeechVoice(bestVoice)) {
             currentVoiceSettings.voice = bestVoice;
             window.selectedVoice = bestVoice; // Sync with global voice system
             console.log('🎯 ✅ Nova VOICE SELECTED:', bestVoice.name);
@@ -1040,22 +1257,58 @@ function speakText(text, onEndCallback = null) {
     console.log('🔊 synthesis available:', !!synthesis);
     console.log('🔊 isSpeaking:', isSpeaking);
     console.log('🔊 currentVoiceSettings:', currentVoiceSettings);
+    console.log('🔊 selectedVoiceMode:', selectedVoiceMode, 'selectedJarvisPackId:', selectedJarvisPackId);
     
     if (!synthesis) {
         console.error('🔊 Speech synthesis not available');
         return;
     }
     
+    const shouldResumeWakeListening = wakeWordEnabled && (isWakeListening || isWakeWordSession);
+
+    if (recognition && isListening) {
+        console.log('🔇 Pausing speech recognition before speaking...');
+        restartPending = false;
+        if (isWakeListening) {
+            stopWakeListening();
+        } else {
+            isListening = false;
+            window.isListening = false;
+            try {
+                recognition.abort();
+            } catch (error) {
+                console.warn('🔇 Could not abort recognition before speech:', error);
+            }
+        }
+    }
+
+    const finalOnEndCallback = function() {
+        if (typeof onEndCallback === 'function') {
+            onEndCallback();
+        } else if (shouldResumeWakeListening) {
+            restoreWakeListeningAfterResponse();
+        }
+    };
+
     // CRITICAL: Stop recognition and wait before speaking to prevent feedback loop
-    const startSpeaking = () => {
+    const startSpeaking = async () => {
         if (isSpeaking) {
             console.log('🔊 Already speaking, canceling previous');
             synthesis.cancel();
-            setTimeout(() => speakText(text, onEndCallback), 100);
+            setTimeout(() => speakText(text, finalOnEndCallback), 100);
             return;
         }
-        
-        setupUtteranceAndSpeak(text, onEndCallback);
+
+        if (selectedVoiceMode === 'jarvis-pack' && selectedJarvisPackId) {
+            ensureJarvisResponseVoice();
+        }
+
+        const usedBridge = await playViaLocalVoiceBridge(text, finalOnEndCallback);
+        if (usedBridge) {
+            return;
+        }
+
+        setupUtteranceAndSpeak(text, finalOnEndCallback);
     };
     
     // Wait a bit before speaking to ensure any active recognition has stopped
@@ -1066,7 +1319,7 @@ function setupUtteranceAndSpeak(text, onEndCallback) {
     const utterance = new SpeechSynthesisUtterance(text);
     
     // Apply current voice settings with validation
-    if (currentVoiceSettings.voice && currentVoiceSettings.voice instanceof SpeechSynthesisVoice) {
+    if (isUsableSpeechVoice(currentVoiceSettings.voice)) {
         try {
             utterance.voice = currentVoiceSettings.voice;
             console.log('🔊 Using voice:', currentVoiceSettings.voice.name);
@@ -1124,6 +1377,11 @@ function setupUtteranceAndSpeak(text, onEndCallback) {
 }
 
 function stopSpeech() {
+    if (currentBridgeAudio) {
+        currentBridgeAudio.pause();
+        currentBridgeAudio.currentTime = 0;
+        currentBridgeAudio = null;
+    }
     if (synthesis) {
         synthesis.cancel();
         isSpeaking = false;
@@ -1161,10 +1419,14 @@ function selectVoiceById(voiceIndex) {
         const selectedVoice = window.availableNovaVoices[voiceIndex];
         currentVoiceSettings.voice = selectedVoice;
         window.selectedVoice = selectedVoice; // Sync with global voice system
+        selectedVoiceMode = 'tts';
+        selectedJarvisPackId = null;
         console.log('🎯 Voice manually selected:', selectedVoice.name);
         
         // Save preference
         localStorage.setItem('Nova_selected_voice', selectedVoice.name);
+        localStorage.setItem('Nova_voice_mode', selectedVoiceMode);
+        localStorage.removeItem('Nova_selected_jarvis_pack');
         
         // Preview the selected voice
         previewVoice(selectedVoice, "Voice selection updated, sir. This is your new N.O.V.A voice.");
@@ -1179,6 +1441,13 @@ function getAvailableVoices() {
 }
 
 function createVoiceSamplePhrase() {
+    if (typeof window.getRandomJarvisStylePhrase === 'function') {
+        const dynamicPhrase = window.getRandomJarvisStylePhrase();
+        if (dynamicPhrase && typeof dynamicPhrase === 'string' && dynamicPhrase.trim().length > 0) {
+            return dynamicPhrase.trim();
+        }
+    }
+
     const phrases = [
         "At your service, sir.",
         "Good evening, sir. All systems are operational and ready for your commands.",
@@ -1425,6 +1694,7 @@ function startVoiceRecognition() {
 // Settings Integration
 async function enableWakeListening(enabled) {
     console.log('🎤 Wake listening toggle:', enabled);
+    localStorage.setItem('Nova_wake_word_enabled', enabled ? 'true' : 'false');
     
     if (enabled) {
         // Enable wake listening
@@ -1504,32 +1774,53 @@ window.createVoiceSamplePhrase = createVoiceSamplePhrase;
 function populateVoiceSelection() {
     const voiceSelect = document.getElementById('voiceSelection');
     if (!voiceSelect || !window.availableNovaVoices) return;
-    
-    // Clear existing options
+
     voiceSelect.innerHTML = '';
-    
-    const availableVoices = window.availableNovaVoices;
-    
-    if (availableVoices.length === 0) {
-        voiceSelect.innerHTML = '<option value="">No voices available</option>';
-        return;
+
+    const jarvisPacks = Array.isArray(window.JARVIS_AUDIO_PACKS) ? window.JARVIS_AUDIO_PACKS : [];
+    if (jarvisPacks.length > 0) {
+        const packSeparator = document.createElement('option');
+        packSeparator.value = '';
+        packSeparator.textContent = '───── JARVIS Audio Packs (.wav) ─────';
+        packSeparator.disabled = true;
+        voiceSelect.appendChild(packSeparator);
+
+        jarvisPacks.forEach(pack => {
+            const option = document.createElement('option');
+            option.value = `pack:${pack.id}`;
+            option.textContent = `${pack.name} 🎵`;
+            if (selectedVoiceMode === 'jarvis-pack' && selectedJarvisPackId === pack.id) {
+                option.selected = true;
+            }
+            voiceSelect.appendChild(option);
+        });
     }
-    
-    // Add voice options
+
+    const ttsSeparator = document.createElement('option');
+    ttsSeparator.value = '';
+    ttsSeparator.textContent = '───── Browser TTS Voices ─────';
+    ttsSeparator.disabled = true;
+    voiceSelect.appendChild(ttsSeparator);
+
+    const availableVoices = window.availableNovaVoices;
     availableVoices.forEach((voice, index) => {
         const option = document.createElement('option');
-        option.value = index;
+        option.value = `tts:${index}`;
         option.textContent = `${voice.name} (Score: ${voice.NovaScore})`;
-        
-        // Mark current voice as selected
-        if (currentVoiceSettings.voice && voice.name === currentVoiceSettings.voice.name) {
+        if (selectedVoiceMode !== 'jarvis-pack' && currentVoiceSettings.voice && voice.name === currentVoiceSettings.voice.name) {
             option.selected = true;
         }
-        
         voiceSelect.appendChild(option);
     });
-    
-    console.log(`🎤 Populated voice selection with ${availableVoices.length} voices`);
+
+    if (selectedVoiceMode === 'jarvis-pack' && selectedJarvisPackId) {
+        const packOption = `pack:${selectedJarvisPackId}`;
+        if (Array.from(voiceSelect.options).some(option => option.value === packOption)) {
+            voiceSelect.value = packOption;
+        }
+    }
+
+    console.log(`🎤 Populated voice selection with ${availableVoices.length} browser voices`);
 }
 
 function initializeVoiceSelectionUI() {
@@ -1538,25 +1829,59 @@ function initializeVoiceSelectionUI() {
     
     if (voiceSelect) {
         voiceSelect.addEventListener('change', function() {
-            const selectedIndex = parseInt(this.value);
-            if (!isNaN(selectedIndex)) {
+            const selectedValue = this.value;
+            if (selectedValue.startsWith('pack:')) {
+                const packId = selectedValue.replace('pack:', '');
+                localVoiceBridgeEnabled = true;
+                localStorage.setItem('Nova_local_voice_bridge_enabled', 'true');
+                if (typeof window.setVoiceModeSelection === 'function') {
+                    window.setVoiceModeSelection('jarvis-pack', packId);
+                }
+                ensureJarvisResponseVoice();
+                const played = playJarvisPackSample('Voice pack selected, sir.');
+                if (!played) speakText('Voice pack selected, sir.');
+                return;
+            }
+
+            const selectedIndex = parseInt(selectedValue.replace('tts:', ''), 10);
+            if (!isNaN(selectedIndex) && window.availableNovaVoices && window.availableNovaVoices[selectedIndex]) {
+                localVoiceBridgeEnabled = false;
+                localStorage.setItem('Nova_local_voice_bridge_enabled', 'false');
+                if (typeof window.setVoiceModeSelection === 'function') {
+                    window.setVoiceModeSelection('tts', null);
+                }
                 selectVoiceById(selectedIndex);
+                showVoiceNotification('Browser TTS voice selected', 2000);
             }
         });
     }
     
     if (previewBtn) {
         previewBtn.addEventListener('click', function() {
-            const voiceSelect = document.getElementById('voiceSelection');
-            const selectedIndex = parseInt(voiceSelect.value);
-            
-            if (!isNaN(selectedIndex) && window.availableNovaVoices && window.availableNovaVoices[selectedIndex]) {
-                const selectedVoice = window.availableNovaVoices[selectedIndex];
-                const sampleText = createVoiceSamplePhrase();
-                previewVoice(selectedVoice, sampleText);
-            } else {
-                console.warn('No voice selected for preview');
+            const selectedValue = voiceSelect ? voiceSelect.value : '';
+            const sampleText = createVoiceSamplePhrase();
+
+            if (selectedValue && selectedValue.startsWith('pack:')) {
+                const packId = selectedValue.replace('pack:', '');
+                localVoiceBridgeEnabled = true;
+                localStorage.setItem('Nova_local_voice_bridge_enabled', 'true');
+                if (typeof window.setVoiceModeSelection === 'function') {
+                    window.setVoiceModeSelection('jarvis-pack', packId);
+                }
+                const played = playJarvisPackSample(sampleText);
+                if (!played) speakText(sampleText);
+                return;
             }
+
+            const selectedIndex = parseInt((selectedValue || '').replace('tts:', ''), 10);
+            if (!isNaN(selectedIndex) && window.availableNovaVoices && window.availableNovaVoices[selectedIndex]) {
+                localVoiceBridgeEnabled = false;
+                localStorage.setItem('Nova_local_voice_bridge_enabled', 'false');
+                previewVoice(window.availableNovaVoices[selectedIndex], sampleText);
+                return;
+            }
+
+            speakText(sampleText);
         });
     }
 }
@@ -1581,6 +1906,7 @@ function setupSettingsEventListeners() {
     // Wake phrase toggle
     const wakeToggle = document.getElementById('wakePhraseEnabled');
     if (wakeToggle) {
+        wakeToggle.checked = wakeWordEnabled;
         wakeToggle.addEventListener('change', function() {
             enableWakeListening(this.checked);
         });
@@ -1591,6 +1917,32 @@ function setupSettingsEventListeners() {
     if (responseToggle) {
         responseToggle.addEventListener('change', function() {
             enableVoiceResponse(this.checked);
+        });
+    }
+
+    const localBridgeToggle = document.getElementById('localVoiceBridgeEnabled');
+    if (localBridgeToggle) {
+        localBridgeToggle.checked = localVoiceBridgeEnabled;
+        localBridgeToggle.addEventListener('change', function() {
+            localVoiceBridgeEnabled = !!this.checked;
+            localStorage.setItem('Nova_local_voice_bridge_enabled', localVoiceBridgeEnabled ? 'true' : 'false');
+            showVoiceNotification(
+                localVoiceBridgeEnabled
+                    ? 'Local Python voice bridge enabled'
+                    : 'Local Python voice bridge disabled',
+                2500
+            );
+        });
+    }
+
+    const localBridgeUrlInput = document.getElementById('localVoiceBridgeUrl');
+    if (localBridgeUrlInput) {
+        localBridgeUrlInput.value = normalizeBridgeUrl(localVoiceBridgeUrl);
+        localBridgeUrlInput.addEventListener('change', function() {
+            localVoiceBridgeUrl = normalizeBridgeUrl(this.value);
+            this.value = localVoiceBridgeUrl;
+            localStorage.setItem('Nova_local_voice_bridge_url', localVoiceBridgeUrl);
+            showVoiceNotification('Local voice bridge URL saved', 2000);
         });
     }
 }
@@ -1923,7 +2275,7 @@ async function stopGroqRecordingAndTranscribe() {
             groqMediaRecorder.stream.getTracks().forEach(t => t.stop());
 
             if (groqAudioChunks.length === 0) {
-                updateVoiceStatus('Ready - Press and hold R to speak');
+                updateVoiceStatus(getDefaultReadyStatus());
                 showVoiceNotification('No audio captured', 2000);
                 return resolve();
             }
@@ -1961,13 +2313,13 @@ async function stopGroqRecordingAndTranscribe() {
                     updateVoiceStatus('Processing command...');
                     processVoiceCommand(transcript);
                 } else {
-                    updateVoiceStatus('Ready - Press and hold R to speak');
+                    updateVoiceStatus(getDefaultReadyStatus());
                     showVoiceNotification('No speech detected - try again', 2000);
                 }
             } catch (err) {
                 console.error('🎤 Groq Whisper transcription error:', err);
                 showVoiceNotification('Transcription failed - please try again', 3000);
-                updateVoiceStatus('Ready - Press and hold R to speak');
+                updateVoiceStatus(getDefaultReadyStatus());
             }
 
             resolve();
@@ -1978,13 +2330,118 @@ async function stopGroqRecordingAndTranscribe() {
 }
 // ====== END GROQ WHISPER PTT RECORDING ======
 
-// ====== HOTKEY 'R' FOR PUSH-TO-TALK ======
+// ====== HOTKEY 'R' FOR PUSH-TO-TALK + 'R+T' TOGGLE ======
 let hotkeyActive = false;
 let hotkeyListening = false;
 let pttReleaseMode = false;
+let hotkeyRPressed = false;
+let hotkeyTPressed = false;
+let hotkeyComboHandled = false;
+
+function getDefaultReadyStatus() {
+    return alwaysListeningHotkeyMode
+        ? 'Always listening (R+T to turn off)'
+        : 'Ready - Press and hold R to speak';
+}
+
+function getAlwaysListeningStatus() {
+    return 'Always listening... Speak naturally (R+T to turn off)';
+}
+
+function clearHotkeyRecordingUI() {
+    const voiceBtn = document.getElementById('voiceBtn');
+    if (voiceBtn) {
+        voiceBtn.classList.remove('recording');
+    }
+}
+
+async function toggleAlwaysListeningMode() {
+    if (alwaysListeningHotkeyMode) {
+        alwaysListeningHotkeyMode = false;
+        alwaysListeningTurnActive = false;
+        window.alwaysListeningHotkeyMode = false;
+        hotkeyActive = false;
+        hotkeyListening = false;
+        clearHotkeyRecordingUI();
+        if (recognition && isListening) {
+            try { recognition.abort(); } catch (e) {}
+        }
+        updateVoiceStatus(getDefaultReadyStatus());
+        showVoiceNotification('Always-listening mode disabled', 2000);
+        return;
+    }
+
+    if (!isVoiceSupported) {
+        showVoiceNotification('Voice recognition not supported in this browser', 3000);
+        return;
+    }
+
+    if (!hasVoicePermission) {
+        const granted = await requestVoicePermission();
+        if (!granted) {
+            return;
+        }
+    }
+
+    hotkeyActive = false;
+    hotkeyListening = false;
+    pttReleaseMode = false;
+    clearHotkeyRecordingUI();
+    if (groqRecordingActive) {
+        await stopGroqRecordingAndTranscribe();
+    } else if (recognition && isListening) {
+        try { recognition.abort(); } catch (e) {}
+    }
+
+    isWakeListening = false;
+    window.isWakeListening = false;
+    alwaysListeningHotkeyMode = true;
+    alwaysListeningTurnActive = false;
+    window.alwaysListeningHotkeyMode = true;
+    showVoiceNotification('Always-listening mode enabled (R+T to turn off)', 2500);
+    updateVoiceStatus(getAlwaysListeningStatus());
+    startAlwaysListeningTurn();
+}
+
+function startAlwaysListeningTurn() {
+    if (!alwaysListeningHotkeyMode || !recognition || !hasVoicePermission || !isVoiceSupported) {
+        return;
+    }
+
+    const synthSpeaking = window.speechSynthesis &&
+        (window.speechSynthesis.speaking || window.speechSynthesis.pending);
+    if (isSpeaking || isSpeechOutputActive || synthSpeaking) {
+        setTimeout(() => {
+            if (alwaysListeningHotkeyMode) startAlwaysListeningTurn();
+        }, 500);
+        return;
+    }
+
+    if (isListening || alwaysListeningTurnActive) {
+        return;
+    }
+
+    pendingTranscript = '';
+    lastInterimTranscript = '';
+    alwaysListeningTurnActive = true;
+    isWakeWordSession = true;
+    window.isWakeWordSession = true;
+    updateVoiceStatus(getAlwaysListeningStatus());
+    try {
+        recognition.continuous = false;
+        recognition.interimResults = true;
+        recognition.start();
+    } catch (error) {
+        console.error('🎙️ Failed to start always-listening turn:', error);
+        alwaysListeningTurnActive = false;
+        setTimeout(() => {
+            if (alwaysListeningHotkeyMode) startAlwaysListeningTurn();
+        }, 600);
+    }
+}
 
 function setupPushToTalkHotkey() {
-    console.log('⌨️ Setting up push-to-talk hotkey (R)...');
+    console.log('⌨️ Setting up push-to-talk hotkey (R) and always-listening toggle (R+T)...');
     
     document.addEventListener('keydown', async function(e) {
         const target = e.target;
@@ -1994,9 +2451,24 @@ function setupPushToTalkHotkey() {
         if (isInInput) {
             return;
         }
+
+        const key = e.key.toLowerCase();
+        if (key === 'r') hotkeyRPressed = true;
+        if (key === 't') hotkeyTPressed = true;
+
+        if (hotkeyRPressed && hotkeyTPressed && !hotkeyComboHandled) {
+            e.preventDefault();
+            hotkeyComboHandled = true;
+            await toggleAlwaysListeningMode();
+            return;
+        }
+
+        if (alwaysListeningHotkeyMode) {
+            return;
+        }
         
         // Check if 'R' key is pressed (case insensitive)
-        if (e.key.toLowerCase() === 'r' && !hotkeyActive) {
+        if (key === 'r' && !hotkeyActive) {
             e.preventDefault();
             hotkeyActive = true;
             
@@ -2038,8 +2510,19 @@ function setupPushToTalkHotkey() {
     });
     
     document.addEventListener('keyup', function(e) {
+        const key = e.key.toLowerCase();
+        if (key === 'r') hotkeyRPressed = false;
+        if (key === 't') hotkeyTPressed = false;
+        if (!hotkeyRPressed && !hotkeyTPressed) {
+            hotkeyComboHandled = false;
+        }
+
+        if (alwaysListeningHotkeyMode) {
+            return;
+        }
+
         // Check if 'R' key is released
-        if (e.key.toLowerCase() === 'r' && hotkeyActive) {
+        if (key === 'r' && hotkeyActive) {
             e.preventDefault();
             hotkeyActive = false;
             
@@ -2066,7 +2549,7 @@ function setupPushToTalkHotkey() {
         }
     });
     
-    console.log('✅ Push-to-talk hotkey (R) initialized');
+    console.log('✅ Push-to-talk hotkey (R) initialized, always-listening combo: R+T');
 }
 
 // Initialize hotkey on load
@@ -2117,7 +2600,7 @@ async function toggleVoiceListening() {
         
         if (permissionGranted) {
             // Turn on wake listening
-            startWakeListening();
+            await enableWakeListening(true);
             updateVoiceStatus('Say "Hey Nova" to activate');
             showVoiceNotification('Say "Hey Nova" to activate', 3000);
             
@@ -2183,7 +2666,7 @@ function setupChatSystem() {
     // Add welcome message
     setTimeout(() => {
         if (isVoiceSupported) {
-            addMessageToChat('Good day, sir. N.O.V.A systems are online and ready. Press and hold the microphone button to speak, or type your message below.', 'Nova');
+            addMessageToChat('Good day, sir. N.O.V.A systems are online and ready. To speak: Press and hold the microphone button or the "R" key. For AlwaysListening, press R + T.', 'Nova');
         } else {
             addMessageToChat('Good day, sir. N.O.V.A systems are online and ready. Voice recognition is not supported in this browser, but you can type your message below.', 'Nova');
         }
@@ -2360,6 +2843,23 @@ function initializeFullSystem() {
         populateVoiceSelection();
         initializeVoiceSelectionUI();
         setupSettingsEventListeners();
+
+        const wakeToggle = document.getElementById('wakePhraseEnabled');
+        const storedWakeWordEnabled = localStorage.getItem('Nova_wake_word_enabled');
+        const shouldEnableWakeWord = storedWakeWordEnabled === null
+            ? (wakeToggle ? !!wakeToggle.checked : true)
+            : storedWakeWordEnabled === 'true';
+
+        wakeWordEnabled = shouldEnableWakeWord;
+        if (wakeToggle) {
+            wakeToggle.checked = shouldEnableWakeWord;
+        }
+
+        if (shouldEnableWakeWord) {
+            enableWakeListening(true);
+        } else {
+            updateVoiceStatus('Press and hold microphone to speak');
+        }
     }, 1000);
 }
 
@@ -2386,5 +2886,221 @@ Object.defineProperty(window, 'hasVoicePermission', {
 Object.defineProperty(window, 'isListening', {
     get: function() { return isListening; }
 });
+
+function getSelectedJarvisPack() {
+    if (!selectedJarvisPackId) return null;
+    return JARVIS_AUDIO_PACKS.find(p => p.id === selectedJarvisPackId) || null;
+}
+
+function dedupeClipList(clips) {
+    return Array.from(new Set((clips || []).filter(Boolean)));
+}
+
+function shuffleClipList(clips) {
+    const shuffled = clips.slice();
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const temp = shuffled[i];
+        shuffled[i] = shuffled[j];
+        shuffled[j] = temp;
+    }
+    return shuffled;
+}
+
+function chooseJarvisPackClip(pack, text = '') {
+    const normalized = (text || '').toLowerCase();
+    const packId = pack ? pack.id : '';
+
+    const genericCatalog = {
+        preview: ['ready.wav', 'poweron.wav', 'power on.wav', 'poweron.wav', 'powerup.wav', 'power up.wav', 'system.wav', 'ok.wav'],
+        greeting: ['ready.wav', 'poweron.wav', 'power on.wav', 'welcome.wav', 'hello.wav'],
+        confirm: ['updatesuccess.wav', 'updatesuccessful.wav', 'connected.wav', 'configsaved.wav', 'ok.wav'],
+        error: ['error.wav', 'failed.wav', 'warning.wav', 'alert.wav', 'sensorerror.wav', 'sdcarderror.wav', 'lowbattery.wav'],
+        volume: ['volume.wav', 'volumelevel.wav', 'volup.wav', 'voldown.wav', 'volumecontrol.wav'],
+        default: ['ready.wav', 'poweron.wav', 'power on.wav', 'boot.wav', 'powerup.wav']
+    };
+
+    const packCatalogs = {
+        'jarvis-pack-cfx': {
+            preview: ['extra/UI/system.wav', 'extra/UI/diagnostics.wav', 'extra/UI/ok.wav', 'tracks/font.wav', 'tracks/font-alt.wav'],
+            greeting: ['extra/UI/system.wav', 'extra/UI/menu.wav', 'extra/UI/ok.wav'],
+            confirm: ['extra/UI/configsaved.wav', 'extra/UI/colorsconfigsaved.wav', 'extra/UI/fontconfigsaved.wav', 'extra/UI/ok.wav'],
+            error: ['extra/UI/lowbattery.wav', 'extra/UI/lowbattery-alt.wav', 'extra/UI/deadbattery.wav', 'extra/UI/deadbattery-alt.wav'],
+            volume: ['extra/UI/volume.wav', 'extra/UI/plus.wav', 'extra/UI/minus.wav'],
+            default: ['extra/UI/system.wav', 'tracks/font.wav', 'extra/UI/ok.wav']
+        },
+        'jarvis-pack-ghv4': {
+            preview: ['UserInterfaceSounds/BatteryIndicator/battpwron.wav', 'UserInterfaceSounds/Miscellaneous/bleenabled.wav', 'UserInterfaceSounds/Miscellaneous/wifienabled.wav'],
+            greeting: ['UserInterfaceSounds/BatteryIndicator/battpwron.wav', 'UserInterfaceSounds/Miscellaneous/blepairingsuccessful.wav'],
+            confirm: ['UserInterfaceSounds/Miscellaneous/blepairingsuccessful.wav', 'UserInterfaceSounds/FirmwareUpdate/endupdate.wav'],
+            error: ['UserInterfaceSounds/BatteryIndicator/lowbatt.wav', 'UserInterfaceSounds/Miscellaneous/soundfilemissing.wav', 'UserInterfaceSounds/Miscellaneous/effectfontsmissing.wav'],
+            volume: ['UserInterfaceSounds/VolumeControl/bgnvolumecontrol.wav', 'UserInterfaceSounds/VolumeControl/endvolumecontrol.wav'],
+            default: ['UserInterfaceSounds/BatteryIndicator/battpwron.wav', 'UserInterfaceSounds/Miscellaneous/rebooting.wav']
+        },
+        'jarvis-pack-proffie': {
+            preview: ['common/mpwrup.wav', 'common/msetting.wav', 'common/mconfirm.wav', 'common/mmain.wav'],
+            greeting: ['common/mpwrup.wav', 'common/mconfirm.wav', 'common/maffirm.wav'],
+            confirm: ['common/mconfirm.wav', 'common/msave.wav', 'common/maffirm.wav'],
+            error: ['common/mcancel.wav', 'common/mlb.wav', 'common/mfalse.wav'],
+            volume: ['common/vmbegin.wav', 'common/volup.wav', 'common/voldown.wav', 'common/vmend.wav'],
+            default: ['common/mpwrup.wav', 'common/mconfirm.wav', 'common/msetting.wav']
+        },
+        'jarvis-pack-sn4': {
+            preview: ['ready.wav', 'poweron.wav', 'appconnected.wav', 'batterylevel.wav'],
+            greeting: ['ready.wav', 'poweron.wav', 'appconnected.wav'],
+            confirm: ['updatesuccessful.wav', 'colorselected.wav', 'appconnected.wav'],
+            error: ['sensorerror.wav', 'SDcarderror.wav', 'lowbattery.wav'],
+            volume: ['volumelevel.wav'],
+            default: ['ready.wav', 'poweron.wav', 'blade.wav']
+        },
+        'jarvis-pack-xeno2': {
+            preview: ['PowerOn.wav', 'PowerUp.wav', 'Connected.wav', 'ChargeFull.wav'],
+            greeting: ['PowerOn.wav', 'Connected.wav', 'PowerUp.wav'],
+            confirm: ['UpgradeSuccess.wav', 'ChargeFull.wav', 'Connected.wav'],
+            error: ['LowBattery.wav'],
+            volume: ['VolumeLoud.wav', 'VolumeLow.wav', 'VolumeMedia.wav'],
+            default: ['PowerOn.wav', 'PowerUp.wav', 'Connected.wav']
+        },
+        'jarvis-pack-xeno3': {
+            preview: ['ready.wav', 'poweron.wav', 'appconnected.wav', 'power (1).wav', 'power (2).wav'],
+            greeting: ['ready.wav', 'poweron.wav', 'appconnected.wav'],
+            confirm: ['updatesuccessful.wav', 'colorselected.wav', 'appconnected.wav'],
+            error: ['sensorerror.wav', 'SDcarderror.wav', 'lowbattery.wav'],
+            volume: ['volumelevel.wav'],
+            default: ['ready.wav', 'poweron.wav', 'blade.wav']
+        }
+    };
+
+    let category = 'default';
+    if (normalized.includes('error') || normalized.includes('failed') || normalized.includes('problem')) {
+        category = 'error';
+    } else if (normalized.includes('volume') || normalized.includes('loud') || normalized.includes('quiet')) {
+        category = 'volume';
+    } else if (normalized.includes('updated') || normalized.includes('selected') || normalized.includes('saved') || normalized.includes('success')) {
+        category = 'confirm';
+    } else if (normalized.includes('preview') || normalized.includes('test') || normalized.includes('voice') || normalized.includes('sound')) {
+        category = 'preview';
+    } else if (normalized.includes('hello') || normalized.includes('hi') || normalized.includes('good') || normalized.includes('greetings')) {
+        category = 'greeting';
+    }
+
+    const packCatalog = packCatalogs[packId] || {};
+    const fallbackCategories = ['preview', 'confirm', 'default'];
+    const candidates = [];
+
+    candidates.push(...(packCatalog[category] || []));
+    candidates.push(...(genericCatalog[category] || []));
+
+    fallbackCategories.forEach(fallbackCategory => {
+        if (fallbackCategory !== category) {
+            candidates.push(...(packCatalog[fallbackCategory] || []));
+            candidates.push(...(genericCatalog[fallbackCategory] || []));
+        }
+    });
+
+    const dedupedCandidates = dedupeClipList(candidates);
+    const lastPlayedClip = lastJarvisPackClipByPack[packId];
+    const prioritizedCandidates = dedupedCandidates.filter(clip => clip !== lastPlayedClip);
+
+    if (lastPlayedClip && dedupedCandidates.includes(lastPlayedClip)) {
+        prioritizedCandidates.push(lastPlayedClip);
+    }
+
+    return shuffleClipList(prioritizedCandidates);
+}
+
+function playJarvisPackSample(text = '', onEndCallback = null) {
+    const pack = getSelectedJarvisPack();
+    if (!pack) return false;
+
+    const clipCandidates = chooseJarvisPackClip(pack, text);
+    let candidateIndex = 0;
+
+    const tryPlayNext = () => {
+        if (candidateIndex >= clipCandidates.length) {
+            console.warn('🔊 No playable JARVIS clip found in pack:', pack.name);
+            return false;
+        }
+
+        const clip = clipCandidates[candidateIndex++];
+        const src = `${pack.basePath}/${clip}`;
+        const audio = new Audio(src);
+        currentPackAudio = audio;
+
+        audio.onplay = function () {
+            lastJarvisPackClipByPack[pack.id] = clip;
+            isSpeaking = true;
+            window.isSpeaking = true;
+            isSpeechOutputActive = true;
+            window.isSpeechOutputActive = true;
+            updateSpeakingUI(true);
+            console.log('🔊 Playing JARVIS pack clip:', src);
+        };
+
+        audio.onended = function () {
+            isSpeaking = false;
+            window.isSpeaking = false;
+            isSpeechOutputActive = false;
+            window.isSpeechOutputActive = false;
+            updateSpeakingUI(false);
+            currentPackAudio = null;
+            if (onEndCallback) onEndCallback();
+        };
+
+        audio.onerror = function () {
+            // Try next clip candidate
+            if (!tryPlayNext()) {
+                // Final failure - cleanup and callback
+                isSpeaking = false;
+                window.isSpeaking = false;
+                isSpeechOutputActive = false;
+                window.isSpeechOutputActive = false;
+                updateSpeakingUI(false);
+                currentPackAudio = null;
+                if (onEndCallback) onEndCallback();
+            }
+        };
+
+        audio.play().catch(() => {
+            if (!tryPlayNext()) {
+                isSpeaking = false;
+                window.isSpeaking = false;
+                isSpeechOutputActive = false;
+                window.isSpeechOutputActive = false;
+                updateSpeakingUI(false);
+                currentPackAudio = null;
+                if (onEndCallback) onEndCallback();
+            }
+        });
+
+        return true;
+    };
+
+    return tryPlayNext();
+}
+
+window.JARVIS_AUDIO_PACKS = JARVIS_AUDIO_PACKS;
+window.setVoiceModeSelection = function(mode, packId = null) {
+    selectedVoiceMode = mode === 'jarvis-pack' ? 'jarvis-pack' : 'tts';
+    selectedJarvisPackId = selectedVoiceMode === 'jarvis-pack' ? packId : null;
+    localStorage.setItem('Nova_voice_mode', selectedVoiceMode);
+    if (selectedJarvisPackId) {
+        localStorage.setItem('Nova_selected_jarvis_pack', selectedJarvisPackId);
+        ensureJarvisResponseVoice();
+    } else {
+        localStorage.removeItem('Nova_selected_jarvis_pack');
+    }
+    console.log('🎤 Voice mode selection updated:', selectedVoiceMode, selectedJarvisPackId);
+};
+
+window.loadVoiceModeSelection = function() {
+    const savedMode = localStorage.getItem('Nova_voice_mode');
+    const savedPack = localStorage.getItem('Nova_selected_jarvis_pack');
+    selectedVoiceMode = savedMode === 'jarvis-pack' ? 'jarvis-pack' : 'tts';
+    selectedJarvisPackId = savedMode === 'jarvis-pack' ? savedPack : null;
+    console.log('🎤 Loaded voice mode selection:', selectedVoiceMode, selectedJarvisPackId);
+};
+
+window.loadVoiceModeSelection();
 
 console.log('🎤 N.O.V.A Voice System loaded successfully');

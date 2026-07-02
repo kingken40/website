@@ -632,6 +632,19 @@ body {
     border: 1px solid rgba(0, 170, 255, 0.3);
 }
 
+.message-content a,
+.message-content .message-link {
+    color: #7fd3ff;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    word-break: break-word;
+}
+
+.message-content a:hover,
+.message-content .message-link:hover {
+    color: #b8e8ff;
+}
+
 .user-message .message-content {
     background: linear-gradient(135deg, rgba(0, 170, 255, 0.2), rgba(0, 136, 204, 0.2));
     border: 1px solid rgba(0, 170, 255, 0.3);

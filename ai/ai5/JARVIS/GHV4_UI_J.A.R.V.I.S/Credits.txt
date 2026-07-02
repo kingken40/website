@@ -1,0 +1,18 @@
+
+GHV4_UI_J.A.R.V.I.S. - NoSloppy 2025
+
+I'd appreciate a donation to cover my time and effort.
+You can buy me a coffee here:
+https://www.buymeacoffee.com/BrianConner
+Thanks!
+
+
+Note - Plain voice versions of the BatteryIndicator sounds can be found
+in the Extras/BatteryIndicator_noSFX folder.
+
+The battery indicator sounds use pre-on and post-off sound effects from the amazing
+"Son of Darkness" sound font by Dark Path Media.
+Big thanks to them for contributing these effects as user interface sounds!
+
+Check out more of the epic fonts by Dark Path Media at
+http://www.saberfont.com/Dark-Path-Media_bymfg_34-0-1.html.

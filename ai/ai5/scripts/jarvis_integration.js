@@ -28,6 +28,7 @@ window.voiceIntegrationFix = function() {
                 .replace(/Mr\./g, 'Mister')  // Convert Mr. to Mister
                 .replace(/Mrs\./g, 'Missus')  // Convert Mrs. to Missus
                 .replace(/\s+/g, ' ')  // Clean up multiple spaces
+                .replace(/\*+/g, ' ')  // Clean up multiple asterisks
                 .trim();
         };
     }

@@ -49,7 +49,7 @@
         </div>
 
         <div class="voice-status">
-            <span class="voice-status-text">Press and hold microphone to speak (or hold R key)</span>
+            <span class="voice-status-text">Press and hold microphone to speak (or hold R). Press R+T to toggle always-listening mode.</span>
         </div>
     </div>
 
@@ -64,7 +64,7 @@
             </div>
             <div class="mode-card" data-personality="genius">
                 <div class="mode-icon">🧠</div>
-                <div class="mode-name">Genius Mode</div>
+                <div class="mode-name">Genius</div>
                 <div class="mode-desc">Advanced Problem Solving</div>
             </div>
             <div class="mode-card" data-personality="professor">
@@ -79,7 +79,7 @@
             </div>
             <div class="mode-card" data-personality="brainstorm">
                 <div class="mode-icon">💡</div>
-                <div class="mode-name">Brainstorm Mode</div>
+                <div class="mode-name">Brainstorm</div>
                 <div class="mode-desc">Creative Idea Generation</div>
             </div>
             <div class="mode-card" data-personality="study">
@@ -198,13 +198,21 @@
                     <input type="range" id="voiceSpeed" min="0.5" max="2" step="0.1" value="1">
                 </div>
                 <div class="setting-group">
-                    <label for="voiceSelection">N.O.V.A Voice</label>
+                    <label for="voiceSelection">N.O.V.A Voice / JARVIS Pack</label>
                     <select id="voiceSelection">
                         <option value="">Loading voices...</option>
                     </select>
                     <button type="button" id="previewVoiceBtn" class="preview-btn" title="Preview Selected Voice">
                         <i class="fas fa-play"></i> Preview
                     </button>
+                </div>
+                <div class="setting-group">
+                    <label for="localVoiceBridgeEnabled">Local Jarvis-main Python Voice Bridge</label>
+                    <input type="checkbox" id="localVoiceBridgeEnabled">
+                </div>
+                <div class="setting-group">
+                    <label for="localVoiceBridgeUrl">Bridge URL</label>
+                    <input type="text" id="localVoiceBridgeUrl" value="http://127.0.0.1:8765" style="width: 100%; padding: 0.5rem; background: rgba(0, 170, 255, 0.1); border: 1px solid rgba(0, 170, 255, 0.3); border-radius: 5px; color: #00aaff;">
                 </div>
                 <!-- Wake phrase setting - DISABLED/COMMENTED OUT -->
                 <!-- <div class="setting-group">
@@ -646,6 +654,10 @@
             
             // Load current voice settings
             loadVoiceSettings();
+            // Re-inject pack options after other initializers may have overwritten the dropdown
+            setTimeout(() => ensureJarvisPackOptionsInDropdown(), 50);
+            setTimeout(() => ensureJarvisPackOptionsInDropdown(), 300);
+            setTimeout(() => ensureJarvisPackOptionsInDropdown(), 1000);
 
             // Render saved course material list
             if (typeof renderMaterialList === 'function') renderMaterialList();
@@ -766,6 +778,41 @@
             }
         }
 
+        function ensureJarvisPackOptionsInDropdown() {
+            const voiceSelect = document.getElementById('voiceSelection');
+            if (!voiceSelect) return;
+
+            const existingPackOptions = Array.from(voiceSelect.options).filter(opt => (opt.value || '').startsWith('pack:'));
+            if (existingPackOptions.length > 0) {
+                return;
+            }
+
+            const jarvisPacks = (Array.isArray(window.JARVIS_AUDIO_PACKS) && window.JARVIS_AUDIO_PACKS.length > 0)
+                ? window.JARVIS_AUDIO_PACKS
+                : [
+                    { id: 'jarvis-pack-cfx', name: 'JARVIS Pack - CFX' },
+                    { id: 'jarvis-pack-ghv4', name: 'JARVIS Pack - GHV4' },
+                    { id: 'jarvis-pack-proffie', name: 'JARVIS Pack - ProffieOS V2' },
+                    { id: 'jarvis-pack-sn4', name: 'JARVIS Pack - SN4' },
+                    { id: 'jarvis-pack-xeno2', name: 'JARVIS Pack - Xeno2' },
+                    { id: 'jarvis-pack-xeno3', name: 'JARVIS Pack - Xeno3' }
+                ];
+
+            const separator = document.createElement('option');
+            separator.textContent = '───── JARVIS Audio Packs (.wav) ─────';
+            separator.disabled = true;
+            voiceSelect.appendChild(separator);
+
+            jarvisPacks.forEach(pack => {
+                const option = document.createElement('option');
+                option.value = `pack:${pack.id}`;
+                option.textContent = `${pack.name} 🎵`;
+                voiceSelect.appendChild(option);
+            });
+
+            console.log(`🎵 Injected ${jarvisPacks.length} JARVIS pack options into dropdown`);
+        }
+
         function loadAvailableVoices() {
             if (!window.speechSynthesis) {
                 console.warn('🔊 Speech synthesis not supported');
@@ -784,7 +831,12 @@
                     return;
                 }
                 
-                voiceSelect.innerHTML = '<option value="">Default System Voice</option>';
+                voiceSelect.innerHTML = '';
+                
+                const defaultOption = document.createElement('option');
+                defaultOption.value = '';
+                defaultOption.textContent = 'Default System Voice';
+                voiceSelect.appendChild(defaultOption);
                 
                 // Filter for English voices and good quality ones
                 const englishVoices = voices.filter(voice => 
@@ -800,18 +852,44 @@
                     voice.name.toLowerCase().includes('microsoft')
                 );
                 
+                // Add JARVIS packs from jarvis_voice.js (or fallback list if global not yet ready)
+                const jarvisPacks = (Array.isArray(window.JARVIS_AUDIO_PACKS) && window.JARVIS_AUDIO_PACKS.length > 0)
+                    ? window.JARVIS_AUDIO_PACKS
+                    : [
+                        { id: 'jarvis-pack-cfx', name: 'JARVIS Pack - CFX' },
+                        { id: 'jarvis-pack-ghv4', name: 'JARVIS Pack - GHV4' },
+                        { id: 'jarvis-pack-proffie', name: 'JARVIS Pack - ProffieOS V2' },
+                        { id: 'jarvis-pack-sn4', name: 'JARVIS Pack - SN4' },
+                        { id: 'jarvis-pack-xeno2', name: 'JARVIS Pack - Xeno2' },
+                        { id: 'jarvis-pack-xeno3', name: 'JARVIS Pack - Xeno3' }
+                    ];
+
+                if (jarvisPacks.length > 0) {
+                    const packSeparator = document.createElement('option');
+                    packSeparator.textContent = '───── JARVIS Audio Packs (.wav) ─────';
+                    packSeparator.disabled = true;
+                    voiceSelect.appendChild(packSeparator);
+
+                    jarvisPacks.forEach(pack => {
+                        const option = document.createElement('option');
+                        option.value = `pack:${pack.id}`;
+                        option.textContent = `${pack.name} 🎵`;
+                        voiceSelect.appendChild(option);
+                    });
+                }
+
                 // Add preferred voices first
                 preferredVoices.forEach(voice => {
                     const option = document.createElement('option');
-                    option.value = voice.name;
+                    option.value = `tts:${voice.name}`;
                     option.textContent = `${voice.name} (${voice.lang}) ${voice.localService ? '🎯' : '☁️'}`;
                     voiceSelect.appendChild(option);
                 });
                 
-                // Add separator
+                // Add separator for other TTS voices
                 if (preferredVoices.length > 0) {
                     const separator = document.createElement('option');
-                    separator.textContent = '───── Other Voices ─────';
+                    separator.textContent = '───── Other TTS Voices ─────';
                     separator.disabled = true;
                     voiceSelect.appendChild(separator);
                 }
@@ -823,7 +901,7 @@
                 
                 otherVoices.forEach(voice => {
                     const option = document.createElement('option');
-                    option.value = voice.name;
+                    option.value = `tts:${voice.name}`;
                     option.textContent = `${voice.name} (${voice.lang}) ${voice.localService ? '🎯' : '☁️'}`;
                     voiceSelect.appendChild(option);
                 });
@@ -843,18 +921,35 @@
                 } catch (e) {
                     console.warn('Could not restore voice preference:', e);
                 }
+
+                const savedMode = localStorage.getItem('Nova_voice_mode');
+                const savedPack = localStorage.getItem('Nova_selected_jarvis_pack');
                 
                 // Set current voice in dropdown
-                if (window.selectedVoice) {
-                    voiceSelect.value = window.selectedVoice.name;
+                if (savedMode === 'jarvis-pack' && savedPack) {
+                    voiceSelect.value = `pack:${savedPack}`;
+                    if (typeof window.setVoiceModeSelection === 'function') {
+                        window.setVoiceModeSelection('jarvis-pack', savedPack);
+                    }
+                } else if (window.selectedVoice) {
+                    voiceSelect.value = `tts:${window.selectedVoice.name}`;
+                    if (typeof window.setVoiceModeSelection === 'function') {
+                        window.setVoiceModeSelection('tts', null);
+                    }
                 } else if (voiceToSelect) {
-                    voiceSelect.value = voiceToSelect.name;
+                    voiceSelect.value = `tts:${voiceToSelect.name}`;
                     window.selectedVoice = voiceToSelect;
+                    if (typeof window.setVoiceModeSelection === 'function') {
+                        window.setVoiceModeSelection('tts', null);
+                    }
                 } else {
                     // Auto-select first preferred voice if available
                     if (preferredVoices.length > 0) {
-                        voiceSelect.value = preferredVoices[0].name;
+                        voiceSelect.value = `tts:${preferredVoices[0].name}`;
                         window.selectedVoice = preferredVoices[0];
+                        if (typeof window.setVoiceModeSelection === 'function') {
+                            window.setVoiceModeSelection('tts', null);
+                        }
                         console.log('🔊 Auto-selected preferred voice:', preferredVoices[0].name);
                     }
                 }
@@ -865,45 +960,64 @@
             
             // Handle voice changes
             voiceSelect.addEventListener('change', function() {
-                const voiceName = this.value;
-                console.log('🔊 Voice selection changed to:', voiceName);
+                const selectedValue = this.value;
+                console.log('🔊 Voice selection changed to:', selectedValue);
                 
-                if (voiceName) {
-                    const voices = window.speechSynthesis.getVoices();
-                    const selectedVoice = voices.find(voice => voice.name === voiceName);
-                    if (selectedVoice) {
-                        window.selectedVoice = selectedVoice;
-                        console.log('🔊 Voice object set:', selectedVoice);
-                        console.log('🔊 Voice details - Name:', selectedVoice.name, 'Lang:', selectedVoice.lang, 'Local:', selectedVoice.localService);
-                        
-                        // Store in localStorage for persistence
-                        try {
-                            localStorage.setItem('jarvisVoicePreference', JSON.stringify({
-                                name: selectedVoice.name,
-                                lang: selectedVoice.lang
-                            }));
-                        } catch (e) {
-                            console.warn('Could not save voice preference:', e);
-                        }
-                        
-                        showNotification(`Voice changed to: ${selectedVoice.name}`, 2000);
-                        
-                        // Immediate test to confirm voice change
-                        setTimeout(() => {
-                            window.testVoiceResponse(`Voice changed to ${selectedVoice.name}, sir.`);
-                        }, 500);
-                    }
-                } else {
+                if (!selectedValue) {
                     window.selectedVoice = null;
-                    console.log('🔊 Using default voice');
-                    showNotification('Using default system voice', 2000);
-                    
-                    // Clear saved preference
-                    try {
-                        localStorage.removeItem('jarvisVoicePreference');
-                    } catch (e) {
-                        console.warn('Could not clear voice preference:', e);
+                    if (typeof window.setVoiceModeSelection === 'function') {
+                        window.setVoiceModeSelection('tts', null);
                     }
+                    showNotification('Using default system voice', 2000);
+                    return;
+                }
+
+                if (selectedValue.startsWith('pack:')) {
+                    const packId = selectedValue.replace('pack:', '');
+                    if (typeof window.setVoiceModeSelection === 'function') {
+                        window.setVoiceModeSelection('jarvis-pack', packId);
+                    }
+                    showNotification(`Voice changed to JARVIS pack: ${packId}`, 2000);
+                    setTimeout(() => {
+                        if (typeof window.speakText === 'function') {
+                            window.speakText('Voice pack selected, sir.');
+                        }
+                    }, 300);
+                    return;
+                }
+
+                // TTS branch
+                const voiceName = selectedValue.replace('tts:', '');
+                const voices = window.speechSynthesis.getVoices();
+                const selectedVoice = voices.find(voice => voice.name === voiceName);
+                if (selectedVoice) {
+                    window.selectedVoice = selectedVoice;
+                    if (typeof window.setVoiceModeSelection === 'function') {
+                        window.setVoiceModeSelection('tts', null);
+                    }
+                    console.log('🔊 Voice object set:', selectedVoice);
+                    console.log('🔊 Voice details - Name:', selectedVoice.name, 'Lang:', selectedVoice.lang, 'Local:', selectedVoice.localService);
+                    
+                    // Store in localStorage for persistence
+                    try {
+                        localStorage.setItem('jarvisVoicePreference', JSON.stringify({
+                            name: selectedVoice.name,
+                            lang: selectedVoice.lang
+                        }));
+                    } catch (e) {
+                        console.warn('Could not save voice preference:', e);
+                    }
+                    
+                    showNotification(`Voice changed to: ${selectedVoice.name}`, 2000);
+                    
+                    // Immediate test to confirm voice change
+                    setTimeout(() => {
+                        if (typeof window.testVoiceResponse === 'function') {
+                            window.testVoiceResponse(`Voice changed to ${selectedVoice.name}, sir.`);
+                        } else if (typeof window.speakText === 'function') {
+                            window.speakText(`Voice changed to ${selectedVoice.name}, sir.`);
+                        }
+                    }, 500);
                 }
             });
             
@@ -913,40 +1027,37 @@
                 previewBtn.addEventListener('click', function() {
                     const testText = "Good day, sir. This is N.O.V.A. How do you find this voice?";
                     console.log('🎧 Preview button clicked');
-                    console.log('🎧 Current selected voice:', window.selectedVoice ? window.selectedVoice.name : 'none');
                     
                     // Cancel any ongoing speech
                     if (window.speechSynthesis) {
                         window.speechSynthesis.cancel();
                     }
                     
-                    // Use enhanced speak function
-                    if (typeof window.enhancedSpeakText === 'function') {
-                        window.enhancedSpeakText(testText);
-                    } else if (typeof window.speakText === 'function') {
+                    if (typeof window.speakText === 'function') {
                         window.speakText(testText);
-                    } else {
-                        // Direct fallback preview
-                        const utterance = new SpeechSynthesisUtterance(testText);
-                        
-                        // Use currently selected voice
-                        if (window.selectedVoice && window.selectedVoice instanceof SpeechSynthesisVoice) {
-                            utterance.voice = window.selectedVoice;
-                            console.log('🎧 Using voice for preview:', window.selectedVoice.name);
-                        } else {
-                            console.log('🎧 Using default voice for preview');
-                        }
-                        
-                        utterance.rate = parseFloat(document.getElementById('voiceSpeed')?.value || 1.0);
-                        utterance.pitch = 0.8;
-                        utterance.volume = parseFloat(document.getElementById('voiceVolume')?.value || 0.7);
-                        
-                        utterance.onstart = () => console.log('🎧 Preview started');
-                        utterance.onend = () => console.log('🎧 Preview ended');
-                        utterance.onerror = (e) => console.error('🎧 Preview error:', e);
-                        
-                        window.speechSynthesis.speak(utterance);
+                        return;
                     }
+                    
+                    // Direct fallback preview (TTS only)
+                    const utterance = new SpeechSynthesisUtterance(testText);
+                    
+                    // Use currently selected voice
+                    if (window.selectedVoice && window.selectedVoice instanceof SpeechSynthesisVoice) {
+                        utterance.voice = window.selectedVoice;
+                        console.log('🎧 Using voice for preview:', window.selectedVoice.name);
+                    } else {
+                        console.log('🎧 Using default voice for preview');
+                    }
+                    
+                    utterance.rate = parseFloat(document.getElementById('voiceSpeed')?.value || 1.0);
+                    utterance.pitch = 0.8;
+                    utterance.volume = parseFloat(document.getElementById('voiceVolume')?.value || 0.7);
+                    
+                    utterance.onstart = () => console.log('🎧 Preview started');
+                    utterance.onend = () => console.log('🎧 Preview ended');
+                    utterance.onerror = (e) => console.error('🎧 Preview error:', e);
+                    
+                    window.speechSynthesis.speak(utterance);
                 });
             }
         }
