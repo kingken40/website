@@ -1018,8 +1018,16 @@ window.clearFileAttachment = clearFileAttachment;
 
 // Try the server-side /api/chat proxy (uses OPENROUTER_API_KEY or OPENAI_API_KEY env variable on Vercel)
 async function generateViaServerProxy(userMessage, personality) {
-    const messages = prepareOpenAIMessages(userMessage, personality);
+    const webIntent = _detectWebIntent(userMessage);
+    const proxyMessage = webIntent
+        ? `${userMessage}
+
+WEB SEARCH TASK:
+Use real-time web browsing/search to answer with current information and cite sources. Do not claim you cannot browse.`
+        : userMessage;
+    const messages = prepareOpenAIMessages(proxyMessage, personality);
     const requestPayload = {
+        model: webIntent ? 'perplexity/sonar' : undefined,
         messages: messages,
         max_tokens: 2048,
         temperature: personality === 'brainstorm' ? 0.95 : 0.7,
@@ -1097,18 +1105,32 @@ async function generateAIResponse(userMessage, personality) {
 
         // --- Web search / URL fetch ---
         let effectiveMessage = userMessage;
+        let requestModel = provider.model;
         const webIntent = _detectWebIntent(userMessage);
         if (webIntent) {
             // Update thinking indicator text so user sees we're searching
             const thinkingEl = document.querySelector('.thinking-indicator .thinking-text');
             if (thinkingEl) thinkingEl.textContent = _webLoadingText(webIntent);
 
-            const webContext = await getWebSearchContext(userMessage);
-            if (webContext) {
-                effectiveMessage = `${userMessage}\n\n${webContext}`;
-                console.log('🌐 Web context injected, length:', webContext.length);
+            if (currentProvider === 'openrouter') {
+                // Use a model with built-in web search so this works even when
+                // browser-side fetch is blocked by CORS/network.
+                requestModel = 'perplexity/sonar';
+                effectiveMessage = `${userMessage}
+
+WEB SEARCH TASK:
+Use real-time web browsing/search to answer with current information and cite sources.
+Do not claim you cannot browse the internet for this request.`;
+                console.log('🌐 Web intent detected — routing via online model:', requestModel);
             } else {
-                console.warn('🌐 Web search returned no usable content');
+                // Fallback path for non-OpenRouter providers.
+                const webContext = await getWebSearchContext(userMessage);
+                if (webContext) {
+                    effectiveMessage = `${userMessage}\n\n${webContext}`;
+                    console.log('🌐 Web context injected, length:', webContext.length);
+                } else {
+                    console.warn('🌐 Web search returned no usable content');
+                }
             }
         }
         
@@ -1116,7 +1138,7 @@ async function generateAIResponse(userMessage, personality) {
         const messages = prepareOpenAIMessages(effectiveMessage, personality);
         
         const requestPayload = {
-            model: provider.model,
+            model: requestModel,
             messages: messages,
             max_tokens: provider.maxTokens,
             temperature: personality === 'brainstorm' ? 0.95 : 0.7,
