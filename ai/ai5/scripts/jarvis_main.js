@@ -1094,9 +1094,26 @@ async function generateAIResponse(userMessage, personality) {
     try {
         // Add network delay for better UX
         await new Promise(resolve => setTimeout(resolve, 800));
+
+        // --- Web search / URL fetch ---
+        let effectiveMessage = userMessage;
+        const webIntent = _detectWebIntent(userMessage);
+        if (webIntent) {
+            // Update thinking indicator text so user sees we're searching
+            const thinkingEl = document.querySelector('.thinking-indicator .thinking-text');
+            if (thinkingEl) thinkingEl.textContent = _webLoadingText(webIntent);
+
+            const webContext = await getWebSearchContext(userMessage);
+            if (webContext) {
+                effectiveMessage = `${userMessage}\n\n${webContext}`;
+                console.log('🌐 Web context injected, length:', webContext.length);
+            } else {
+                console.warn('🌐 Web search returned no usable content');
+            }
+        }
         
         // Prepare messages array with conversation history
-        const messages = prepareOpenAIMessages(userMessage, personality);
+        const messages = prepareOpenAIMessages(effectiveMessage, personality);
         
         const requestPayload = {
             model: provider.model,
@@ -1334,6 +1351,84 @@ async function generateAIResponse(userMessage, personality) {
 }
 
 
+// ============================================================
+// WEB SEARCH MODULE — Jina AI (free, no API key required)
+//   r.jina.ai/{url}    — fetch any webpage as clean markdown
+//   s.jina.ai/{query}  — search the web, returns top results
+// ============================================================
+
+const _WEB_URL_RE = /https?:\/\/[^\s<>"{}|\\^`[\]]+/g;
+
+// Explicit web intent: URL present OR clear search/browse keywords
+const _WEB_INTENT_RE = /\b(search(?:\s+(?:for|the\s+web|online))?|look\s*(?:it\s+)?up|browse|visit|go\s+to|open\s+(?:the\s+)?(?:site|page|link|url|website)|fetch|check\s+(?:the\s+)?(?:website|page|site)|(?:their|its|the)\s+(?:website|webpage|web\s+page|site)|(?:find|get)\s+(?:online|on\s+the\s+web|current|real.?time|live)|latest\s+news|current\s+news|real.?time|what(?:'s|\s+is)\s+(?:on|at)\s+(?:the\s+)?(?:website|site|page))\b/i;
+
+function _detectWebIntent(message) {
+    const urls = message.match(_WEB_URL_RE) || [];
+    if (urls.length) return { type: 'url', urls };
+    if (_WEB_INTENT_RE.test(message)) return { type: 'search', query: message };
+    return null;
+}
+
+function _webLoadingText(intent) {
+    return intent.type === 'url'
+        ? `🌐 Fetching page content...`
+        : `🔍 Searching the web...`;
+}
+
+async function _jinaFetch(url) {
+    try {
+        const r = await fetch(`https://r.jina.ai/${url}`, {
+            headers: { Accept: 'text/plain', 'X-Return-Format': 'markdown' }
+        });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const text = await r.text();
+        return text.slice(0, 9000);
+    } catch (e) {
+        console.warn('🌐 Jina fetch failed:', url, e.message);
+        return null;
+    }
+}
+
+async function _jinaSearch(query) {
+    try {
+        const r = await fetch(`https://s.jina.ai/${encodeURIComponent(query)}`, {
+            headers: { Accept: 'text/plain', 'X-Return-Format': 'markdown' }
+        });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const text = await r.text();
+        return text.slice(0, 9000);
+    } catch (e) {
+        console.warn('🔍 Jina search failed:', e.message);
+        return null;
+    }
+}
+
+async function getWebSearchContext(userMessage) {
+    const intent = _detectWebIntent(userMessage);
+    if (!intent) return null;
+
+    console.log('🌐 Web intent detected:', intent.type);
+
+    if (intent.type === 'url') {
+        const blocks = [];
+        for (const url of intent.urls.slice(0, 2)) {
+            const content = await _jinaFetch(url);
+            if (content) blocks.push(`=== LIVE PAGE CONTENT: ${url} ===\n${content}\n=== END PAGE CONTENT ===`);
+        }
+        return blocks.length ? blocks.join('\n\n') : null;
+    }
+
+    // Search
+    const result = await _jinaSearch(userMessage);
+    if (!result) return null;
+    return `=== LIVE WEB SEARCH RESULTS ===\n${result}\n=== END SEARCH RESULTS ===`;
+}
+
+// ============================================================
+// END WEB SEARCH MODULE
+// ============================================================
+
+
 function prepareOpenAIMessages(userMessage, personality) {
     console.log('📝 Preparing messages for OpenAI with personality:', personality);
     
@@ -1366,6 +1461,7 @@ If you are N.O.V.A:
 - Be intelligent and efficient
 - Think Paul Bettany's Nova: witty, helpful, authoritative but never condescending
 - If the Knowledge Base includes relevant content, actively use it and treat it as canonical user context
+- You have the ability to search the web and fetch pages in real-time. When live web data is provided in the message (marked with === LIVE ...), use it directly and tell the user what you found rather than claiming you cannot browse the internet
 
 If you are Genius Mode:
 - Analytical and technical
@@ -1396,6 +1492,9 @@ ${personalityInstructions}${jarvisStyleContext}${directiveContext}${materialCont
 
 KNOWLEDGE BASE RULE:
 When "KNOWLEDGE BASE DIRECTIVES" or "USER KNOWLEDGE BASE" content is present, those are highest-priority user instructions and context. Follow them unless the user explicitly replaces them in a newer Knowledge Base entry. If there is a conflict, prefer the most recent user-provided entry.
+
+WEB SEARCH RULE:
+When the user's message includes a block starting with "=== LIVE PAGE CONTENT" or "=== LIVE WEB SEARCH RESULTS ===", that is real-time data fetched from the web on the user's behalf. Treat it as ground truth. Quote specific details from it in your response rather than falling back on your training data. Acknowledge that the information is live and current.
 
 SOURCE CITATION RULE:
 For educational, research, or fact-heavy responses that rely on specific facts, statistics, scientific concepts, historical events, or technical claims, add a "Sources & References" section at the very bottom of your response formatted as:
