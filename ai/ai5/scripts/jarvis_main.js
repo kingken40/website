@@ -87,7 +87,7 @@ const personalities = {
     Nova: {
         name: 'N.O.V.A',
         greeting: 'Hello Mr. Ken. I, Nova, am at your service. How may I assist you today?',
-        style: 'British AI assistant with dry wit - conversational yet sophisticated, helpful and efficient',
+        style: 'sly British AI assistant with dry wit - conversational yet sophisticated, observant, helpful, and efficient',
         responsePrefix: 'Certainly, sir. '
     },
     genius: {
@@ -116,7 +116,7 @@ const personalities = {
     },
     study: {
         name: 'Study Guide',
-        greeting: 'Study Guide mode activated. Upload your course material in Settings and I\'ll help you master it.',
+        greeting: 'Study Guide mode activated. Upload your Knowledge Base in Settings and I\'ll help you master it.',
         style: 'expert academic assignment helper and study coach',
         responsePrefix: ''
     }
@@ -190,12 +190,38 @@ function getJarvisStyleReferenceContext(personality) {
 
 // ====== PERSISTENT MATERIAL STORE ======
 let persistentMaterial = [];
+const KNOWLEDGE_BASE_MAX_ENTRY_CHARS = 6000;
+const KNOWLEDGE_BASE_MAX_TOTAL_CHARS = 24000;
+const KNOWLEDGE_BASE_DIRECTIVE_MAX_LINES = 24;
+
+function normalizeKnowledgeBaseText(value) {
+    return String(value || '')
+        .replace(/\r\n/g, '\n')
+        .replace(/\u0000/g, '')
+        .trim();
+}
 
 function loadPersistentMaterial() {
     try {
         const stored = localStorage.getItem('nova_persistent_material');
         if (stored) {
-            persistentMaterial = JSON.parse(stored);
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed)) {
+                persistentMaterial = parsed
+                    .map((item, index) => {
+                        const name = normalizeKnowledgeBaseText(item?.name || `Knowledge Base Entry ${index + 1}`);
+                        const content = normalizeKnowledgeBaseText(item?.content);
+                        if (!name || !content) return null;
+                        return {
+                            id: item?.id || Date.now() + index,
+                            name,
+                            content
+                        };
+                    })
+                    .filter(Boolean);
+            } else {
+                persistentMaterial = [];
+            }
         }
     } catch(e) {
         persistentMaterial = [];
@@ -211,7 +237,10 @@ function savePersistentMaterial() {
 }
 
 function addPersistentMaterialItem(name, content) {
-    persistentMaterial.push({ id: Date.now(), name, content });
+    const normalizedName = normalizeKnowledgeBaseText(name || 'Knowledge Base Entry');
+    const normalizedContent = normalizeKnowledgeBaseText(content);
+    if (!normalizedContent) return;
+    persistentMaterial.push({ id: Date.now(), name: normalizedName, content: normalizedContent });
     savePersistentMaterial();
     renderMaterialList();
 }
@@ -222,12 +251,70 @@ function removePersistentMaterialItem(id) {
     renderMaterialList();
 }
 
+function updatePersistentMaterialItem(id, name, content) {
+    const normalizedName = normalizeKnowledgeBaseText(name || 'Knowledge Base Entry');
+    const normalizedContent = normalizeKnowledgeBaseText(content);
+    if (!normalizedName || !normalizedContent) return false;
+    const index = persistentMaterial.findIndex(m => m.id === id);
+    if (index === -1) return false;
+    persistentMaterial[index] = { ...persistentMaterial[index], name: normalizedName, content: normalizedContent };
+    savePersistentMaterial();
+    renderMaterialList();
+    return true;
+}
+
+function getKnowledgeBaseDirectiveContext() {
+    if (persistentMaterial.length === 0) return '';
+
+    const directivePrefixes = ['rule:', 'directive:', 'must:', 'always:', 'never:', '!'];
+    const lines = [];
+    for (const item of persistentMaterial) {
+        const contentLines = String(item.content || '').split(/\r?\n/);
+        for (const rawLine of contentLines) {
+            const line = rawLine.trim();
+            if (!line) continue;
+            const lower = line.toLowerCase();
+            const hasDirectivePrefix = directivePrefixes.some(prefix => lower.startsWith(prefix));
+            const looksLikeStrongInstruction =
+                /\b(always|never|must|do not|don't|required|forbidden)\b/i.test(line) && line.length <= 220;
+
+            if (hasDirectivePrefix || looksLikeStrongInstruction) {
+                lines.push(`[${item.name}] ${line.replace(/^!+\s*/, '')}`);
+                if (lines.length >= KNOWLEDGE_BASE_DIRECTIVE_MAX_LINES) break;
+            }
+        }
+        if (lines.length >= KNOWLEDGE_BASE_DIRECTIVE_MAX_LINES) break;
+    }
+
+    if (lines.length === 0) return '';
+    return `\n\n=== KNOWLEDGE BASE DIRECTIVES (highest priority user rules) ===\n${lines.map(line => `- ${line}`).join('\n')}\n=== END KNOWLEDGE BASE DIRECTIVES ===`;
+}
+
 function getPersistentMaterialContext() {
     if (persistentMaterial.length === 0) return '';
-    const sections = persistentMaterial.map(m =>
-        `--- Material: ${m.name} ---\n${m.content}`
-    ).join('\n\n');
-    return `\n\n=== UPLOADED COURSE MATERIAL (always reference this when relevant) ===\n${sections}\n=== END OF COURSE MATERIAL ===`;
+    let totalChars = 0;
+    const sections = [];
+
+    for (const item of persistentMaterial) {
+        const entryName = normalizeKnowledgeBaseText(item.name);
+        const fullContent = normalizeKnowledgeBaseText(item.content);
+        if (!entryName || !fullContent) continue;
+
+        const content = fullContent.length > KNOWLEDGE_BASE_MAX_ENTRY_CHARS
+            ? `${fullContent.slice(0, KNOWLEDGE_BASE_MAX_ENTRY_CHARS)}\n[Truncated for context size]`
+            : fullContent;
+
+        const section = `--- Knowledge Base Entry: ${entryName} ---\n${content}`;
+        if (totalChars + section.length > KNOWLEDGE_BASE_MAX_TOTAL_CHARS) {
+            sections.push('[Additional knowledge base entries omitted for context size]');
+            break;
+        }
+        sections.push(section);
+        totalChars += section.length;
+    }
+
+    if (sections.length === 0) return '';
+    return `\n\n=== USER KNOWLEDGE BASE (authoritative context) ===\n${sections.join('\n\n')}\n=== END USER KNOWLEDGE BASE ===`;
 }
 
 // ====== USER PROFILE / PERSONALIZATION ======
@@ -381,13 +468,16 @@ function renderMaterialList() {
     const list = document.getElementById('materialList');
     if (!list) return;
     if (persistentMaterial.length === 0) {
-        list.innerHTML = '<div style="color:rgba(255,255,255,0.4);font-size:0.85rem;padding:0.5rem 0;">No material added yet.</div>';
+        list.innerHTML = '<div style="color:rgba(255,255,255,0.4);font-size:0.85rem;padding:0.5rem 0;">No knowledge base items added yet.</div>';
         return;
     }
     list.innerHTML = persistentMaterial.map(m => `
         <div style="display:flex;align-items:center;justify-content:space-between;padding:0.4rem 0.6rem;margin-bottom:0.4rem;background:rgba(0,170,255,0.08);border:1px solid rgba(0,170,255,0.2);border-radius:5px;">
             <span style="color:#00aaff;font-size:0.85rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:80%;" title="${m.name}">${m.name}</span>
-            <button onclick="removePersistentMaterialItem(${m.id})" style="background:none;border:none;color:#ff4444;cursor:pointer;font-size:1rem;padding:0 0.3rem;" title="Remove">✕</button>
+            <span style="display:flex;gap:0.2rem;">
+                <button onclick="editPersistentMaterialItem(${m.id})" style="background:none;border:none;color:#ffd166;cursor:pointer;font-size:0.9rem;padding:0 0.3rem;" title="Edit">✎</button>
+                <button onclick="removePersistentMaterialItem(${m.id})" style="background:none;border:none;color:#ff4444;cursor:pointer;font-size:1rem;padding:0 0.3rem;" title="Remove">✕</button>
+            </span>
         </div>
     `).join('');
 }
@@ -399,7 +489,7 @@ function handleMaterialFileUpload(file) {
         const reader = new FileReader();
         reader.onload = e => {
             addPersistentMaterialItem(file.name, e.target.result);
-            showNotification(`Material added: ${file.name}`, 3000);
+            showNotification(`Knowledge Base item added: ${file.name}`, 3000);
         };
         reader.readAsText(file);
     } else if (ext === 'pdf') {
@@ -415,7 +505,7 @@ function handleMaterialFileUpload(file) {
                     text += content.items.map(item => item.str).join(' ') + '\n';
                 }
                 addPersistentMaterialItem(file.name, text);
-                showNotification(`PDF material added: ${file.name}`, 3000);
+                showNotification(`Knowledge Base PDF added: ${file.name}`, 3000);
             } catch(err) {
                 showNotification('PDF parsing failed. Try a text file instead.', 4000);
             }
@@ -427,6 +517,86 @@ function handleMaterialFileUpload(file) {
 }
 
 window.removePersistentMaterialItem = removePersistentMaterialItem;
+
+// ====== KNOWLEDGE BASE EDIT MODAL ======
+let _kbEditTargetId = null;
+
+function openKbEditModal(id) {
+    const item = persistentMaterial.find(m => m.id === id);
+    if (!item) return;
+
+    const modal   = document.getElementById('kbEditModal');
+    const nameEl  = document.getElementById('kbEditName');
+    const contentEl = document.getElementById('kbEditContent');
+    if (!modal || !nameEl || !contentEl) {
+        // Fallback if modal not in DOM (e.g. CLEAN page)
+        const updatedName = prompt('Edit Knowledge Base item label:', item.name);
+        if (updatedName === null) return;
+        const updatedContent = prompt('Edit Knowledge Base item content:', item.content);
+        if (updatedContent === null) return;
+        const ok = updatePersistentMaterialItem(id, updatedName, updatedContent);
+        showNotification(ok ? 'Knowledge Base item updated.' : 'Knowledge Base update failed.', 2000);
+        return;
+    }
+
+    _kbEditTargetId = id;
+    nameEl.value    = item.name;
+    contentEl.value = item.content;
+    modal.style.display = 'flex';
+    nameEl.focus();
+}
+
+function closeKbEditModal() {
+    const modal = document.getElementById('kbEditModal');
+    if (modal) modal.style.display = 'none';
+    _kbEditTargetId = null;
+}
+
+function saveKbEditModal() {
+    if (_kbEditTargetId === null) return;
+    const nameEl    = document.getElementById('kbEditName');
+    const contentEl = document.getElementById('kbEditContent');
+    const ok = updatePersistentMaterialItem(
+        _kbEditTargetId,
+        nameEl ? nameEl.value : '',
+        contentEl ? contentEl.value : ''
+    );
+    closeKbEditModal();
+    showNotification(ok ? 'Knowledge Base item updated.' : 'Knowledge Base update failed. Check the entry content.', 2000);
+}
+
+// Wire modal buttons once DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    const closeBtn  = document.getElementById('kbEditClose');
+    const cancelBtn = document.getElementById('kbEditCancel');
+    const saveBtn   = document.getElementById('kbEditSave');
+    const modal     = document.getElementById('kbEditModal');
+
+    if (closeBtn)  closeBtn.addEventListener('click', closeKbEditModal);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeKbEditModal);
+    if (saveBtn)   saveBtn.addEventListener('click', saveKbEditModal);
+
+    // Close when clicking the dark backdrop
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) closeKbEditModal();
+        });
+    }
+
+    // Save on Ctrl+Enter / Cmd+Enter inside the textarea
+    const contentEl = document.getElementById('kbEditContent');
+    if (contentEl) {
+        contentEl.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                saveKbEditModal();
+            }
+        });
+    }
+});
+
+window.editPersistentMaterialItem = openKbEditModal;
+// ====== END KNOWLEDGE BASE EDIT MODAL ======
 
 loadPersistentMaterial();
 loadUserProfile();
@@ -1183,7 +1353,7 @@ Your role:
 - For math/science: show complete working with explanations of each step
 - For research: help find relevant angles and organize information
 - Create study guides, practice questions, flashcard-style reviews, and concise summaries on demand
-- When course material is uploaded, reference it directly and prioritize it over general knowledge
+- When the user's Knowledge Base contains relevant information, reference it directly, trust it as user-provided context, and prioritize it over generic background knowledge
 - Use worked examples, analogies, and check-for-understanding questions when they help learning
 - Encourage understanding, not just completion`;
     } else {
@@ -1192,9 +1362,10 @@ When the user is trying to learn, teach clearly: explain step by step, define im
 
 If you are N.O.V.A:
 - Address user as "sir" when appropriate
-- Use dry British humor and occasional witty sarcasm
+- Use dry British humor with a sly edge and occasional witty sarcasm
 - Be intelligent and efficient
 - Think Paul Bettany's Nova: witty, helpful, authoritative but never condescending
+- If the Knowledge Base includes relevant content, actively use it and treat it as canonical user context
 
 If you are Genius Mode:
 - Analytical and technical
@@ -1209,8 +1380,9 @@ If you are Data Analyst:
 - Precise and statistical`;
     }
 
-    // Inject persistent course material, user profile, and real-time data into context
+    // Inject persistent Knowledge Base, user profile, and real-time data into context
     const jarvisStyleContext = getJarvisStyleReferenceContext(personality);
+    const directiveContext = getKnowledgeBaseDirectiveContext();
     const materialContext = getPersistentMaterialContext();
     const profileContext = getUserProfileContext();
     const realtimeContext = getRealtimeContextString();
@@ -1220,7 +1392,10 @@ If you are Data Analyst:
         role: "system",
         content: `You are ${config.name}, a ${config.style}.
 
-${personalityInstructions}${jarvisStyleContext}${materialContext}${profileContext}${realtimeContext}
+${personalityInstructions}${jarvisStyleContext}${directiveContext}${materialContext}${profileContext}${realtimeContext}
+
+KNOWLEDGE BASE RULE:
+When "KNOWLEDGE BASE DIRECTIVES" or "USER KNOWLEDGE BASE" content is present, those are highest-priority user instructions and context. Follow them unless the user explicitly replaces them in a newer Knowledge Base entry. If there is a conflict, prefer the most recent user-provided entry.
 
 SOURCE CITATION RULE:
 For educational, research, or fact-heavy responses that rely on specific facts, statistics, scientific concepts, historical events, or technical claims, add a "Sources & References" section at the very bottom of your response formatted as:
@@ -1815,7 +1990,7 @@ function setupEventListeners() {
     if (addMaterialTextBtn && materialTextInput) {
         addMaterialTextBtn.addEventListener('click', () => {
             const content = materialTextInput.value.trim();
-            const name = (materialTextName && materialTextName.value.trim()) || 'Pasted Material';
+            const name = (materialTextName && materialTextName.value.trim()) || 'Pasted Knowledge Base Entry';
             if (!content) {
                 showNotification('Paste some text first.', 2000);
                 return;
@@ -1823,7 +1998,7 @@ function setupEventListeners() {
             addPersistentMaterialItem(name, content);
             materialTextInput.value = '';
             if (materialTextName) materialTextName.value = '';
-            showNotification('Material added!', 2000);
+            showNotification('Knowledge Base item added!', 2000);
         });
     }
 
@@ -1832,11 +2007,11 @@ function setupEventListeners() {
     if (clearAllMaterialBtn) {
         clearAllMaterialBtn.addEventListener('click', () => {
             if (persistentMaterial.length === 0) return;
-            if (confirm('Remove all uploaded material?')) {
+            if (confirm('Remove all Knowledge Base items?')) {
                 persistentMaterial = [];
                 savePersistentMaterial();
                 renderMaterialList();
-                showNotification('All material cleared.', 2000);
+                showNotification('Knowledge Base cleared.', 2000);
             }
         });
     }
@@ -2412,7 +2587,7 @@ window.testFullVoiceWorkflow = function() {
         // Step 4: Test voice recognition if available
         console.log('Step 4: Voice recognition test');
         if (typeof window.startWakeListening === 'function') {
-            console.log('🎤 Voice recognition available - you can now say "Hey Nova"');
+            console.log('🎤 Voice recognition available - you can now say "Nova" or "Hey Nova"');
         } else {
             console.log('🎤 Voice recognition not available');
         }

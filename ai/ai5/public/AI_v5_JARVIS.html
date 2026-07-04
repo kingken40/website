@@ -216,14 +216,14 @@
                 </div>
                 <!-- Wake phrase setting - DISABLED/COMMENTED OUT -->
                 <!-- <div class="setting-group">
-                    <label for="wakePhraseEnabled">Wake Phrase ("Hey Nova")</label>
+                    <label for="wakePhraseEnabled">Wake Phrase ("Nova" or "Hey Nova")</label>
                     <input type="checkbox" id="wakePhraseEnabled" checked>
                 </div> -->
                 </div>
                 
                 <div class="setting-section" style="margin-top: 1.5rem;">
-                    <h4 style="color: #FFD700; margin-bottom: 1rem; border-bottom: 1px solid rgba(255, 215, 0, 0.3); padding-bottom: 0.5rem;">📚 Course Material</h4>
-                    <p style="color:rgba(255,255,255,0.6);font-size:0.82rem;margin-bottom:0.8rem;">Add notes, slides, or readings that N.O.V.A will reference across all chats. Great for Study Guide mode.</p>
+                    <h4 style="color: #FFD700; margin-bottom: 1rem; border-bottom: 1px solid rgba(255, 215, 0, 0.3); padding-bottom: 0.5rem;">📚 Knowledge Base</h4>
+                    <p style="color:rgba(255,255,255,0.6);font-size:0.82rem;margin-bottom:0.8rem;">Add notes, slides, references, or context that N.O.V.A should read, remember, and prioritize across chats.</p>
                     <div class="setting-group">
                         <label>Upload a file (txt, md, pdf, code)</label>
                         <div style="display:flex;gap:0.5rem;align-items:center;margin-top:0.3rem;">
@@ -234,15 +234,15 @@
                     <div class="setting-group" style="margin-top:0.8rem;">
                         <label>Or paste text</label>
                         <input type="text" id="materialTextName" placeholder="Label (e.g. Chapter 3 Notes)" style="width:100%;padding:0.4rem 0.6rem;background:rgba(0,170,255,0.08);border:1px solid rgba(0,170,255,0.25);border-radius:5px;color:#00aaff;margin-bottom:0.4rem;">
-                        <textarea id="materialTextInput" rows="4" placeholder="Paste your notes or course content here..." style="width:100%;padding:0.5rem 0.6rem;background:rgba(0,170,255,0.08);border:1px solid rgba(0,170,255,0.25);border-radius:5px;color:#e0e0e0;resize:vertical;font-size:0.85rem;box-sizing:border-box;"></textarea>
-                        <button id="addMaterialTextBtn" type="button" style="margin-top:0.4rem;padding:0.45rem 1rem;background:linear-gradient(135deg,#FFD700,#FFA500);border:none;border-radius:5px;color:#1a1a2e;font-weight:600;cursor:pointer;font-size:0.85rem;">+ Add Material</button>
+                        <textarea id="materialTextInput" rows="4" placeholder="Paste notes, documentation, or any context for your Knowledge Base..." style="width:100%;padding:0.5rem 0.6rem;background:rgba(0,170,255,0.08);border:1px solid rgba(0,170,255,0.25);border-radius:5px;color:#e0e0e0;resize:vertical;font-size:0.85rem;box-sizing:border-box;"></textarea>
+                        <button id="addMaterialTextBtn" type="button" style="margin-top:0.4rem;padding:0.45rem 1rem;background:linear-gradient(135deg,#FFD700,#FFA500);border:none;border-radius:5px;color:#1a1a2e;font-weight:600;cursor:pointer;font-size:0.85rem;">+ Add to Knowledge Base</button>
                     </div>
                     <div class="setting-group" style="margin-top:0.8rem;">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem;">
-                            <label style="margin:0;">Saved Material</label>
+                            <label style="margin:0;">Saved Knowledge Base</label>
                             <button id="clearAllMaterialBtn" type="button" style="background:none;border:1px solid rgba(255,68,68,0.4);color:#ff6666;border-radius:4px;padding:0.2rem 0.6rem;cursor:pointer;font-size:0.78rem;">Clear All</button>
                         </div>
-                        <div id="materialList"><div style="color:rgba(255,255,255,0.4);font-size:0.85rem;padding:0.5rem 0;">No material added yet.</div></div>
+                        <div id="materialList"><div style="color:rgba(255,255,255,0.4);font-size:0.85rem;padding:0.5rem 0;">No knowledge base items added yet.</div></div>
                     </div>
                 </div>
 
@@ -336,6 +336,73 @@
 
     <!-- Notification System -->
     <div class="notification" id="notification"></div>
+
+    <!-- Knowledge Base Edit Modal -->
+    <div id="kbEditModal" style="
+        display:none;position:fixed;inset:0;z-index:10000;
+        background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);
+        align-items:center;justify-content:center;
+    ">
+        <div style="
+            background:linear-gradient(135deg,#0d1b2a,#1a2a3a);
+            border:1px solid rgba(0,170,255,0.35);
+            border-radius:12px;
+            padding:1.6rem;
+            width:min(700px,94vw);
+            max-height:90vh;
+            display:flex;flex-direction:column;gap:1rem;
+            box-shadow:0 0 40px rgba(0,170,255,0.2);
+        ">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <h3 style="color:#FFD700;margin:0;font-size:1.1rem;">✎ Edit Knowledge Base Entry</h3>
+                <button id="kbEditClose" type="button" style="
+                    background:none;border:none;color:rgba(255,255,255,0.6);
+                    font-size:1.4rem;cursor:pointer;line-height:1;padding:0 0.2rem;
+                " title="Cancel">&times;</button>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:0.4rem;">
+                <label style="color:rgba(255,255,255,0.75);font-size:0.82rem;">Label</label>
+                <input id="kbEditName" type="text" style="
+                    width:100%;padding:0.5rem 0.7rem;
+                    background:rgba(0,170,255,0.08);
+                    border:1px solid rgba(0,170,255,0.3);
+                    border-radius:6px;color:#00aaff;font-size:0.9rem;
+                    box-sizing:border-box;
+                ">
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:0.4rem;flex:1;min-height:0;">
+                <label style="color:rgba(255,255,255,0.75);font-size:0.82rem;">Content</label>
+                <textarea id="kbEditContent" rows="12" style="
+                    width:100%;padding:0.6rem 0.7rem;
+                    background:rgba(0,170,255,0.05);
+                    border:1px solid rgba(0,170,255,0.25);
+                    border-radius:6px;color:#e0e0e0;font-size:0.85rem;
+                    resize:vertical;box-sizing:border-box;font-family:inherit;
+                    line-height:1.5;max-height:50vh;overflow-y:auto;
+                "></textarea>
+                <small style="color:rgba(255,255,255,0.4);font-size:0.76rem;">
+                    Tip: Prefix lines with <code style="color:#FFD700;">Rule:</code>, <code style="color:#FFD700;">Always:</code>, or <code style="color:#FFD700;">Never:</code> to make them high-priority directives N.O.V.A will follow strictly.
+                </small>
+            </div>
+
+            <div style="display:flex;justify-content:flex-end;gap:0.75rem;margin-top:0.25rem;">
+                <button id="kbEditCancel" type="button" style="
+                    padding:0.5rem 1.2rem;
+                    background:rgba(255,255,255,0.07);
+                    border:1px solid rgba(255,255,255,0.2);
+                    border-radius:6px;color:#ccc;cursor:pointer;font-size:0.88rem;
+                ">Cancel</button>
+                <button id="kbEditSave" type="button" style="
+                    padding:0.5rem 1.4rem;
+                    background:linear-gradient(135deg,#FFD700,#FFA500);
+                    border:none;border-radius:6px;
+                    color:#1a1a2e;font-weight:700;cursor:pointer;font-size:0.88rem;
+                ">Save Changes</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Loading Overlay -->
     <div class="loading-overlay" id="loadingOverlay">
@@ -549,7 +616,7 @@
             },
             study: {
                 name: "Study Guide",
-                systemPrompt: "You are an expert academic assistant specializing in assignment help, homework completion, and study guidance. Help students understand assignments, break down complex problems, provide step-by-step solutions with explanations, assist with essays/math/research, create study guides and practice questions. When course material is uploaded, reference it directly and prioritize it over general knowledge.",
+                systemPrompt: "You are an expert academic assistant specializing in assignment help, homework completion, and study guidance. Help students understand assignments, break down complex problems, provide step-by-step solutions with explanations, assist with essays/math/research, create study guides and practice questions. When Knowledge Base content is uploaded, reference it directly and prioritize it over general knowledge.",
                 voiceSettings: { rate: 0.9, pitch: 0.95 }
             }
         };
@@ -628,7 +695,7 @@
                     <h3>🤖 N.O.V.A Systems Initialized</h3>
                     <p>Good ${getTimeOfDay()}, sir. N.O.V.A is online and ready to assist you.</p>
                     <div class="feature-highlights">
-                        <div class="feature">🗣️ <strong>Voice Recognition:</strong> Say "Hey Nova" or press and hold the microphone</div>
+                        <div class="feature">🗣️ <strong>Voice Recognition:</strong> Say "Nova" or "Hey Nova", or press and hold the microphone</div>
                         <div class="feature">🧠 <strong>AI Modes:</strong> Switch between different AI personalities</div>
                         <div class="feature">⚙️ <strong>Settings:</strong> Customize voice and preferences</div>
                         <div class="feature">📁 <strong>File Upload:</strong> Attach and analyze documents</div>
@@ -659,7 +726,7 @@
             setTimeout(() => ensureJarvisPackOptionsInDropdown(), 300);
             setTimeout(() => ensureJarvisPackOptionsInDropdown(), 1000);
 
-            // Render saved course material list
+            // Render saved Knowledge Base list
             if (typeof renderMaterialList === 'function') renderMaterialList();
 
             // Wire material controls (once, using flags to avoid duplicate listeners)
@@ -680,13 +747,13 @@
                 addMaterialTextBtn._wired = true;
                 addMaterialTextBtn.addEventListener('click', () => {
                     const content = document.getElementById('materialTextInput').value.trim();
-                    const name = document.getElementById('materialTextName').value.trim() || 'Pasted Material';
+                    const name = document.getElementById('materialTextName').value.trim() || 'Pasted Knowledge Base Entry';
                     if (!content) { showNotification('Paste some text first.', 2000); return; }
                     if (typeof addPersistentMaterialItem === 'function') {
                         addPersistentMaterialItem(name, content);
                         document.getElementById('materialTextInput').value = '';
                         document.getElementById('materialTextName').value = '';
-                        showNotification('Material added!', 2000);
+                        showNotification('Knowledge Base item added!', 2000);
                     }
                 });
             }
@@ -696,11 +763,11 @@
                 clearAllMaterialBtn._wired = true;
                 clearAllMaterialBtn.addEventListener('click', () => {
                     if (typeof persistentMaterial === 'undefined' || persistentMaterial.length === 0) return;
-                    if (confirm('Remove all uploaded material?')) {
+                    if (confirm('Remove all Knowledge Base items?')) {
                         persistentMaterial.length = 0;
                         if (typeof savePersistentMaterial === 'function') savePersistentMaterial();
                         if (typeof renderMaterialList === 'function') renderMaterialList();
-                        showNotification('All material cleared.', 2000);
+                        showNotification('Knowledge Base cleared.', 2000);
                     }
                 });
             }
@@ -1102,7 +1169,7 @@
                     updateVoiceVisualizer(false);
                 } else {
                     window.startWakeListening();
-                    updateVoiceStatus('Listening for "Hey Nova"...');
+                    updateVoiceStatus('Listening for "Nova" or "Hey Nova"...');
                     updateVoiceVisualizer(true);
                     showVoiceEnabledMessage();
                 }
@@ -1138,12 +1205,12 @@
             const message = `
                 <div class="voice-enabled-message">
                     <h4>🎤 Voice Recognition Activated</h4>
-                    <p>I'm now listening for "Hey Nova" followed by your commands.</p>
+                    <p>I'm now listening for "Nova" or "Hey Nova" followed by your commands.</p>
                     <p><strong>Try saying:</strong></p>
                     <ul>
-                        <li>"Hey Nova, what's the weather like?"</li>
+                        <li>"Nova, what's the weather like?"</li>
                         <li>"Hey Nova, explain quantum physics"</li>
-                        <li>"Hey Nova, switch to genius mode"</li>
+                        <li>"Nova, switch to genius mode"</li>
                     </ul>
                 </div>
             `;
@@ -1275,7 +1342,7 @@
             if (typeof window.startWakeListening === 'function') {
                 console.log('🎤 Starting wake listening...');
                 window.startWakeListening();
-                updateVoiceStatus('Listening for "Hey Jarvis"...');
+                updateVoiceStatus('Listening for "Nova" or "Hey Nova"...');
                 updateVoiceVisualizer(true);
             } else {
                 console.error('🎤 Voice functions not available');
@@ -1350,7 +1417,7 @@
                 // Step 4: Test voice recognition if available
                 console.log('Step 4: Voice recognition test');
                 if (typeof window.startWakeListening === 'function') {
-                    console.log('🎤 Voice recognition available - you can now say "Hey Jarvis"');
+                    console.log('🎤 Voice recognition available - you can now say "Nova" or "Hey Nova"');
                 } else {
                     console.log('🎤 Voice recognition not available');
                 }
