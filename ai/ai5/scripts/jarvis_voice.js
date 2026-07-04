@@ -15,7 +15,7 @@ let isSpeaking = false;
 let isWakeListening = false;
 let isVoiceResponseEnabled = true;
 let hasVoicePermission = false;
-let voicePermissionRequested = false;
+let voicePermissionRequestInFlight = null;
 let pendingTranscript = '';
 let lastInterimTranscript = '';
 let wakeWordEnabled = localStorage.getItem('Nova_wake_word_enabled') !== 'false'; // Default on unless explicitly disabled
@@ -192,51 +192,58 @@ const voiceCommands = {
 
 // Microphone Permission Management
 async function requestVoicePermission() {
-    if (voicePermissionRequested) {
-        return hasVoicePermission;
-    }
-
-    voicePermissionRequested = true;
-    
-    try {
-        console.log('🎤 Requesting microphone permission...');
-        showVoiceNotification('Requesting microphone access...', 3000);
-        
-        // Request permission through getUserMedia
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        
-        // Permission granted - immediately close the stream
-        stream.getTracks().forEach(track => track.stop());
-        hasVoicePermission = true;
-        
-        console.log('✅ Microphone permission granted');
-        showVoiceNotification('Microphone access granted - voice recognition ready!', 3000);
-        
-        // Update status in chat
-        setTimeout(() => {
-            addMessageToChat('Microphone access granted, sir. Voice recognition is now ready. Press and hold the microphone button to speak.', 'Nova');
-        }, 500);
-        
+    if (hasVoicePermission) {
         return true;
-        
-    } catch (error) {
-        hasVoicePermission = false;
-        console.warn('⚠️ Microphone permission denied:', error);
-        
-        if (error.name === 'NotAllowedError') {
-            showVoiceNotification('Microphone access denied. Please enable it in browser settings.', 5000);
-            setTimeout(() => {
-                addMessageToChat('Microphone access was denied, sir. Voice recognition will not function. You can still use text input below.', 'Nova');
-            }, 500);
-        } else {
-            showVoiceNotification('Microphone not available. Please check your device settings.', 5000);
-            setTimeout(() => {
-                addMessageToChat('Microphone is not available, sir. Voice recognition will not function. You can still use text input below.', 'Nova');
-            }, 500);
-        }
-        
-        return false;
     }
+    if (voicePermissionRequestInFlight) {
+        return voicePermissionRequestInFlight;
+    }
+    
+    voicePermissionRequestInFlight = (async () => {
+        try {
+            console.log('🎤 Requesting microphone permission...');
+            showVoiceNotification('Requesting microphone access...', 3000);
+            
+            // Request permission through getUserMedia
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            
+            // Permission granted - immediately close the stream
+            stream.getTracks().forEach(track => track.stop());
+            hasVoicePermission = true;
+            
+            console.log('✅ Microphone permission granted');
+            showVoiceNotification('Microphone access granted - voice recognition ready!', 3000);
+            
+            // Update status in chat
+            setTimeout(() => {
+                addMessageToChat('Microphone access granted, sir. Voice recognition is now ready. Press and hold the microphone button to speak.', 'Nova');
+            }, 500);
+            
+            return true;
+            
+        } catch (error) {
+            hasVoicePermission = false;
+            console.warn('⚠️ Microphone permission denied:', error);
+            
+            if (error.name === 'NotAllowedError') {
+                showVoiceNotification('Microphone access denied. Please enable it in browser settings.', 5000);
+                setTimeout(() => {
+                    addMessageToChat('Microphone access was denied, sir. Voice recognition will not function. You can still use text input below.', 'Nova');
+                }, 500);
+            } else {
+                showVoiceNotification('Microphone not available. Please check your device settings.', 5000);
+                setTimeout(() => {
+                    addMessageToChat('Microphone is not available, sir. Voice recognition will not function. You can still use text input below.', 'Nova');
+                }, 500);
+            }
+            
+            return false;
+        } finally {
+            voicePermissionRequestInFlight = null;
+        }
+    })();
+
+    return voicePermissionRequestInFlight;
 }
 
 // Initialize Voice System
@@ -335,7 +342,7 @@ function setupSpeechRecognition() {
             pendingTranscript = '';
             lastInterimTranscript = '';
             if (transcript) {
-                console.log('🎙️ Always-listening turn captured:', transcript);
+                console.log('🎙️ Always-listening turned-on captured:', transcript);
                 isWakeWordSession = true;
                 window.isWakeWordSession = true;
                 updateVoiceStatus('Processing command...');
@@ -605,14 +612,22 @@ function startWakeListening() {
         return;
     }
     
-    // Check if speech is currently active
-    if (window.speechSynthesis && (window.speechSynthesis.speaking || window.speechSynthesis.pending)) {
+    // Check if speech is currently active (use our own isSpeaking flag as
+    // primary — speechSynthesis.speaking can lag behind utterance.onend in
+    // some browsers, causing the old single-shot retry to give up too early)
+    const speechActive = isSpeaking ||
+        (window.speechSynthesis && (window.speechSynthesis.speaking || window.speechSynthesis.pending));
+    if (speechActive) {
         console.log('👂 Cannot start listening - Nova is currently speaking');
-        setTimeout(() => {
-            if (wakeWordEnabled && !window.speechSynthesis.speaking && !window.speechSynthesis.pending) {
-                startWakeListening();
+        setTimeout(function retryWake() {
+            const stillSpeaking = isSpeaking ||
+                (window.speechSynthesis && (window.speechSynthesis.speaking || window.speechSynthesis.pending));
+            if (!stillSpeaking) {
+                if (wakeWordEnabled) startWakeListening();
+            } else if (wakeWordEnabled) {
+                setTimeout(retryWake, 400);   // keep polling until speech clears
             }
-        }, 1000);
+        }, 400);
         return;
     }
     
@@ -632,7 +647,7 @@ function startWakeListening() {
     try {
         recognition.continuous = true;
         recognition.start();
-        updateVoiceStatus('Listening for "Hey Nova"...');
+        updateVoiceStatus('Listening for "Nova" or "Hey Nova"...');
         
         wakeListeningTimeout = setTimeout(() => {
             if (isWakeListening && isListening && wakeWordEnabled) {
@@ -927,7 +942,7 @@ function processVoiceCommand(transcript) {
             
         } else if (voiceCommands.help.some(help => command.includes(help))) {
             addMessageToChat(transcript, 'user');
-            const response = 'I can help you with various tasks including answering questions, analyzing data, creating lesson plans, and more. You can also use voice commands by saying "Hey Nova".';
+            const response = 'I can help you with various tasks including answering questions, analyzing data, creating lesson plans, and more. You can also use voice commands by saying "Nova" or "Hey Nova".';
             addMessageToChat(response, 'Nova');
             if (isWakeWordSession) {
                 speakText(response, restoreWakeListeningAfterResponse);
@@ -1709,17 +1724,19 @@ async function enableWakeListening(enabled) {
             const granted = await requestVoicePermission();
             if (!granted) {
                 console.log('🎤 Permission denied - cannot enable wake listening');
+                updateVoiceStatus('Microphone access required to enable wake phrase listening');
                 return;
             }
         }
         
         wakeWordEnabled = true;
-        isWakeListening = true;
-        window.isWakeListening = true;
+        // Do NOT pre-set isWakeListening here — startWakeListening() sets it
+        // when recognition actually starts. Pre-setting it causes
+        // restoreWakeListeningAfterResponse to wrongly skip a restart.
         
         console.log('🎤 Wake listening enabled - starting...');
-        showVoiceNotification('Wake word enabled - Say "Hey Nova"', 3000);
-        updateVoiceStatus('Listening for "Hey Nova"...');
+        showVoiceNotification('Wake word enabled - Say "Nova" or "Hey Nova"', 3000);
+        updateVoiceStatus('Listening for "Nova" or "Hey Nova"...');
         
         startWakeListening();
     } else {
@@ -2189,8 +2206,8 @@ function setupVoiceButtons() {
                 this.title = '"Hey Nova" wake word ENABLED';
                 
                 console.log('🎤 Wake word enabled - starting wake listening');
-                showVoiceNotification('Wake word enabled - Say "Hey Nova"', 3000);
-                updateVoiceStatus('Say "Hey Nova" or press and hold microphone');
+                showVoiceNotification('Wake word enabled - Say "Nova" or "Hey Nova"', 3000);
+                updateVoiceStatus('Say "Nova" or "Hey Nova", or press and hold microphone');
                 
                 // Start wake listening
                 isWakeListening = true;
@@ -2585,7 +2602,7 @@ async function toggleVoiceListening() {
             }
         }
         
-        updateVoiceStatus('Click microphone to enable "Hey Nova" listening');
+        updateVoiceStatus('Click microphone to enable "Nova" or "Hey Nova" listening');
         showVoiceNotification('Voice recognition disabled', 2000);
         
         // Hide visualizer when voice is disabled
@@ -2601,8 +2618,8 @@ async function toggleVoiceListening() {
         if (permissionGranted) {
             // Turn on wake listening
             await enableWakeListening(true);
-            updateVoiceStatus('Say "Hey Nova" to activate');
-            showVoiceNotification('Say "Hey Nova" to activate', 3000);
+            updateVoiceStatus('Say "Nova" or "Hey Nova" to activate');
+            showVoiceNotification('Say "Nova" or "Hey Nova" to activate', 3000);
             
             // Show voice enabled message and activate visualizer
             if (typeof showVoiceEnabledMessage === 'function') {
@@ -2612,7 +2629,7 @@ async function toggleVoiceListening() {
                 updateVoiceVisualizer(true);
             }
             
-            console.log('🎤 Wake listening enabled - say "Hey Nova"');
+            console.log('🎤 Wake listening enabled - say "Nova" or "Hey Nova"');
         } else {
             updateVoiceStatus('Microphone access required for voice recognition');
             console.log('🎤 Cannot start voice recognition - permission denied');
@@ -2746,7 +2763,7 @@ function generateNovaResponse(message) {
     
     // Help requests
     if (lowerMessage.includes('help') || lowerMessage.includes('assist') || lowerMessage.includes('what can you do')) {
-        return "I can assist with various tasks, sir. Try asking me about science, mathematics, analysis, or general information. You can also use voice commands by saying 'Hey Nova'.";
+        return "I can assist with various tasks, sir. Try asking me about science, mathematics, analysis, or general information. You can also use voice commands by saying 'Nova' or 'Hey Nova'.";
     }
     
     // Chat management
