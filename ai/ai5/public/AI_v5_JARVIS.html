@@ -243,8 +243,12 @@
                     <div class="setting-group" style="margin-top:0.8rem;">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem;">
                             <label style="margin:0;">Saved Knowledge Base</label>
-                            <button id="clearAllMaterialBtn" type="button" style="background:none;border:1px solid rgba(255,68,68,0.4);color:#ff6666;border-radius:4px;padding:0.2rem 0.6rem;cursor:pointer;font-size:0.78rem;">Clear All</button>
+                            <div style="display:flex;gap:0.35rem;align-items:center;">
+                                <button id="kbCreateGroupBtn" type="button" class="kb-group-mode-btn">+ New Group</button>
+                                <button id="clearAllMaterialBtn" type="button" style="background:none;border:1px solid rgba(255,68,68,0.4);color:#ff6666;border-radius:4px;padding:0.2rem 0.6rem;cursor:pointer;font-size:0.78rem;">Clear All</button>
+                            </div>
                         </div>
+                        <div style="color:rgba(255,255,255,0.55);font-size:0.75rem;margin-bottom:0.35rem;">Click a group to view/edit/delete the notes there, or move notes into existing/new groups.</div>
                         <div id="materialList"><div style="color:rgba(255,255,255,0.4);font-size:0.85rem;padding:0.5rem 0;">No knowledge base items added yet.</div></div>
                     </div>
                 </div>
