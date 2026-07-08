@@ -54,6 +54,7 @@ let currentPersonality = 'Nova';
 
 // Initialize conversation history
 let conversationHistory = [];
+let isResponseInFlight = false;
 
 const JARVIS_STYLE_PHRASES_PATH = '../Jarvis-main/phrases.txt';
 const JARVIS_STYLE_REFERENCE_LIMIT = 24;
@@ -881,6 +882,14 @@ function processUserMessage(userMessage) {
     console.log('💭 ==========================================');
     
     try {
+        if (isResponseInFlight) {
+            showNotification('N.O.V.A is still responding. Please wait or use Continue after it finishes.', 2500);
+            return;
+        }
+
+        isResponseInFlight = true;
+        updateContinuationButtonState();
+
         // Detect and save any personalization info from the message
         detectAndSavePersonalization(userMessage);
         
@@ -898,13 +907,73 @@ function processUserMessage(userMessage) {
         }
         
         // Generate AI response
-        setTimeout(() => {
-            generateAIResponse(userMessage, currentPersonality);
+        setTimeout(async () => {
+            try {
+                await generateAIResponse(userMessage, currentPersonality);
+            } finally {
+                isResponseInFlight = false;
+                updateContinuationButtonState();
+            }
         }, 1000);
     } catch (error) {
         console.error('❌ Error in processUserMessage:', error);
+        isResponseInFlight = false;
+        updateContinuationButtonState();
         removeThinkingIndicator();
         addMessage('System error processing your message. Please try again.', 'Nova');
+    }
+}
+
+function getLastNovaMessageText() {
+    for (let i = conversationHistory.length - 1; i >= 0; i--) {
+        if (conversationHistory[i].role === 'assistant' && conversationHistory[i].content) {
+            return conversationHistory[i].content;
+        }
+    }
+    return '';
+}
+
+function updateContinuationButtonState() {
+    const continueBtn = document.getElementById('continueBtn');
+    if (!continueBtn) return;
+    continueBtn.disabled = isResponseInFlight;
+    continueBtn.classList.toggle('disabled', isResponseInFlight);
+}
+
+async function continueConversation() {
+    if (isResponseInFlight) {
+        showNotification('Please wait for N.O.V.A to finish the current response.', 2200);
+        return;
+    }
+
+    const lastNovaMessage = getLastNovaMessageText();
+    if (!lastNovaMessage) {
+        showNotification('No response yet to continue from.', 2200);
+        return;
+    }
+
+    isResponseInFlight = true;
+    updateContinuationButtonState();
+    addThinkingIndicator();
+
+    const thinkingEl = document.querySelector('.thinking-indicator .thinking-text');
+    if (thinkingEl) {
+        thinkingEl.textContent = 'N.O.V.A is continuing the response...';
+    }
+
+    const continuationPrompt = `Continue your previous response naturally based on this ongoing chat.
+Keep it directly relevant to what we are discussing right now.
+Do not restart from scratch, do not repeat the same points, and do not be random.
+Build from where you left off with useful next details.
+
+Last assistant response:
+${lastNovaMessage}`;
+
+    try {
+        await generateAIResponse(continuationPrompt, currentPersonality);
+    } finally {
+        isResponseInFlight = false;
+        updateContinuationButtonState();
     }
 }
 
@@ -1018,16 +1087,19 @@ window.clearFileAttachment = clearFileAttachment;
 
 // Try the server-side /api/chat proxy (uses OPENROUTER_API_KEY or OPENAI_API_KEY env variable on Vercel)
 async function generateViaServerProxy(userMessage, personality) {
-    const webIntent = _detectWebIntent(userMessage);
+    const webIntent = _resolveWebIntent(userMessage);
+    const shouldUseWeb = !!webIntent;
     const proxyMessage = webIntent
         ? `${userMessage}
 
 WEB SEARCH TASK:
-Use real-time web browsing/search to answer with current information and cite sources. Do not claim you cannot browse.`
+Use real-time web browsing/search to answer with current information and cite sources.
+You MUST include a "Sources & References" section with source title + clickable markdown link for every internet-derived claim.
+Do not claim you cannot browse.`
         : userMessage;
     const messages = prepareOpenAIMessages(proxyMessage, personality);
     const requestPayload = {
-        model: webIntent ? 'perplexity/sonar' : undefined,
+        model: shouldUseWeb ? 'perplexity/sonar' : undefined,
         messages: messages,
         max_tokens: 2048,
         temperature: personality === 'brainstorm' ? 0.95 : 0.7,
@@ -1055,7 +1127,10 @@ Use real-time web browsing/search to answer with current information and cite so
     if (!responseData.choices || !responseData.choices[0] || !responseData.choices[0].message) {
         throw new Error('Invalid server proxy response format');
     }
-    return responseData.choices[0].message.content;
+    const rawReply = responseData.choices[0].message.content;
+    const payloadSources = _extractSourcesFromProviderPayload(responseData);
+    const reply = _ensureWebSourcesInReply(rawReply, payloadSources, shouldUseWeb);
+    return { reply, webUsed: shouldUseWeb };
 }
 
 // Enhanced AI integration with multi-provider support and improved error handling
@@ -1071,7 +1146,8 @@ async function generateAIResponse(userMessage, personality) {
         console.log('🌐 No user API key configured — trying server proxy (/api/chat)...');
         try {
             await new Promise(resolve => setTimeout(resolve, 400));
-            const reply = await generateViaServerProxy(userMessage, personality);
+            const proxyResult = await generateViaServerProxy(userMessage, personality);
+            const reply = proxyResult.reply;
             removeThinkingIndicator();
             addMessage(reply, 'Nova');
             conversationHistory.push({ role: 'assistant', content: reply, personality, timestamp: new Date().toISOString() });
@@ -1106,7 +1182,9 @@ async function generateAIResponse(userMessage, personality) {
         // --- Web search / URL fetch ---
         let effectiveMessage = userMessage;
         let requestModel = provider.model;
-        const webIntent = _detectWebIntent(userMessage);
+        const webIntent = _resolveWebIntent(userMessage);
+        const shouldUseWeb = !!webIntent;
+        let collectedWebSources = [];
         if (webIntent) {
             // Update thinking indicator text so user sees we're searching
             const thinkingEl = document.querySelector('.thinking-indicator .thinking-text');
@@ -1120,14 +1198,17 @@ async function generateAIResponse(userMessage, personality) {
 
 WEB SEARCH TASK:
 Use real-time web browsing/search to answer with current information and cite sources.
+For every internet-derived claim, include a source title and clickable markdown URL.
+If the user asked for downloadable resources, prioritize official download pages and direct file links when available.
 Do not claim you cannot browse the internet for this request.`;
                 console.log('🌐 Web intent detected — routing via online model:', requestModel);
             } else {
                 // Fallback path for non-OpenRouter providers.
-                const webContext = await getWebSearchContext(userMessage);
-                if (webContext) {
-                    effectiveMessage = `${userMessage}\n\n${webContext}`;
-                    console.log('🌐 Web context injected, length:', webContext.length);
+                const webBundle = await getWebSearchContext(userMessage);
+                if (webBundle && webBundle.context) {
+                    effectiveMessage = `${userMessage}\n\n${webBundle.context}`;
+                    collectedWebSources = Array.isArray(webBundle.sources) ? webBundle.sources : [];
+                    console.log('🌐 Web context injected, length:', webBundle.context.length, 'sources:', collectedWebSources.length);
                 } else {
                     console.warn('🌐 Web search returned no usable content');
                 }
@@ -1211,7 +1292,10 @@ Do not claim you cannot browse the internet for this request.`;
             throw new Error(`Invalid ${currentProvider.toUpperCase()} response format`);
         }
         
-        const reply = responseData.choices[0].message.content;
+        const rawReply = responseData.choices[0].message.content;
+        const payloadSources = _extractSourcesFromProviderPayload(responseData);
+        const mergedSources = _mergeSourceLists(collectedWebSources, payloadSources);
+        const reply = _ensureWebSourcesInReply(rawReply, mergedSources, shouldUseWeb);
         console.log('✅', currentProvider.toUpperCase(), 'Response Success - Length:', reply.length, 'characters');
         console.log('🎭 Personality:', personality);
         
@@ -1382,7 +1466,13 @@ Do not claim you cannot browse the internet for this request.`;
 const _WEB_URL_RE = /https?:\/\/[^\s<>"{}|\\^`[\]]+/g;
 
 // Explicit web intent: URL present OR clear search/browse keywords
-const _WEB_INTENT_RE = /\b(search(?:\s+(?:for|the\s+web|online))?|look\s*(?:it\s+)?up|browse|visit|go\s+to|open\s+(?:the\s+)?(?:site|page|link|url|website)|fetch|check\s+(?:the\s+)?(?:website|page|site)|(?:their|its|the)\s+(?:website|webpage|web\s+page|site)|(?:find|get)\s+(?:online|on\s+the\s+web|current|real.?time|live)|latest\s+news|current\s+news|real.?time|what(?:'s|\s+is)\s+(?:on|at)\s+(?:the\s+)?(?:website|site|page))\b/i;
+const _WEB_INTENT_RE = /\b(search(?:\s+(?:for|the\s+web|online))?|look\s*(?:it\s+)?up|browse|visit|go\s+to|open\s+(?:the\s+)?(?:site|page|link|url|website)|fetch|check\s+(?:the\s+)?(?:website|page|site)|(?:their|its|the)\s+(?:website|webpage|web\s+page|site)|(?:find|get)\s+(?:online|on\s+the\s+web|current|real.?time|live)|latest\s+news|current\s+news|real.?time|what(?:'s|\s+is)\s+(?:on|at)\s+(?:the\s+)?(?:website|site|page)|download(?:able|s)?|installer|setup\s+file|github\s+release|official\s+download|apk|exe|dmg|zip\s+file|pdf\s+download|dataset)\b/i;
+const _FACT_LOOKUP_RE = /\b(what\s+is|who\s+is|where\s+is|when\s+is|how\s+to|latest|current|news|price|specs?|release\s+date|documentation|docs|official|best|top\s+\d+|compare|review|download(?:able|s)?|template|example|guide|tutorial|dataset|statistics?|evidence|research)\b/i;
+const _LOCAL_TASK_RE = /\b(this\s+(?:chat|conversation|file|project|repo|code|snippet)|from\s+my\s+(?:notes|knowledge\s+base)|summari[sz]e\s+(?:this|above)|rewrite|rephrase|translate|fix\s+my\s+code|debug\s+this|remember\s+that)\b/i;
+const _CASUAL_CHAT_RE = /\b(hi|hello|hey|how are you|thanks|thank you|good morning|good night|tell me a joke|who are you)\b/i;
+const _STOPWORD_SET = new Set([
+    'the','and','for','with','that','this','from','have','what','when','where','which','about','your','please','could','would','there','their','they','them','into','just','some','more','than','then','also','does','dont','cant','want','need','help','find','give','show','tell','make'
+]);
 
 function _detectWebIntent(message) {
     const urls = message.match(_WEB_URL_RE) || [];
@@ -1391,10 +1481,62 @@ function _detectWebIntent(message) {
     return null;
 }
 
+function _tokenizeForLocalMatch(text) {
+    return String(text || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .split(/\s+/)
+        .map(t => t.trim())
+        .filter(t => t.length >= 4 && !_STOPWORD_SET.has(t));
+}
+
+function _hasLikelyLocalKnowledge(message) {
+    if (!Array.isArray(persistentMaterial) || persistentMaterial.length === 0) {
+        return false;
+    }
+
+    const tokens = Array.from(new Set(_tokenizeForLocalMatch(message))).slice(0, 10);
+    if (tokens.length === 0) return false;
+
+    const localCorpus = persistentMaterial
+        .slice(0, 20)
+        .map(item => `${item.name || ''}\n${item.content || ''}`)
+        .join('\n')
+        .toLowerCase();
+
+    let matches = 0;
+    for (const token of tokens) {
+        if (localCorpus.includes(token)) {
+            matches += 1;
+            if (matches >= 2) return true;
+        }
+    }
+    return false;
+}
+
+function _resolveWebIntent(message) {
+    const explicit = _detectWebIntent(message);
+    if (explicit) return explicit;
+
+    const text = String(message || '').trim();
+    if (!text || _LOCAL_TASK_RE.test(text) || _CASUAL_CHAT_RE.test(text)) return null;
+
+    const factualRequest = _FACT_LOOKUP_RE.test(text) || /\?$/.test(text);
+    if (!factualRequest) return null;
+
+    if (_hasLikelyLocalKnowledge(text)) {
+        return null;
+    }
+
+    return { type: 'auto', query: text };
+}
+
 function _webLoadingText(intent) {
     return intent.type === 'url'
         ? `🌐 Fetching page content...`
-        : `🔍 Searching the web...`;
+        : intent.type === 'auto'
+            ? `🌐 Checking live web sources...`
+            : `🔍 Searching the web...`;
 }
 
 async function _jinaFetch(url) {
@@ -1425,25 +1567,171 @@ async function _jinaSearch(query) {
     }
 }
 
+function _normalizeSourceUrl(url) {
+    try {
+        const parsed = new URL(String(url || '').trim());
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+        return parsed.href;
+    } catch (error) {
+        return null;
+    }
+}
+
+function _sourceTitleFromUrl(url) {
+    try {
+        const parsed = new URL(url);
+        const host = parsed.hostname.replace(/^www\./, '');
+        const parts = parsed.pathname.split('/').filter(Boolean);
+        const tail = parts.length ? parts[parts.length - 1].replace(/[-_]+/g, ' ') : '';
+        return tail ? `${host} — ${tail}` : host;
+    } catch (error) {
+        return String(url || 'Source');
+    }
+}
+
+function _extractSourcesFromText(text) {
+    const sources = [];
+    const seen = new Set();
+    const raw = String(text || '');
+
+    raw.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (match, title, url) => {
+        const normalizedUrl = _normalizeSourceUrl(url);
+        if (!normalizedUrl || seen.has(normalizedUrl)) return match;
+        seen.add(normalizedUrl);
+        sources.push({ title: String(title || '').trim() || _sourceTitleFromUrl(normalizedUrl), url: normalizedUrl });
+        return match;
+    });
+
+    raw.replace(/(?:^|\s)(https?:\/\/[^\s<>"')\]]+)/g, (match, url) => {
+        const normalizedUrl = _normalizeSourceUrl(url);
+        if (!normalizedUrl || seen.has(normalizedUrl)) return match;
+        seen.add(normalizedUrl);
+        sources.push({ title: _sourceTitleFromUrl(normalizedUrl), url: normalizedUrl });
+        return match;
+    });
+
+    return sources.slice(0, 12);
+}
+
+function _extractSourcesFromProviderPayload(responseData) {
+    const sources = [];
+    const seen = new Set();
+
+    function add(url, title) {
+        const normalizedUrl = _normalizeSourceUrl(url);
+        if (!normalizedUrl || seen.has(normalizedUrl)) return;
+        seen.add(normalizedUrl);
+        sources.push({
+            title: String(title || '').trim() || _sourceTitleFromUrl(normalizedUrl),
+            url: normalizedUrl
+        });
+    }
+
+    const candidates = [];
+    if (Array.isArray(responseData?.citations)) candidates.push(...responseData.citations);
+    if (Array.isArray(responseData?.sources)) candidates.push(...responseData.sources);
+
+    const message = responseData?.choices?.[0]?.message;
+    if (Array.isArray(message?.citations)) candidates.push(...message.citations);
+    if (Array.isArray(message?.sources)) candidates.push(...message.sources);
+    if (Array.isArray(message?.annotations)) candidates.push(...message.annotations);
+
+    for (const item of candidates) {
+        if (!item) continue;
+        if (typeof item === 'string') {
+            add(item, '');
+        } else {
+            add(item.url || item.link || item.href, item.title || item.name || item.source);
+        }
+    }
+
+    const modelText = message?.content || '';
+    const inlineSources = _extractSourcesFromText(modelText);
+    for (const src of inlineSources) add(src.url, src.title);
+
+    return sources.slice(0, 12);
+}
+
+function _mergeSourceLists(...lists) {
+    const merged = [];
+    const seen = new Set();
+    for (const list of lists) {
+        if (!Array.isArray(list)) continue;
+        for (const item of list) {
+            if (!item || !item.url) continue;
+            const normalizedUrl = _normalizeSourceUrl(item.url);
+            if (!normalizedUrl || seen.has(normalizedUrl)) continue;
+            seen.add(normalizedUrl);
+            merged.push({
+                title: String(item.title || '').trim() || _sourceTitleFromUrl(normalizedUrl),
+                url: normalizedUrl
+            });
+        }
+    }
+    return merged.slice(0, 12);
+}
+
+function _ensureWebSourcesInReply(reply, sources, webWasUsed) {
+    const text = String(reply || '').trim();
+    if (!webWasUsed) return text;
+
+    const hasSourcesHeader = /sources\s*&\s*references/i.test(text);
+    const hasMarkdownLinks = /\[[^\]]+\]\(https?:\/\/[^\s)]+\)/i.test(text);
+    if (hasSourcesHeader && hasMarkdownLinks) {
+        return text;
+    }
+
+    const mergedSources = _mergeSourceLists(sources, _extractSourcesFromText(text));
+    const lines = [
+        '',
+        '---',
+        '**Sources & References**'
+    ];
+
+    if (mergedSources.length === 0) {
+        lines.push('- No verified public link available');
+    } else {
+        for (const src of mergedSources.slice(0, 8)) {
+            lines.push(`- ${src.title}`);
+            lines.push(`  Link: [${src.url}](${src.url})`);
+        }
+    }
+
+    return `${text}\n${lines.join('\n')}`;
+}
+
 async function getWebSearchContext(userMessage) {
-    const intent = _detectWebIntent(userMessage);
+    const intent = _resolveWebIntent(userMessage);
     if (!intent) return null;
 
     console.log('🌐 Web intent detected:', intent.type);
 
     if (intent.type === 'url') {
         const blocks = [];
+        const sources = [];
         for (const url of intent.urls.slice(0, 2)) {
             const content = await _jinaFetch(url);
-            if (content) blocks.push(`=== LIVE PAGE CONTENT: ${url} ===\n${content}\n=== END PAGE CONTENT ===`);
+            if (content) {
+                blocks.push(`=== LIVE PAGE CONTENT: ${url} ===\n${content}\n=== END PAGE CONTENT ===`);
+                const pageSources = _extractSourcesFromText(content);
+                const titleLine = content.match(/^Title:\s*(.+)$/im);
+                sources.push({ title: titleLine ? titleLine[1].trim() : _sourceTitleFromUrl(url), url });
+                sources.push(...pageSources);
+            }
         }
-        return blocks.length ? blocks.join('\n\n') : null;
+        if (!blocks.length) return null;
+        return { context: blocks.join('\n\n'), sources: _mergeSourceLists(sources) };
     }
 
     // Search
-    const result = await _jinaSearch(userMessage);
+    const query = intent.query || userMessage;
+    const result = await _jinaSearch(query);
     if (!result) return null;
-    return `=== LIVE WEB SEARCH RESULTS ===\n${result}\n=== END SEARCH RESULTS ===`;
+    const sources = _extractSourcesFromText(result);
+    return {
+        context: `=== LIVE WEB SEARCH RESULTS ===\n${result}\n=== END SEARCH RESULTS ===`,
+        sources: _mergeSourceLists(sources)
+    };
 }
 
 // ============================================================
@@ -1532,7 +1820,8 @@ Every source item must include BOTH:
 1. A human-readable source title
 2. A full URL shown in markdown link format so the interface can render a clickable link
 
-Do not output title-only sources. If you cannot provide a reliable public URL, say "No verified public link available" instead of inventing one. For casual conversation or simple questions, omit the section. Never fabricate specific URLs or DOIs.`
+Do not output title-only sources. If you cannot provide a reliable public URL, say "No verified public link available" instead of inventing one. For casual conversation or simple questions, omit the section. Never fabricate specific URLs or DOIs.
+When LIVE web blocks are present in the prompt, a "Sources & References" section is mandatory and every internet-derived claim must map to a listed source title + clickable URL.`
    };
     
     // Build messages array starting with system message
@@ -2007,6 +2296,13 @@ function setupEventListeners() {
             sendMessageWithAttachment();
         });
     }
+
+    const continueBtn = document.getElementById('continueBtn');
+    if (continueBtn) {
+        continueBtn.addEventListener('click', () => {
+            continueConversation();
+        });
+    }
     
     // Enter key for message input
     const messageInput = document.getElementById('messageInput');
@@ -2176,6 +2472,8 @@ function setupEventListeners() {
     } else {
         console.error('📎 [jarvis_main.js] Could not find attachBtn or fileMenu!', {attachBtn, fileMenu});
     }
+
+    updateContinuationButtonState();
 }
 
 // Voice Integration Fixes
@@ -2727,7 +3025,7 @@ function addThinkingIndicator() {
             <div class="thinking-dots">
                 <span></span><span></span><span></span>
             </div>
-            N.O.V.A is thinking...
+            <span class="thinking-text">N.O.V.A is thinking...</span>
         </div>
     `;
     

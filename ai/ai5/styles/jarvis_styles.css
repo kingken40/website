@@ -769,6 +769,23 @@ body {
     box-shadow: 0 0 10px rgba(0, 170, 255, 0.3);
 }
 
+.continue-btn {
+    border-color: rgba(255, 215, 0, 0.45);
+    color: #ffd966;
+}
+
+.continue-btn:hover {
+    background: rgba(255, 215, 0, 0.15);
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.35);
+}
+
+.continue-btn.disabled,
+.continue-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
 .voice-input-btn.active {
     background: #00aaff;
     color: white;
