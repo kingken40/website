@@ -1074,9 +1074,9 @@ function processUserMessage(userMessage) {
     console.log('💭 ==========================================');
     
     try {
-        // Handle interrupt if speech is currently playing
+        // Handle interrupt if speech is currently playing AND a response is in flight
         if (isResponseInFlight && window.isSpeaking) {
-            console.log('🛑 Interrupt detected - speech is in progress');
+            console.log('🛑 Interrupt detected - speech is in progress (text input)');
             handleInterrupt(userMessage);
             return;
         }
@@ -1202,14 +1202,20 @@ async function handleInterrupt(userMessage) {
     // Get the last Nova message to understand context
     const lastNovaMessage = getLastNovaMessageText();
     
-    // Create topic-change continuation prompt
-    const interruptPrompt = `The user has interrupted the previous response and is now asking or saying something different. Here's what I was discussing:
+    // Build context-aware prompt that understands natural conversation flow
+    const interruptPrompt = `The user has interrupted your previous response mid-way. They are now saying or asking:
 
-Last response (interrupted): ${lastNovaMessage}
+"${userMessage}"
 
-Now the user is saying: "${userMessage}"
+Here's what you were discussing before they interrupted:
+${lastNovaMessage}
 
-Acknowledge this change and smoothly transition to address their new input. Do not repeat what was said before. This is a natural conversation flow where they've changed direction.`;
+Now respond to their new input naturally. Determine if they are:
+1. Asking a clarification or follow-up to what you were saying
+2. Asking something related but different
+3. Asking something completely unrelated
+
+Respond contextually and intelligently. If related, acknowledge the connection. If unrelated, smoothly transition to the new topic. Do not repeat information you already provided. Keep your response focused on what they just asked or said.`;
     
     try {
         addThinkingIndicator();
