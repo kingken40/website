@@ -56,6 +56,8 @@ let currentPersonality = 'Nova';
 let conversationHistory = [];
 let isResponseInFlight = false;
 
+// Interrupt handling state (uses window.isSpeaking from jarvis_voice.js to track speech)
+
 const JARVIS_STYLE_PHRASES_PATH = '../Jarvis-main/phrases.txt';
 const JARVIS_STYLE_REFERENCE_LIMIT = 24;
 const JARVIS_STYLE_FALLBACK_PHRASES = [
@@ -191,6 +193,10 @@ function getJarvisStyleReferenceContext(personality) {
 
 // ====== PERSISTENT MATERIAL STORE ======
 let persistentMaterial = [];
+let knowledgeBaseGroups = [];
+const collapsedKnowledgeBaseGroups = new Set();
+const initializedKnowledgeBaseGroups = new Set();
+const DEFAULT_KB_GROUP = 'Ungrouped';
 const KNOWLEDGE_BASE_MAX_ENTRY_CHARS = 6000;
 const KNOWLEDGE_BASE_MAX_TOTAL_CHARS = 24000;
 const KNOWLEDGE_BASE_DIRECTIVE_MAX_LINES = 24;
@@ -200,6 +206,63 @@ function normalizeKnowledgeBaseText(value) {
         .replace(/\r\n/g, '\n')
         .replace(/\u0000/g, '')
         .trim();
+}
+
+function normalizeKnowledgeBaseGroupName(value) {
+    return normalizeKnowledgeBaseText(value).replace(/\s+/g, ' ');
+}
+
+function loadKnowledgeBaseGroups() {
+    try {
+        const stored = localStorage.getItem('nova_kb_groups');
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed)) {
+                knowledgeBaseGroups = parsed
+                    .map(name => normalizeKnowledgeBaseGroupName(name))
+                    .filter(Boolean);
+            }
+        }
+    } catch (e) {
+        knowledgeBaseGroups = [];
+    }
+}
+
+function saveKnowledgeBaseGroups() {
+    try {
+        localStorage.setItem('nova_kb_groups', JSON.stringify(knowledgeBaseGroups));
+    } catch (e) {}
+}
+
+function ensureKnowledgeBaseGroupExists(groupName) {
+    const normalized = normalizeKnowledgeBaseGroupName(groupName);
+    if (!normalized || normalized.toLowerCase() === DEFAULT_KB_GROUP.toLowerCase()) {
+        return DEFAULT_KB_GROUP;
+    }
+
+    const existing = knowledgeBaseGroups.find(name => name.toLowerCase() === normalized.toLowerCase());
+    if (existing) return existing;
+
+    knowledgeBaseGroups.push(normalized);
+    saveKnowledgeBaseGroups();
+    return normalized;
+}
+
+function getOrderedKnowledgeBaseGroupNames() {
+    const names = [...knowledgeBaseGroups];
+    const seen = new Set(names.map(n => n.toLowerCase()));
+
+    for (const item of persistentMaterial) {
+        const normalized = normalizeKnowledgeBaseGroupName(item.groupName);
+        if (!normalized || normalized.toLowerCase() === DEFAULT_KB_GROUP.toLowerCase()) continue;
+        if (!seen.has(normalized.toLowerCase())) {
+            names.push(normalized);
+            seen.add(normalized.toLowerCase());
+        }
+    }
+
+    names.push(DEFAULT_KB_GROUP);
+    return names;
 }
 
 function loadPersistentMaterial() {
@@ -213,10 +276,12 @@ function loadPersistentMaterial() {
                         const name = normalizeKnowledgeBaseText(item?.name || `Knowledge Base Entry ${index + 1}`);
                         const content = normalizeKnowledgeBaseText(item?.content);
                         if (!name || !content) return null;
+                        const groupName = ensureKnowledgeBaseGroupExists(item?.groupName || DEFAULT_KB_GROUP);
                         return {
                             id: item?.id || Date.now() + index,
                             name,
-                            content
+                            content,
+                            groupName
                         };
                     })
                     .filter(Boolean);
@@ -241,7 +306,8 @@ function addPersistentMaterialItem(name, content) {
     const normalizedName = normalizeKnowledgeBaseText(name || 'Knowledge Base Entry');
     const normalizedContent = normalizeKnowledgeBaseText(content);
     if (!normalizedContent) return;
-    persistentMaterial.push({ id: Date.now(), name: normalizedName, content: normalizedContent });
+    const groupName = knowledgeBaseGroups.length > 0 ? knowledgeBaseGroups[0] : DEFAULT_KB_GROUP;
+    persistentMaterial.push({ id: Date.now(), name: normalizedName, content: normalizedContent, groupName });
     savePersistentMaterial();
     renderMaterialList();
 }
@@ -468,19 +534,139 @@ function getRealtimeContextString() {
 function renderMaterialList() {
     const list = document.getElementById('materialList');
     if (!list) return;
-    if (persistentMaterial.length === 0) {
-        list.innerHTML = '<div style="color:rgba(255,255,255,0.4);font-size:0.85rem;padding:0.5rem 0;">No knowledge base items added yet.</div>';
+    if (persistentMaterial.length === 0 && knowledgeBaseGroups.length === 0) {
+        list.innerHTML = '<div class="kb-empty-message">No knowledge base items added yet.</div>';
         return;
     }
-    list.innerHTML = persistentMaterial.map(m => `
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:0.4rem 0.6rem;margin-bottom:0.4rem;background:rgba(0,170,255,0.08);border:1px solid rgba(0,170,255,0.2);border-radius:5px;">
-            <span style="color:#00aaff;font-size:0.85rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:80%;" title="${m.name}">${m.name}</span>
-            <span style="display:flex;gap:0.2rem;">
-                <button onclick="editPersistentMaterialItem(${m.id})" style="background:none;border:none;color:#ffd166;cursor:pointer;font-size:0.9rem;padding:0 0.3rem;" title="Edit">✎</button>
-                <button onclick="removePersistentMaterialItem(${m.id})" style="background:none;border:none;color:#ff4444;cursor:pointer;font-size:1rem;padding:0 0.3rem;" title="Remove">✕</button>
+
+    const orderedGroupNames = getOrderedKnowledgeBaseGroupNames();
+    const groupedItems = groupKnowledgeBaseItems(orderedGroupNames);
+
+    const validGroups = new Set(orderedGroupNames.map(name => name.toLowerCase()));
+    for (const groupName of Array.from(collapsedKnowledgeBaseGroups)) {
+        if (!validGroups.has(groupName.toLowerCase())) {
+            collapsedKnowledgeBaseGroups.delete(groupName);
+            initializedKnowledgeBaseGroups.delete(groupName);
+        }
+    }
+
+    const sections = orderedGroupNames.map((groupName, index) => {
+            const items = groupedItems[groupName] || [];
+            if (!initializedKnowledgeBaseGroups.has(groupName)) {
+                initializedKnowledgeBaseGroups.add(groupName);
+                collapsedKnowledgeBaseGroups.add(groupName);
+            }
+            const encodedGroup = encodeURIComponent(groupName);
+            const isCollapsed = collapsedKnowledgeBaseGroups.has(groupName);
+            return `
+                <div class="kb-group">
+                    <button type="button" class="kb-group-header" onclick="toggleKnowledgeBaseGroup('${encodedGroup}')">
+                        <span class="kb-group-title">${index + 1}. ${escapeHtml(groupName)}</span>
+                        <span class="kb-group-meta">${items.length} items</span>
+                        <span class="kb-group-caret">${isCollapsed ? '▸' : '▾'}</span>
+                    </button>
+                    <div class="kb-group-body ${isCollapsed ? 'collapsed' : ''}">
+                        ${items.length > 0 ? items.map(item => renderKnowledgeBaseItemCard(item)).join('') : '<div class="kb-group-empty">No notes in this group yet.</div>'}
+                    </div>
+                </div>
+            `;
+        });
+
+    list.innerHTML = sections.join('');
+}
+
+function renderKnowledgeBaseItemCard(item) {
+    return `
+        <div class="kb-item-row">
+            <span class="kb-item-name" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</span>
+            <span class="kb-item-actions">
+                <button onclick="editPersistentMaterialItem(${item.id})" class="kb-item-edit" title="Edit">✎</button>
+                <button onclick="removePersistentMaterialItem(${item.id})" class="kb-item-remove" title="Remove">✕</button>
+                <button onclick="assignKnowledgeBaseItemGroup(${item.id})" class="kb-item-group" title="Move to group">📁</button>
             </span>
         </div>
-    `).join('');
+    `;
+}
+
+function groupKnowledgeBaseItems(orderedGroups) {
+    const grouped = {};
+    for (const groupName of orderedGroups) {
+        grouped[groupName] = [];
+    }
+
+    for (const item of persistentMaterial) {
+        const normalized = normalizeKnowledgeBaseGroupName(item.groupName);
+        const groupName = normalized ? ensureKnowledgeBaseGroupExists(normalized) : DEFAULT_KB_GROUP;
+        if (!grouped[groupName]) {
+            grouped[groupName] = [];
+        }
+        grouped[groupName].push(item);
+    }
+    return grouped;
+}
+
+function createKnowledgeBaseGroup() {
+    const groupName = prompt('Enter a custom group name for the Knowledge Base:');
+    if (groupName === null) return;
+    const normalized = normalizeKnowledgeBaseGroupName(groupName);
+    if (!normalized) {
+        showNotification('Group name cannot be empty.', 2000);
+        return;
+    }
+    ensureKnowledgeBaseGroupExists(normalized);
+    showNotification(`Group created: ${normalized}`, 2000);
+    renderMaterialList();
+}
+
+function assignKnowledgeBaseItemGroup(id) {
+    const item = persistentMaterial.find(m => m.id === id);
+    if (!item) return;
+
+    const currentGroup = normalizeKnowledgeBaseGroupName(item.groupName) || DEFAULT_KB_GROUP;
+    const options = getOrderedKnowledgeBaseGroupNames()
+        .filter(name => name !== DEFAULT_KB_GROUP)
+        .map((name, idx) => `${idx + 1}. ${name}`)
+        .join('\n');
+
+    const promptText = `Move "${item.name}" to which group?\n\n` +
+        (options ? `Existing groups:\n${options}\n\n` : '') +
+        'Type an existing group number, a group name, or leave blank for Ungrouped.';
+    const selected = prompt(promptText, currentGroup === DEFAULT_KB_GROUP ? '' : currentGroup);
+    if (selected === null) return;
+
+    const normalizedInput = normalizeKnowledgeBaseGroupName(selected);
+    let targetGroup = DEFAULT_KB_GROUP;
+
+    if (normalizedInput) {
+        const byIndex = normalizedInput.match(/^\d+$/);
+        if (byIndex) {
+            const idx = Number(normalizedInput) - 1;
+            const existing = getOrderedKnowledgeBaseGroupNames().filter(name => name !== DEFAULT_KB_GROUP);
+            if (existing[idx]) {
+                targetGroup = existing[idx];
+            } else {
+                showNotification('Invalid group number.', 2000);
+                return;
+            }
+        } else {
+            targetGroup = ensureKnowledgeBaseGroupExists(normalizedInput);
+        }
+    }
+
+    item.groupName = targetGroup;
+    savePersistentMaterial();
+    renderMaterialList();
+    showNotification(`Moved to ${targetGroup}`, 1800);
+}
+
+function toggleKnowledgeBaseGroup(encodedGroupName) {
+    const groupName = decodeURIComponent(encodedGroupName);
+    if (collapsedKnowledgeBaseGroups.has(groupName)) {
+        collapsedKnowledgeBaseGroups.delete(groupName);
+    } else {
+        collapsedKnowledgeBaseGroups.add(groupName);
+    }
+    renderMaterialList();
 }
 
 function handleMaterialFileUpload(file) {
@@ -518,6 +704,9 @@ function handleMaterialFileUpload(file) {
 }
 
 window.removePersistentMaterialItem = removePersistentMaterialItem;
+window.createKnowledgeBaseGroup = createKnowledgeBaseGroup;
+window.assignKnowledgeBaseItemGroup = assignKnowledgeBaseItemGroup;
+window.toggleKnowledgeBaseGroup = toggleKnowledgeBaseGroup;
 
 // ====== KNOWLEDGE BASE EDIT MODAL ======
 let _kbEditTargetId = null;
@@ -599,6 +788,7 @@ document.addEventListener('DOMContentLoaded', function() {
 window.editPersistentMaterialItem = openKbEditModal;
 // ====== END KNOWLEDGE BASE EDIT MODAL ======
 
+loadKnowledgeBaseGroups();
 loadPersistentMaterial();
 loadUserProfile();
 // ====== END PERSISTENT MATERIAL STORE ======
@@ -748,7 +938,7 @@ function addMessage(text, sender, timestamp = null) {
         </div>
         <div class="message-content">${formatMessageContent(text)}</div>
         ${sender === 'user' ? `<button class="message-edit-btn" onclick="editMessage('${messageId}')" title="Edit and resubmit message"><i class="fas fa-edit"></i></button>` : ''}
-        ${sender === 'Nova' ? `<button class="message-replay-btn" onclick="replayMessage('${messageId}')" title="Replay message"><i class="fas fa-microphone"></i></button>` : ''}
+        <button class="message-replay-btn" onclick="replayMessage('${messageId}')" title="Read message aloud"><i class="fas fa-microphone"></i></button>
     `;
     
     // Store original text and metadata (for replay/edit functionality)
@@ -879,9 +1069,18 @@ function processUserMessage(userMessage) {
     console.log('💭 processUserMessage CALLED');
     console.log('💭 Message:', userMessage);
     console.log('💭 Current personality:', currentPersonality);
+    console.log('💭 isResponseInFlight:', isResponseInFlight);
+    console.log('💭 window.isSpeaking:', window.isSpeaking);
     console.log('💭 ==========================================');
     
     try {
+        // Handle interrupt if speech is currently playing
+        if (isResponseInFlight && window.isSpeaking) {
+            console.log('🛑 Interrupt detected - speech is in progress');
+            handleInterrupt(userMessage);
+            return;
+        }
+        
         if (isResponseInFlight) {
             showNotification('N.O.V.A is still responding. Please wait or use Continue after it finishes.', 2500);
             return;
@@ -971,6 +1170,55 @@ ${lastNovaMessage}`;
 
     try {
         await generateAIResponse(continuationPrompt, currentPersonality);
+    } finally {
+        isResponseInFlight = false;
+        updateContinuationButtonState();
+    }
+}
+
+// Handle interrupt when user speaks during Nova's response (topic change)
+async function handleInterrupt(userMessage) {
+    // Stop speech synthesis immediately
+    if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+        console.log('🛑 Speech synthesis stopped (interrupt)');
+    }
+    
+    // If response is in flight, set flag to stop continuation
+    const wasResponseInFlight = isResponseInFlight;
+    if (!isResponseInFlight) {
+        isResponseInFlight = true;
+        updateContinuationButtonState();
+    }
+    
+    // Add user's interruption to chat and history
+    addMessage(userMessage, 'user');
+    conversationHistory.push({
+        role: 'user',
+        content: userMessage,
+        timestamp: new Date().toISOString()
+    });
+    
+    // Get the last Nova message to understand context
+    const lastNovaMessage = getLastNovaMessageText();
+    
+    // Create topic-change continuation prompt
+    const interruptPrompt = `The user has interrupted the previous response and is now asking or saying something different. Here's what I was discussing:
+
+Last response (interrupted): ${lastNovaMessage}
+
+Now the user is saying: "${userMessage}"
+
+Acknowledge this change and smoothly transition to address their new input. Do not repeat what was said before. This is a natural conversation flow where they've changed direction.`;
+    
+    try {
+        addThinkingIndicator();
+        const thinkingEl = document.querySelector('.thinking-indicator .thinking-text');
+        if (thinkingEl) {
+            thinkingEl.textContent = 'N.O.V.A is responding to your interruption...';
+        }
+        
+        await generateAIResponse(interruptPrompt, currentPersonality);
     } finally {
         isResponseInFlight = false;
         updateContinuationButtonState();
@@ -1084,6 +1332,9 @@ function clearFileAttachment() {
 
 // Make clearFileAttachment globally available for onclick handler
 window.clearFileAttachment = clearFileAttachment;
+
+// Make handleInterrupt globally available for interrupt detection
+window.handleInterrupt = handleInterrupt;
 
 // Try the server-side /api/chat proxy (uses OPENROUTER_API_KEY or OPENAI_API_KEY env variable on Vercel)
 async function generateViaServerProxy(userMessage, personality) {
@@ -2426,10 +2677,21 @@ function setupEventListeners() {
             if (persistentMaterial.length === 0) return;
             if (confirm('Remove all Knowledge Base items?')) {
                 persistentMaterial = [];
+                knowledgeBaseGroups = [];
+                collapsedKnowledgeBaseGroups.clear();
+                initializedKnowledgeBaseGroups.clear();
                 savePersistentMaterial();
+                saveKnowledgeBaseGroups();
                 renderMaterialList();
                 showNotification('Knowledge Base cleared.', 2000);
             }
+        });
+    }
+
+    const kbCreateGroupBtn = document.getElementById('kbCreateGroupBtn');
+    if (kbCreateGroupBtn) {
+        kbCreateGroupBtn.addEventListener('click', () => {
+            createKnowledgeBaseGroup();
         });
     }
     
@@ -2474,6 +2736,7 @@ function setupEventListeners() {
     }
 
     updateContinuationButtonState();
+    renderMaterialList();
 }
 
 // Voice Integration Fixes
@@ -2584,7 +2847,15 @@ window.voiceIntegrationFix = function() {
 
 // Function to make text more natural for speech synthesis (globally accessible)
 window.makeSpeechFriendly = function(text) {
-    return text
+    const withoutSources = String(text || '')
+        // Remove markdown-style sources section
+        .replace(/\n\s*---\s*\n\s*\*\*?\s*Sources\s*&\s*References\s*\*\*?[\s\S]*$/i, '')
+        // Remove plain heading section fallback
+        .replace(/\n\s*Sources\s*&\s*References\s*:?\s*[\s\S]*$/i, '');
+
+    return withoutSources
+        // Remove any trailing standalone source-link lines that may remain
+        .replace(/\n\s*Link:\s*https?:\/\/[^\s]+/gi, '')
         .replace(/N\.O\.V\.A/g, 'Nova')  // Convert N.O.V.A to Nova
         .replace(/N\.O\.V\.A\./g, 'Nova.')  // Handle with trailing period
         .replace(/N\.O\.V\.A,/g, 'Nova,')  // Handle with comma
