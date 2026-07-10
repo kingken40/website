@@ -48,10 +48,6 @@ let localVoiceBridgeUrl = localStorage.getItem('Nova_local_voice_bridge_url') ||
 let currentBridgeAudio = null;
 let lastBridgeFailureNoticeMs = 0;
 
-// Voice interrupt tracking
-let voiceInterruptInProgress = false;
-let lastNovaResponseBeforeInterrupt = '';
-
 function isUsableSpeechVoice(voice) {
     return !!(voice && typeof voice.name === 'string' && typeof voice.lang === 'string');
 }
@@ -303,24 +299,6 @@ function setupSpeechRecognition() {
         updateVoiceUI(true);
         isListening = true;
         window.isListening = true;
-        
-        // INTERRUPT DETECTION: Check if Nova is currently speaking
-        if (window.isSpeaking) {
-            console.log('🛑 User started speaking while Nova is speaking - INTERRUPT DETECTED');
-            voiceInterruptInProgress = true;
-            
-            // Store the context before interrupting
-            if (typeof window.getLastNovaMessageText === 'function') {
-                lastNovaResponseBeforeInterrupt = window.getLastNovaMessageText();
-            }
-            
-            // Stop speech synthesis immediately
-            if (window.speechSynthesis) {
-                window.speechSynthesis.cancel();
-                console.log('🛑 Speech synthesis stopped for interrupt');
-            }
-        }
-        
         // Don't clear transcripts on restart during hotkey hold - startVoiceRecognition clears them on initial press
         if (!hotkeyListening) {
             pendingTranscript = '';
@@ -1051,51 +1029,33 @@ function processVoiceCommand(transcript) {
             console.log('🗣️ ➡️ No special command matched - routing to AI processing');
             console.log('🗣️ Query:', transcript);
             console.log('🗣️ isWakeWordSession:', isWakeWordSession);
-            console.log('🗣️ voiceInterruptInProgress:', voiceInterruptInProgress);
             console.log('🗣️ ==========================================');
             
             // Store wake word flag in window for generateAIResponse to use
             window.isWakeWordSession = isWakeWordSession;
             
-            // Handle interrupt if user spoke while Nova was speaking
-            if (voiceInterruptInProgress) {
-                console.log('🛑 Processing as INTERRUPT - user spoke during Nova\'s response');
-                voiceInterruptInProgress = false; // Reset for next time
-                
-                // Call handleInterrupt instead of normal processing
-                if (typeof window.handleInterrupt === 'function') {
-                    console.log('🛑 Calling handleInterrupt with context-aware routing');
-                    window.handleInterrupt(transcript);
-                } else {
-                    console.warn('🛑 handleInterrupt not available, falling back to normal processing');
-                    if (typeof window.processUserMessage === 'function') {
-                        window.processUserMessage(transcript);
-                    }
-                }
+            // Use the main interface's processUserMessage function which calls OpenAI API
+            if (typeof window.processUserMessage === 'function') {
+                console.log('🗣️ ✅ window.processUserMessage found - calling it now...');
+                window.processUserMessage(transcript);
+                console.log('🗣️ ✅ window.processUserMessage called successfully');
             } else {
-                // Normal message processing
-                // Use the main interface's processUserMessage function which calls OpenAI API
-                if (typeof window.processUserMessage === 'function') {
-                    console.log('🗣️ ✅ window.processUserMessage found - calling it now...');
-                    window.processUserMessage(transcript);
-                    console.log('🗣️ ✅ window.processUserMessage called successfully');
+                // Fallback - processUserMessage not available, handle manually
+                console.error('🗣️ ❌ processUserMessage not available, using fallback');
+                addMessageToChat(transcript, 'user');
+                
+                // Call the main generateAIResponse function directly
+                if (typeof window.generateAIResponse === 'function') {
+                    console.log('🗣️ ⚠️ Using fallback - calling generateAIResponse directly');
+                    window.generateAIResponse(transcript, window.currentPersonality || 'Nova');
                 } else {
-                    // Fallback - processUserMessage not available, handle manually
-                    console.error('🗣️ ❌ processUserMessage not available, using fallback');
-                    addMessageToChat(transcript, 'user');
-                    
-                    // Call the main generateAIResponse function directly
-                    if (typeof window.generateAIResponse === 'function') {
-                        console.log('🗣️ ⚠️ Using fallback - calling generateAIResponse directly');
-                        window.generateAIResponse(transcript, window.currentPersonality || 'Nova');
+                    console.error('🗣️ ❌ No AI processing function available');
+                    const response = 'I received your query but there seems to be a system issue. Please try typing your request instead, sir.';
+                    addMessageToChat(response, 'Nova');
+                    if (isWakeWordSession) {
+                        speakText(response, restoreWakeListeningAfterResponse);
                     } else {
-                        console.error('🗣️ ❌ No AI processing function available');
-                        const response = 'I received your query but there seems to be a system issue. Please try typing your request instead, sir.';
-                        addMessageToChat(response, 'Nova');
-                        if (isWakeWordSession) {
-                            speakText(response, restoreWakeListeningAfterResponse);
-                        } else {
-                            speakText(response);
+                        speakText(response);
                     }
                 }
             }
@@ -2502,14 +2462,15 @@ function setupPushToTalkHotkey() {
     
     document.addEventListener('keydown', async function(e) {
         const target = e.target;
+        const key = e.key.toLowerCase();
         const isInInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
         
-        // Never intercept R while user is typing in any input/textarea
-        if (isInInput) {
+        // Allow R and T keys even when input has focus (for hotkey functionality)
+        // Only prevent other keys while typing in inputs
+        if (isInInput && key !== 'r' && key !== 't') {
             return;
         }
 
-        const key = e.key.toLowerCase();
         if (key === 'r') hotkeyRPressed = true;
         if (key === 't') hotkeyTPressed = true;
 
