@@ -2465,9 +2465,8 @@ function setupPushToTalkHotkey() {
         const key = e.key.toLowerCase();
         const isInInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
         
-        // Allow R and T keys even when input has focus (for hotkey functionality)
-        // Only prevent other keys while typing in inputs
-        if (isInInput && key !== 'r' && key !== 't') {
+        // Never intercept R or T while user is typing in any input/textarea
+        if (isInInput) {
             return;
         }
 

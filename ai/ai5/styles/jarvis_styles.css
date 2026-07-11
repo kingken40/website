@@ -685,7 +685,7 @@ body {
     transform: scale(0.9);
 }
 
-.Nova-message:hover .message-replay-btn {
+.message:hover .message-replay-btn {
     opacity: 1;
     transform: scale(1);
 }
@@ -1075,6 +1075,130 @@ body {
     background: #00aaff;
     cursor: pointer;
     box-shadow: 0 0 10px rgba(0, 170, 255, 0.5);
+}
+
+.kb-group-mode-btn {
+    background: none;
+    border: 1px solid rgba(0, 170, 255, 0.4);
+    color: #7fd3ff;
+    border-radius: 4px;
+    padding: 0.2rem 0.55rem;
+    cursor: pointer;
+    font-size: 0.78rem;
+}
+
+.kb-group-mode-btn.active {
+    border-color: rgba(255, 215, 0, 0.6);
+    color: #ffd766;
+    background: rgba(255, 215, 0, 0.08);
+}
+
+.kb-empty-message {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.85rem;
+    padding: 0.5rem 0;
+}
+
+.kb-group {
+    margin-bottom: 0.45rem;
+    border: 1px solid rgba(0, 170, 255, 0.18);
+    border-radius: 7px;
+    background: rgba(0, 170, 255, 0.04);
+}
+
+.kb-group-header {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: #9ddfff;
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 0.42rem 0.55rem;
+    cursor: pointer;
+    font-size: 0.82rem;
+}
+
+.kb-group-title {
+    text-align: left;
+    font-weight: 600;
+}
+
+.kb-group-meta {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 0.74rem;
+}
+
+.kb-group-caret {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.85rem;
+}
+
+.kb-group-body {
+    padding: 0.15rem 0.35rem 0.4rem;
+}
+
+.kb-group-body.collapsed {
+    display: none;
+}
+
+.kb-group-empty {
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 0.78rem;
+    padding: 0.3rem 0.5rem 0.15rem;
+}
+
+.kb-item-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.35rem 0.55rem;
+    margin-bottom: 0.35rem;
+    background: rgba(0, 170, 255, 0.08);
+    border: 1px solid rgba(0, 170, 255, 0.2);
+    border-radius: 5px;
+}
+
+.kb-item-name {
+    color: #00aaff;
+    font-size: 0.85rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 80%;
+}
+
+.kb-item-actions {
+    display: flex;
+    gap: 0.2rem;
+}
+
+.kb-item-edit,
+.kb-item-remove {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0 0.3rem;
+}
+
+.kb-item-edit {
+    color: #ffd166;
+    font-size: 0.9rem;
+}
+
+.kb-item-remove {
+    color: #ff4444;
+    font-size: 1rem;
+}
+
+.kb-item-group {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0 0.3rem;
+    color: #7fd3ff;
+    font-size: 0.92rem;
 }
 
 /* File Menu */
@@ -1626,9 +1750,10 @@ body.no-animations * {
 }
 
 #voiceSelection option {
-    background: #001122;
-    color: #ffffff;
+    background: #1a3a52;
+    color: #00aaff;
     padding: 0.5rem;
+    text-shadow: 0 0 5px rgba(0, 170, 255, 0.3);
 }
 
 .preview-btn {

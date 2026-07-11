@@ -50,7 +50,50 @@ const providerConfig = {
     }
 };
 
-let currentPersonality = 'Nova';
+// Smart model selection based on task type
+function detectTaskType(userMessage) {
+    const msg = userMessage.toLowerCase();
+    
+    // Reasoning tasks - complex analysis, logic, problem solving
+    if (/\b(analyze|explain|why|logic|prove|theorem|algorithm|calculate|derive|reason)\b/i.test(msg) ||
+        /\b(what|how|why) (does|is|can|will|should)\b/i.test(msg)) {
+        return 'reasoning';
+    }
+    
+    // Creative tasks - writing, storytelling, creative content
+    if (/\b(write|create|generate|story|poem|song|compose|design|invent)\b/i.test(msg) ||
+        /\b(write me|tell me a|create a|generate a)\b/i.test(msg)) {
+        return 'creative';
+    }
+    
+    // Long-form content - summaries, essays, detailed explanations
+    if (/\b(summarize|summary|essay|detailed|comprehensive|explain in detail|elaborate)\b/i.test(msg) ||
+        msg.length > 100) {
+        return 'long';
+    }
+    
+    // Fast tasks - quick answers, simple queries
+    return 'fast';
+}
+
+function selectModelForTask(task) {
+    const models = {
+        'fast': 'groq/llama-3.1-70b',
+        'reasoning': 'anthropic/claude-3.5-sonnet',
+        'creative': 'openai/gpt-4o',
+        'long': 'google/gemini-2.0-flash'
+    };
+    return models[task] || models['fast'];
+}
+
+function updateModelForMessage(userMessage) {
+    const task = detectTaskType(userMessage);
+    currentModel = selectModelForTask(task);
+    providerConfig.openrouter.model = currentModel;
+    console.log('🧠 Task detected:', task, '| Model selected:', currentModel);
+}
+
+
 
 // Initialize conversation history
 let conversationHistory = [];
@@ -1074,9 +1117,9 @@ function processUserMessage(userMessage) {
     console.log('💭 ==========================================');
     
     try {
-        // Handle interrupt if speech is currently playing AND a response is in flight
+        // Handle interrupt if speech is currently playing
         if (isResponseInFlight && window.isSpeaking) {
-            console.log('🛑 Interrupt detected - speech is in progress (text input)');
+            console.log('🛑 Interrupt detected - speech is in progress');
             handleInterrupt(userMessage);
             return;
         }
@@ -1091,6 +1134,9 @@ function processUserMessage(userMessage) {
 
         // Detect and save any personalization info from the message
         detectAndSavePersonalization(userMessage);
+        
+        // Smart model selection based on task type
+        updateModelForMessage(userMessage);
         
         // Add user message to chat
         addMessage(userMessage, 'user');
