@@ -78,10 +78,10 @@ function detectTaskType(userMessage) {
 
 function selectModelForTask(task) {
     const models = {
-        'fast': 'groq/llama-3.1-70b',
-        'reasoning': 'anthropic/claude-3.5-sonnet',
-        'creative': 'openai/gpt-4o',
-        'long': 'google/gemini-2.0-flash'
+        'fast': 'gpt-4o-mini',  // Quick answers, simple queries
+        'reasoning': 'anthropic/claude-opus-4.1',  // Complex analysis, logic
+        'creative': 'gpt-4o',  // Creative writing, ideas
+        'long': 'anthropic/claude-opus-4.1'  // Detailed, long-form content
     };
     return models[task] || models['fast'];
 }
