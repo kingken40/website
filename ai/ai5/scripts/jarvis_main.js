@@ -55,8 +55,7 @@ function detectTaskType(userMessage) {
     const msg = userMessage.toLowerCase();
     
     // Reasoning tasks - complex analysis, logic, problem solving
-    if (/\b(analyze|explain|why|logic|prove|theorem|algorithm|calculate|derive|reason)\b/i.test(msg) ||
-        /\b(what|how|why) (does|is|can|will|should)\b/i.test(msg)) {
+    if (/\b(analyze|logic|prove|theorem|algorithm|calculate|derive|reason|compare|evaluate|tradeoffs|pros and cons|pros|cons|debug|diagnose|root cause|strategy)\b/i.test(msg)) {
         return 'reasoning';
     }
     
@@ -78,19 +77,30 @@ function detectTaskType(userMessage) {
 
 function selectModelForTask(task) {
     const models = {
-        'fast': 'gpt-4o-mini',  // Quick answers, simple queries
-        'reasoning': 'anthropic/claude-opus-4.1',  // Complex analysis, logic
-        'creative': 'gpt-4o',  // Creative writing, ideas
-        'long': 'anthropic/claude-opus-4.1'  // Detailed, long-form content
+        'fast': 'openai/gpt-4o-mini',
+        'reasoning': 'anthropic/claude-sonnet-4.5',
+        'creative': 'openai/gpt-4o',
+        'long': 'google/gemini-2.5-flash'
     };
     return models[task] || models['fast'];
+}
+
+function getMaxTokensForTask(task) {
+    const tokenBudgets = {
+        'fast': 320,
+        'reasoning': 700,
+        'creative': 520,
+        'long': 900
+    };
+    return tokenBudgets[task] || tokenBudgets.fast;
 }
 
 function updateModelForMessage(userMessage) {
     const task = detectTaskType(userMessage);
     currentModel = selectModelForTask(task);
     providerConfig.openrouter.model = currentModel;
-    console.log('🧠 Task detected:', task, '| Model selected:', currentModel);
+    providerConfig.openrouter.maxTokens = getMaxTokensForTask(task);
+    console.log('🧠 Task detected:', task, '| Model selected:', currentModel, '| Max tokens:', providerConfig.openrouter.maxTokens);
 }
 
 
@@ -168,6 +178,23 @@ const personalities = {
     }
 };
 
+function normalizePersonalityKey(personalityType) {
+    const value = String(personalityType || '').trim();
+    if (!value) return 'Nova';
+
+    const normalized = value.toLowerCase();
+    if (normalized === 'jarvis' || normalized === 'n.o.v.a' || normalized === 'nova') {
+        return 'Nova';
+    }
+    if (normalized === 'genius') return 'genius';
+    if (normalized === 'professor') return 'professor';
+    if (normalized === 'analyst') return 'analyst';
+    if (normalized === 'brainstorm') return 'brainstorm';
+    if (normalized === 'study') return 'study';
+
+    return personalities[value] ? value : 'Nova';
+}
+
 function parseJarvisStylePhrases(rawText) {
     if (!rawText || typeof rawText !== 'string') return [];
 
@@ -234,6 +261,30 @@ function getJarvisStyleReferenceContext(personality) {
     return `\n\nJARVIS STYLE REFERENCE (from Jarvis-main/phrases.txt; tone inspiration only - do not copy long lines verbatim):\n${referenceBlock}\n`;
 }
 
+function isPromptLimitErrorMessage(message) {
+    return /prompt tokens limit exceeded|maximum context length|context length|too many tokens|input tokens/i.test(String(message || ''));
+}
+
+function summarizeMessageForContext(text, maxChars = CONTEXT_HISTORY_CHAR_LIMIT) {
+    const normalized = String(text || '')
+        .replace(/\r\n/g, '\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+
+    if (!normalized) return '';
+
+    let condensed = normalized
+        .replace(/=== LIVE PAGE CONTENT[\s\S]*?=== END PAGE CONTENT ===/gi, '[Earlier fetched web page content omitted]')
+        .replace(/=== LIVE WEB SEARCH RESULTS ===[\s\S]*?=== END SEARCH RESULTS ===/gi, '[Earlier live web search results omitted]')
+        .replace(/I've uploaded a (?:text file|PDF document|code file)[\s\S]*/i, '[Earlier uploaded file content omitted]');
+
+    if (condensed.length <= maxChars) {
+        return condensed;
+    }
+
+    return `${condensed.slice(0, Math.max(0, maxChars - 24)).trim()}\n[Earlier message truncated]`;
+}
+
 // ====== PERSISTENT MATERIAL STORE ======
 let persistentMaterial = [];
 let knowledgeBaseGroups = [];
@@ -243,6 +294,10 @@ const DEFAULT_KB_GROUP = 'Ungrouped';
 const KNOWLEDGE_BASE_MAX_ENTRY_CHARS = 6000;
 const KNOWLEDGE_BASE_MAX_TOTAL_CHARS = 24000;
 const KNOWLEDGE_BASE_DIRECTIVE_MAX_LINES = 24;
+const CONTEXT_HISTORY_CHAR_LIMIT = 500;
+const CONTEXT_HISTORY_TOTAL_CHARS = 1600;
+const CONTEXT_HISTORY_CHAR_LIMIT_SLIM = 220;
+const CONTEXT_HISTORY_TOTAL_CHARS_SLIM = 520;
 
 function normalizeKnowledgeBaseText(value) {
     return String(value || '')
@@ -373,12 +428,12 @@ function updatePersistentMaterialItem(id, name, content) {
     return true;
 }
 
-function getKnowledgeBaseDirectiveContext() {
-    if (persistentMaterial.length === 0) return '';
+function getKnowledgeBaseDirectiveContext(materialItems = persistentMaterial, maxLines = KNOWLEDGE_BASE_DIRECTIVE_MAX_LINES) {
+    if (!Array.isArray(materialItems) || materialItems.length === 0) return '';
 
     const directivePrefixes = ['rule:', 'directive:', 'must:', 'always:', 'never:', '!'];
     const lines = [];
-    for (const item of persistentMaterial) {
+    for (const item of materialItems) {
         const contentLines = String(item.content || '').split(/\r?\n/);
         for (const rawLine of contentLines) {
             const line = rawLine.trim();
@@ -390,32 +445,59 @@ function getKnowledgeBaseDirectiveContext() {
 
             if (hasDirectivePrefix || looksLikeStrongInstruction) {
                 lines.push(`[${item.name}] ${line.replace(/^!+\s*/, '')}`);
-                if (lines.length >= KNOWLEDGE_BASE_DIRECTIVE_MAX_LINES) break;
+                if (lines.length >= maxLines) break;
             }
         }
-        if (lines.length >= KNOWLEDGE_BASE_DIRECTIVE_MAX_LINES) break;
+        if (lines.length >= maxLines) break;
     }
 
     if (lines.length === 0) return '';
     return `\n\n=== KNOWLEDGE BASE DIRECTIVES (highest priority user rules) ===\n${lines.map(line => `- ${line}`).join('\n')}\n=== END KNOWLEDGE BASE DIRECTIVES ===`;
 }
 
-function getPersistentMaterialContext() {
-    if (persistentMaterial.length === 0) return '';
+function getRelevantPersistentMaterial(message, maxItems = 4, fallbackAll = false) {
+    if (!Array.isArray(persistentMaterial) || persistentMaterial.length === 0) return [];
+
+    const tokens = Array.from(new Set(_tokenizeForLocalMatch(message))).slice(0, 12);
+    if (tokens.length === 0) {
+        return fallbackAll ? persistentMaterial.slice(0, maxItems) : [];
+    }
+
+    const scored = persistentMaterial
+        .map(item => {
+            const haystack = `${item.name || ''}\n${item.content || ''}`.toLowerCase();
+            let score = 0;
+            for (const token of tokens) {
+                if (haystack.includes(token)) score += 1;
+            }
+            return { item, score };
+        })
+        .filter(entry => entry.score > 0)
+        .sort((a, b) => b.score - a.score);
+
+    if (scored.length > 0) {
+        return scored.slice(0, maxItems).map(entry => entry.item);
+    }
+
+    return fallbackAll ? persistentMaterial.slice(0, maxItems) : [];
+}
+
+function getPersistentMaterialContext(materialItems = persistentMaterial, maxTotalChars = KNOWLEDGE_BASE_MAX_TOTAL_CHARS, maxEntryChars = KNOWLEDGE_BASE_MAX_ENTRY_CHARS) {
+    if (!Array.isArray(materialItems) || materialItems.length === 0) return '';
     let totalChars = 0;
     const sections = [];
 
-    for (const item of persistentMaterial) {
+    for (const item of materialItems) {
         const entryName = normalizeKnowledgeBaseText(item.name);
         const fullContent = normalizeKnowledgeBaseText(item.content);
         if (!entryName || !fullContent) continue;
 
-        const content = fullContent.length > KNOWLEDGE_BASE_MAX_ENTRY_CHARS
-            ? `${fullContent.slice(0, KNOWLEDGE_BASE_MAX_ENTRY_CHARS)}\n[Truncated for context size]`
+        const content = fullContent.length > maxEntryChars
+            ? `${fullContent.slice(0, maxEntryChars)}\n[Truncated for context size]`
             : fullContent;
 
         const section = `--- Knowledge Base Entry: ${entryName} ---\n${content}`;
-        if (totalChars + section.length > KNOWLEDGE_BASE_MAX_TOTAL_CHARS) {
+        if (totalChars + section.length > maxTotalChars) {
             sections.push('[Additional knowledge base entries omitted for context size]');
             break;
         }
@@ -562,14 +644,21 @@ async function fetchWeatherData() {
     });
 }
 
-function getRealtimeContextString() {
-    let ctx = `\n\n=== REAL-TIME CONTEXT ===\nCurrent date/time: ${getCurrentTimeString()}`;
+function getRealtimeContextString(options = {}) {
+    const slim = !!options.slim;
+    let ctx = slim
+        ? `\n\nCurrent date/time: ${getCurrentTimeString()}`
+        : `\n\n=== REAL-TIME CONTEXT ===\nCurrent date/time: ${getCurrentTimeString()}`;
     if (realtimeWeather) {
         ctx += `\nCurrent weather in ${realtimeWeather.location}: ${realtimeWeather.condition}, ${realtimeWeather.temp}°F (feels like ${realtimeWeather.feelsLike}°F), humidity ${realtimeWeather.humidity}%, wind ${realtimeWeather.windSpeed} mph`;
-    } else {
+    } else if (!slim) {
         ctx += `\nWeather: Location access not granted — weather unavailable`;
     }
-    ctx += `\nIMPORTANT: You have real-time date/time and weather above. Use it naturally. Never claim you lack access to the current time or weather.\n=== END REAL-TIME CONTEXT ===`;
+    if (slim) {
+        ctx += `\nUse the current time naturally when relevant.`;
+    } else {
+        ctx += `\nIMPORTANT: You have real-time date/time and weather above. Use it naturally. Never claim you lack access to the current time or weather.\n=== END REAL-TIME CONTEXT ===`;
+    }
     return ctx;
 }
 // ====== END REAL-TIME CONTEXT ======
@@ -916,15 +1005,16 @@ function initializeNova() {
 }
 
 function selectPersonality(personalityType) {
-    console.log('🎭 Switching to personality:', personalityType);
-    currentPersonality = personalityType;
+    const normalizedPersonality = normalizePersonalityKey(personalityType);
+    console.log('🎭 Switching to personality:', personalityType, '=>', normalizedPersonality);
+    currentPersonality = normalizedPersonality;
     
     // Update UI - Update mode cards with active class and data-active attribute
     const modeCards = document.querySelectorAll('.mode-card');
     modeCards.forEach(card => {
         card.classList.remove('active');
         card.removeAttribute('data-active');
-        if (card.dataset.personality === personalityType) {
+        if (normalizePersonalityKey(card.dataset.personality) === normalizedPersonality) {
             card.classList.add('active');
             card.setAttribute('data-active', 'true');
             // Force style recalculation
@@ -934,12 +1024,13 @@ function selectPersonality(personalityType) {
     
     // Update chat title
     const currentModeElement = document.querySelector('.current-mode');
+    const personalityConfig = personalities[normalizedPersonality] || personalities.Nova;
     if (currentModeElement) {
-        currentModeElement.textContent = personalities[personalityType].name + ' Mode';
+        currentModeElement.textContent = personalityConfig.name + ' Mode';
     }
     
     // Greet with new personality
-    const greeting = personalityType === 'Nova' ? getRandomNovaGreeting() : personalities[personalityType].greeting;
+    const greeting = normalizedPersonality === 'Nova' ? getRandomNovaGreeting() : personalityConfig.greeting;
     addMessage(greeting, 'Nova');
     
     // Speak greeting if voice is enabled (with proper voice coordination)
@@ -950,7 +1041,7 @@ function selectPersonality(personalityType) {
         });
     }
     
-    showNotification(`Switched to ${personalities[personalityType].name}`, 2000);
+    showNotification(`Switched to ${personalityConfig.name}`, 2000);
 }
 
 function addMessage(text, sender, timestamp = null) {
@@ -1388,19 +1479,34 @@ window.clearFileAttachment = clearFileAttachment;
 // Make handleInterrupt globally available for interrupt detection
 window.handleInterrupt = handleInterrupt;
 
-// Try the server-side /api/chat proxy (uses OPENROUTER_API_KEY or OPENAI_API_KEY env variable on Vercel)
-async function generateViaServerProxy(userMessage, personality) {
-    const webIntent = _resolveWebIntent(userMessage);
-    const shouldUseWeb = !!webIntent;
-    const proxyMessage = webIntent
-        ? `${userMessage}
+function buildWebTaskMessage(userMessage, webContext = '') {
+    const liveContext = webContext ? `\n\n${webContext}` : '';
+    return `${userMessage}${liveContext}
 
 WEB SEARCH TASK:
 Use real-time web browsing/search to answer with current information and cite sources.
 You MUST include a "Sources & References" section with source title + clickable markdown link for every internet-derived claim.
-Do not claim you cannot browse.`
-        : userMessage;
-    const messages = prepareOpenAIMessages(proxyMessage, personality);
+Do not claim you cannot browse.`;
+}
+
+// Try the server-side /api/chat proxy (uses OPENROUTER_API_KEY or OPENAI_API_KEY env variable on Vercel)
+async function generateViaServerProxy(userMessage, personality, options = {}) {
+    const webIntent = _resolveWebIntent(userMessage);
+    const shouldUseWeb = !!webIntent;
+    let collectedWebSources = [];
+    let proxyMessage = userMessage;
+
+    if (webIntent) {
+        const webBundle = await getWebSearchContext(userMessage);
+        if (webBundle && webBundle.context) {
+            proxyMessage = buildWebTaskMessage(userMessage, webBundle.context);
+            collectedWebSources = Array.isArray(webBundle.sources) ? webBundle.sources : [];
+        } else {
+            proxyMessage = buildWebTaskMessage(userMessage);
+        }
+    }
+
+    const messages = prepareOpenAIMessages(proxyMessage, personality, options);
     const requestPayload = {
         model: shouldUseWeb ? 'perplexity/sonar' : undefined,
         messages: messages,
@@ -1432,12 +1538,13 @@ Do not claim you cannot browse.`
     }
     const rawReply = responseData.choices[0].message.content;
     const payloadSources = _extractSourcesFromProviderPayload(responseData);
-    const reply = _ensureWebSourcesInReply(rawReply, payloadSources, shouldUseWeb);
+    const mergedSources = _mergeSourceLists(payloadSources, collectedWebSources);
+    const reply = _ensureWebSourcesInReply(rawReply, mergedSources, shouldUseWeb);
     return { reply, webUsed: shouldUseWeb };
 }
 
 // Enhanced AI integration with multi-provider support and improved error handling
-async function generateAIResponse(userMessage, personality) {
+async function generateAIResponse(userMessage, personality, options = {}) {
     console.log('🤖 Generating AI response for personality:', personality);
     
     // Check if user has configured a provider API key
@@ -1449,7 +1556,7 @@ async function generateAIResponse(userMessage, personality) {
         console.log('🌐 No user API key configured — trying server proxy (/api/chat)...');
         try {
             await new Promise(resolve => setTimeout(resolve, 400));
-            const proxyResult = await generateViaServerProxy(userMessage, personality);
+            const proxyResult = await generateViaServerProxy(userMessage, personality, options);
             const reply = proxyResult.reply;
             removeThinkingIndicator();
             addMessage(reply, 'Nova');
@@ -1463,13 +1570,22 @@ async function generateAIResponse(userMessage, personality) {
             }
             return;
         } catch (proxyErr) {
+            if (isPromptLimitErrorMessage(proxyErr.message) && !options.slimContext) {
+                console.warn('🌐 Server proxy prompt too large — retrying with slim context');
+                await generateAIResponse(userMessage, personality, { ...options, slimContext: true });
+                return;
+            }
             console.warn('🌐 Server proxy unavailable:', proxyErr.message);
-            // Server proxy failed (likely no env key set) — fall through to show config message
+            // Server proxy failed — fall through to show the most useful message we can
             removeThinkingIndicator();
-            addMessage(
-                '⚙️ N.O.V.A requires an AI API key to respond. Please click the ⚙️ Settings button and enter your OpenRouter API key (get one free at <a href="https://openrouter.ai/keys" target="_blank" style="color:#FFD700">openrouter.ai/keys</a>).',
-                'Nova'
-            );
+            if (/503|No AI API key configured on server/i.test(proxyErr.message)) {
+                addMessage(
+                    '⚙️ N.O.V.A requires an AI API key to respond. Please click the ⚙️ Settings button and enter your OpenRouter API key (get one free at <a href="https://openrouter.ai/keys" target="_blank" style="color:#FFD700">openrouter.ai/keys</a>).',
+                    'Nova'
+                );
+            } else {
+                addMessage(`❌ AI Error: ${proxyErr.message}`, 'Nova');
+            }
             return;
         }
     }
@@ -1497,13 +1613,9 @@ async function generateAIResponse(userMessage, personality) {
                 // Use a model with built-in web search so this works even when
                 // browser-side fetch is blocked by CORS/network.
                 requestModel = 'perplexity/sonar';
-                effectiveMessage = `${userMessage}
-
-WEB SEARCH TASK:
-Use real-time web browsing/search to answer with current information and cite sources.
+                effectiveMessage = `${buildWebTaskMessage(userMessage)}
 For every internet-derived claim, include a source title and clickable markdown URL.
-If the user asked for downloadable resources, prioritize official download pages and direct file links when available.
-Do not claim you cannot browse the internet for this request.`;
+If the user asked for downloadable resources, prioritize official download pages and direct file links when available.`;
                 console.log('🌐 Web intent detected — routing via online model:', requestModel);
             } else {
                 // Fallback path for non-OpenRouter providers.
@@ -1519,7 +1631,7 @@ Do not claim you cannot browse the internet for this request.`;
         }
         
         // Prepare messages array with conversation history
-        const messages = prepareOpenAIMessages(effectiveMessage, personality);
+        const messages = prepareOpenAIMessages(effectiveMessage, personality, options);
         
         const requestPayload = {
             model: requestModel,
@@ -1639,6 +1751,16 @@ Do not claim you cannot browse the internet for this request.`;
         console.error('🔧 DEBUG - Full error object:', error);
         console.error('🔧 DEBUG - Error message:', error.message);
         console.error('🔧 DEBUG - Error stack:', error.stack);
+
+        if (isPromptLimitErrorMessage(error.message) && !options.slimContext) {
+            console.warn('🔄 Prompt too large — retrying with slim context');
+            try {
+                await generateAIResponse(userMessage, personality, { ...options, slimContext: true });
+                return;
+            } catch (retryError) {
+                console.error('🔧 Slim-context retry failed:', retryError);
+            }
+        }
         
         // AUTO-FALLBACK: If OpenRouter fails and user has an OpenAI key, retry with OpenAI
         const isOpenRouterProvider = currentProvider === 'openrouter';
@@ -1655,7 +1777,7 @@ Do not claim you cannot browse the internet for this request.`;
             try {
                 const savedProvider = currentProvider;
                 currentProvider = 'openai';
-                await generateAIResponse(userMessage, personality);
+                await generateAIResponse(userMessage, personality, options);
                 currentProvider = savedProvider;
                 return;
             } catch (openaiErr) {
@@ -1770,7 +1892,7 @@ const _WEB_URL_RE = /https?:\/\/[^\s<>"{}|\\^`[\]]+/g;
 
 // Explicit web intent: URL present OR clear search/browse keywords
 const _WEB_INTENT_RE = /\b(search(?:\s+(?:for|the\s+web|online))?|look\s*(?:it\s+)?up|browse|visit|go\s+to|open\s+(?:the\s+)?(?:site|page|link|url|website)|fetch|check\s+(?:the\s+)?(?:website|page|site)|(?:their|its|the)\s+(?:website|webpage|web\s+page|site)|(?:find|get)\s+(?:online|on\s+the\s+web|current|real.?time|live)|latest\s+news|current\s+news|real.?time|what(?:'s|\s+is)\s+(?:on|at)\s+(?:the\s+)?(?:website|site|page)|download(?:able|s)?|installer|setup\s+file|github\s+release|official\s+download|apk|exe|dmg|zip\s+file|pdf\s+download|dataset)\b/i;
-const _FACT_LOOKUP_RE = /\b(what\s+is|who\s+is|where\s+is|when\s+is|how\s+to|latest|current|news|price|specs?|release\s+date|documentation|docs|official|best|top\s+\d+|compare|review|download(?:able|s)?|template|example|guide|tutorial|dataset|statistics?|evidence|research)\b/i;
+const _FACT_LOOKUP_RE = /\b(what\s+is|who\s+is|where\s+is|when\s+is|why\s+is|how\s+to|latest|current|news|price|specs?|release\s+date|documentation|docs|official|best|top\s+\d+|compare|review|download(?:able|s)?|template|example|guide|tutorial|dataset|statistics?|evidence|research|according\s+to|source)\b/i;
 const _LOCAL_TASK_RE = /\b(this\s+(?:chat|conversation|file|project|repo|code|snippet)|from\s+my\s+(?:notes|knowledge\s+base)|summari[sz]e\s+(?:this|above)|rewrite|rephrase|translate|fix\s+my\s+code|debug\s+this|remember\s+that)\b/i;
 const _CASUAL_CHAT_RE = /\b(hi|hello|hey|how are you|thanks|thank you|good morning|good night|tell me a joke|who are you)\b/i;
 const _STOPWORD_SET = new Set([
@@ -1824,7 +1946,7 @@ function _resolveWebIntent(message) {
     const text = String(message || '').trim();
     if (!text || _LOCAL_TASK_RE.test(text) || _CASUAL_CHAT_RE.test(text)) return null;
 
-    const factualRequest = _FACT_LOOKUP_RE.test(text) || /\?$/.test(text);
+    const factualRequest = _FACT_LOOKUP_RE.test(text);
     if (!factualRequest) return null;
 
     if (_hasLikelyLocalKnowledge(text)) {
@@ -1840,6 +1962,21 @@ function _webLoadingText(intent) {
         : intent.type === 'auto'
             ? `🌐 Checking live web sources...`
             : `🔍 Searching the web...`;
+}
+
+function shouldInjectKnowledgeBaseContext(message, personality, options = {}) {
+    if (options.slimContext) return false;
+
+    const text = String(message || '').trim();
+    if (!text || !Array.isArray(persistentMaterial) || persistentMaterial.length === 0) {
+        return false;
+    }
+
+    if (personality === 'study') return true;
+
+    return _LOCAL_TASK_RE.test(text) ||
+        /\b(knowledge\s+base|my\s+(notes|file|document|pdf|slides)|uploaded|attachment|attached|from\s+the\s+(file|pdf|document)|use\s+my\s+notes)\b/i.test(text) ||
+        _hasLikelyLocalKnowledge(text);
 }
 
 async function _jinaFetch(url) {
@@ -1992,12 +2129,13 @@ function _ensureWebSourcesInReply(reply, sources, webWasUsed) {
     ];
 
     if (mergedSources.length === 0) {
-        lines.push('- No verified public link available');
-    } else {
-        for (const src of mergedSources.slice(0, 8)) {
-            lines.push(`- ${src.title}`);
-            lines.push(`  Link: [${src.url}](${src.url})`);
-        }
+        // Avoid leaving dangling [1]/[2] style citations with no actual links.
+        return text.replace(/\[\d+(?:\s*,\s*\d+)*\]/g, '').replace(/\s{2,}/g, ' ').trim();
+    }
+
+    for (const src of mergedSources.slice(0, 8)) {
+        lines.push(`- ${src.title}`);
+        lines.push(`  Link: [${src.url}](${src.url})`);
     }
 
     return `${text}\n${lines.join('\n')}`;
@@ -2042,59 +2180,43 @@ async function getWebSearchContext(userMessage) {
 // ============================================================
 
 
-function prepareOpenAIMessages(userMessage, personality) {
+function prepareOpenAIMessages(userMessage, personality, options = {}) {
     console.log('📝 Preparing messages for OpenAI with personality:', personality);
     
     // Get personality config
     const config = personalities[personality] || personalities.Nova;
     
     // Build personality-specific instructions
+    const isSlimContext = !!options.slimContext;
+    const isWebBackedRequest = !!_resolveWebIntent(userMessage) || /=== LIVE PAGE CONTENT|=== LIVE WEB SEARCH RESULTS ===/i.test(String(userMessage || ''));
     let personalityInstructions = '';
     if (personality === 'study') {
-        personalityInstructions = `You are an expert academic assistant specializing in assignment help, homework completion, and study guidance.
-
-Your role:
-- Help students understand assignments and break down complex problems
-- Provide step-by-step solutions with clear explanations (not just answers)
-- Teach for understanding first: define terms, explain why each step matters, and connect ideas to core concepts
-- For essays/writing: help with outlines, thesis development, argument structure, citations (APA, MLA, Chicago)
-- For math/science: show complete working with explanations of each step
-- For research: help find relevant angles and organize information
-- Create study guides, practice questions, flashcard-style reviews, and concise summaries on demand
-- When the user's Knowledge Base contains relevant information, reference it directly, trust it as user-provided context, and prioritize it over generic background knowledge
-- Use worked examples, analogies, and check-for-understanding questions when they help learning
-- Encourage understanding, not just completion`;
+        personalityInstructions = isSlimContext
+            ? 'Teach clearly, step by step. Explain reasoning, define important terms, and prioritize understanding over just giving answers.'
+            : 'Teach clearly, step by step. Explain reasoning, define important terms, use examples when helpful, and prioritize understanding over just giving answers.';
     } else {
-        personalityInstructions = `Keep responses natural and conversational. Be helpful and direct - skip unnecessary formality and preamble.
-When the user is trying to learn, teach clearly: explain step by step, define important terms, use examples, and note uncertainty when appropriate.
-
-If you are N.O.V.A:
-- Address user as "sir" when appropriate
-- Use dry British humor with a sly edge and occasional witty sarcasm
-- Be intelligent and efficient
-- Think Paul Bettany's Nova: witty, helpful, authoritative but never condescending
-- If the Knowledge Base includes relevant content, actively use it and treat it as canonical user context
-- You have the ability to search the web and fetch pages in real-time. When live web data is provided in the message (marked with === LIVE ...), use it directly and tell the user what you found rather than claiming you cannot browse the internet
-
-If you are Genius Mode:
-- Analytical and technical
-- Break down problems systematically
-
-If you are Professor:
-- Educational and patient
-- Explain clearly
-
-If you are Data Analyst:
-- Data-driven insights
-- Precise and statistical`;
+        personalityInstructions = isSlimContext
+            ? 'Be helpful, direct, and accurate. Keep the answer concise unless the user asks for depth.'
+            : `Be helpful, direct, and accurate. Teach clearly when needed.
+If you are N.O.V.A, keep a witty but efficient British assistant tone.
+If live web blocks are included, treat them as current web data and use them directly.`;
     }
 
+    const includeKnowledgeBase = shouldInjectKnowledgeBaseContext(userMessage, personality, options);
+    const knowledgeBaseItems = includeKnowledgeBase
+        ? getRelevantPersistentMaterial(userMessage, isSlimContext ? 2 : 4, true)
+        : [];
+
     // Inject persistent Knowledge Base, user profile, and real-time data into context
-    const jarvisStyleContext = getJarvisStyleReferenceContext(personality);
-    const directiveContext = getKnowledgeBaseDirectiveContext();
-    const materialContext = getPersistentMaterialContext();
+    const jarvisStyleContext = isSlimContext ? '' : getJarvisStyleReferenceContext(personality);
+    const directiveContext = includeKnowledgeBase
+        ? getKnowledgeBaseDirectiveContext(knowledgeBaseItems, isSlimContext ? 8 : KNOWLEDGE_BASE_DIRECTIVE_MAX_LINES)
+        : '';
+    const materialContext = includeKnowledgeBase
+        ? getPersistentMaterialContext(knowledgeBaseItems, isSlimContext ? 1800 : 6000, isSlimContext ? 900 : 1800)
+        : '';
     const profileContext = getUserProfileContext();
-    const realtimeContext = getRealtimeContextString();
+    const realtimeContext = getRealtimeContextString({ slim: isSlimContext || isWebBackedRequest });
 
     // System message with personality
     const systemMessage = {
@@ -2103,40 +2225,33 @@ If you are Data Analyst:
 
 ${personalityInstructions}${jarvisStyleContext}${directiveContext}${materialContext}${profileContext}${realtimeContext}
 
-KNOWLEDGE BASE RULE:
-When "KNOWLEDGE BASE DIRECTIVES" or "USER KNOWLEDGE BASE" content is present, those are highest-priority user instructions and context. Follow them unless the user explicitly replaces them in a newer Knowledge Base entry. If there is a conflict, prefer the most recent user-provided entry.
-
-WEB SEARCH RULE:
-When the user's message includes a block starting with "=== LIVE PAGE CONTENT" or "=== LIVE WEB SEARCH RESULTS ===", that is real-time data fetched from the web on the user's behalf. Treat it as ground truth. Quote specific details from it in your response rather than falling back on your training data. Acknowledge that the information is live and current.
-
-SOURCE CITATION RULE:
-For educational, research, or fact-heavy responses that rely on specific facts, statistics, scientific concepts, historical events, or technical claims, add a "Sources & References" section at the very bottom of your response formatted as:
-
----
-**Sources & References**
-- Source title or organization name
- Link: [https://example.com](https://example.com)
-- Source title or organization name
- Link: [https://example.com](https://example.com)
-
-Every source item must include BOTH:
-1. A human-readable source title
-2. A full URL shown in markdown link format so the interface can render a clickable link
-
-Do not output title-only sources. If you cannot provide a reliable public URL, say "No verified public link available" instead of inventing one. For casual conversation or simple questions, omit the section. Never fabricate specific URLs or DOIs.
-When LIVE web blocks are present in the prompt, a "Sources & References" section is mandatory and every internet-derived claim must map to a listed source title + clickable URL.`
+Rules:
+- If Knowledge Base blocks are included, treat them as highest-priority user context.
+- If the message includes "=== LIVE PAGE CONTENT" or "=== LIVE WEB SEARCH RESULTS ===", treat that as current web data and use it directly.
+- For fact-heavy or web-backed answers, end with a "Sources & References" section using source title plus a full clickable markdown URL for each cited source.
+- Never invent URLs, citations, or DOIs.`
    };
     
     // Build messages array starting with system message
     const messages = [systemMessage];
     
     // Add recent conversation history (last 6 messages to avoid token limits)
-    const recentHistory = conversationHistory.slice(-6);
+    const historyLimit = isSlimContext ? 1 : (isWebBackedRequest ? 2 : includeKnowledgeBase ? 4 : 3);
+    const historyCharLimit = isSlimContext ? CONTEXT_HISTORY_CHAR_LIMIT_SLIM : CONTEXT_HISTORY_CHAR_LIMIT;
+    const historyTotalCharLimit = isSlimContext ? CONTEXT_HISTORY_TOTAL_CHARS_SLIM : (isWebBackedRequest ? 700 : CONTEXT_HISTORY_TOTAL_CHARS);
+    const recentHistory = conversationHistory.slice(-historyLimit);
+    let historyCharsUsed = 0;
     for (const msg of recentHistory) {
+        const summarizedContent = summarizeMessageForContext(msg.content, historyCharLimit);
+        if (!summarizedContent) continue;
+        if (historyCharsUsed + summarizedContent.length > historyTotalCharLimit) {
+            break;
+        }
         messages.push({
             role: msg.role,
-            content: msg.content
+            content: summarizedContent
         });
+        historyCharsUsed += summarizedContent.length;
     }
     
     // Add current user message
@@ -4460,7 +4575,8 @@ function hideLoading() {
 // CHAT HISTORY MANAGEMENT
 // ========================================
 
-let currentChatId = null;
+// Use var here to avoid temporal-dead-zone errors if handlers run while script is still initializing.
+var currentChatId = null;
 
 // Generate unique chat ID
 function generateChatId() {
@@ -4483,11 +4599,14 @@ function saveCurrentChat() {
     const allChatsTemp = JSON.parse(localStorage.getItem('nova_chat_history') || '[]');
     const existingChat = allChatsTemp.find(chat => chat.id === currentChatId);
     
+    const normalizedPersonality = normalizePersonalityKey(currentPersonality);
+    currentPersonality = normalizedPersonality;
+
     const chatData = {
         id: currentChatId,
-        name: existingChat?.name || `${personalities[currentPersonality]?.name || 'Nova'} Chat`,
+        name: existingChat?.name || `${personalities[normalizedPersonality]?.name || 'Nova'} Chat`,
         timestamp: Date.now(),
-        personality: currentPersonality,
+        personality: normalizedPersonality,
         messages: chatHistory,
         messageCount: chatHistory.length
     };
@@ -4542,7 +4661,10 @@ function startNewChat() {
     }
     
     // Show greeting
-    const greeting = currentPersonality === 'Nova' ? getRandomNovaGreeting() : personalities[currentPersonality].greeting;
+    const normalizedPersonality = normalizePersonalityKey(currentPersonality);
+    const personalityConfig = personalities[normalizedPersonality] || personalities.Nova;
+    currentPersonality = normalizedPersonality;
+    const greeting = normalizedPersonality === 'Nova' ? getRandomNovaGreeting() : personalityConfig.greeting;
     addMessage(greeting, 'Nova');
     
     showNotification('New chat started', 2000);
@@ -4569,7 +4691,7 @@ function loadChat(chatId) {
     // Load chat data
     currentChatId = chat.id;
     chatHistory = chat.messages || [];
-    currentPersonality = chat.personality || 'Nova';
+    currentPersonality = normalizePersonalityKey(chat.personality || 'Nova');
     
     // Reconstruct conversation history for AI
     conversationHistory = chatHistory.filter(msg => msg.sender !== 'Nova').map(msg => ({
@@ -4589,7 +4711,7 @@ function loadChat(chatId) {
     });
     
     // Update personality mode
-    selectPersonality(chat.personality || 'Nova');
+    selectPersonality(currentPersonality);
     
     // Close modal
     closeChatHistoryModal();
@@ -4677,16 +4799,17 @@ function displayChatHistory() {
     if (emptyState) emptyState.style.display = 'none';
     
     historyList.innerHTML = allChats.map(chat => {
+        const chatMessages = Array.isArray(chat.messages) ? chat.messages : [];
         const date = new Date(chat.timestamp);
         const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         
         // Get first user message as preview
-        const firstUserMsg = chat.messages.find(msg => msg.sender === 'user');
+        const firstUserMsg = chatMessages.find(msg => msg.sender === 'user');
         const preview = firstUserMsg ? firstUserMsg.text.substring(0, 100) : 'No messages';
         
         const isCurrent = chat.id === currentChatId;
-        
-        const chatName = chat.name || `${personalities[chat.personality]?.name || 'N.O.V.A'} Chat`;
+        const chatPersonality = normalizePersonalityKey(chat.personality);
+        const chatName = chat.name || `${personalities[chatPersonality]?.name || 'N.O.V.A'} Chat`;
         
         return `
             <div class="chat-history-item ${isCurrent ? 'current' : ''}" onclick="loadChat('${chat.id}')" data-chat-id="${chat.id}">
@@ -4698,8 +4821,8 @@ function displayChatHistory() {
                 </div>
                 <div class="chat-history-preview">${escapeHtml(preview)}${preview.length >= 100 ? '...' : ''}</div>
                 <div class="chat-history-meta">
-                    <span><i class="fas fa-comments"></i> ${chat.messageCount || 0} messages</span>
-                    <span><i class="fas fa-robot"></i> ${personalities[chat.personality]?.name || 'N.O.V.A'}</span>
+                    <span><i class="fas fa-comments"></i> ${chat.messageCount || chatMessages.length || 0} messages</span>
+                    <span><i class="fas fa-robot"></i> ${personalities[chatPersonality]?.name || 'N.O.V.A'}</span>
                 </div>
                 <div class="chat-history-actions">
                     <button class="chat-history-btn rename" onclick="renameChat('${chat.id}', event)" title="Rename Chat">
