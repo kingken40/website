@@ -14,7 +14,73 @@
         <div class="arc-reactor-bg"></div>
     </div>
 
-    <!-- Header Section -->
+    <!-- ===== MOBILE PHONE-CALL UI ===== -->
+    <div class="mobile-call-ui" id="mobileCallUI" role="main" aria-label="J.A.R.V.I.S Voice Call">
+
+        <!-- Top bar -->
+        <div class="mobile-topbar">
+            <a href="../../Projects.html" class="mobile-back-btn" aria-label="Back to Projects">
+                <i class="fas fa-chevron-left" aria-hidden="true"></i> Back
+            </a>
+            <span class="mobile-call-label">J.A.R.V.I.S</span>
+            <button class="mobile-topbar-settings-btn" id="mobileTopSettingsBtn" title="Settings" aria-label="Settings">
+                <i class="fas fa-cog" aria-hidden="true"></i>
+            </button>
+        </div>
+
+        <!-- Avatar -->
+        <div class="mobile-avatar-section">
+            <div class="mobile-avatar-container" id="mobileAvatarContainer">
+                <div class="mobile-call-ring mobile-call-ring-1"></div>
+                <div class="mobile-call-ring mobile-call-ring-2"></div>
+                <div class="mobile-call-ring mobile-call-ring-3"></div>
+                <div class="mobile-avatar" id="mobileAvatar">
+                    <div class="mobile-avatar-core" aria-hidden="true"></div>
+                </div>
+            </div>
+            <h2 class="mobile-ai-name">J.A.R.V.I.S</h2>
+            <p class="mobile-ai-subtitle">Just A Rather Very Intelligent System</p>
+            <div class="mobile-call-status" aria-live="polite">
+                <span class="mobile-status-dot" id="mobileStatusDot" aria-hidden="true"></span>
+                <span class="mobile-status-text" id="mobileStatusText">Starting up...</span>
+            </div>
+        </div>
+
+        <!-- Conversation transcript -->
+        <div class="mobile-transcript" id="mobileTranscript">
+            <div class="mobile-transcript-header" id="mobileTranscriptToggle"
+                 role="button" tabindex="0" aria-expanded="true" aria-controls="mobileTranscriptMessages">
+                <span>Conversation</span>
+                <i class="fas fa-chevron-up" aria-hidden="true"></i>
+            </div>
+            <div class="mobile-transcript-messages" id="mobileTranscriptMessages" aria-live="polite"></div>
+        </div>
+
+        <!-- Call controls -->
+        <div class="mobile-call-controls" role="toolbar" aria-label="Call controls">
+            <button class="mobile-ctrl-btn" id="mobileMuteBtn"
+                    title="Mute microphone" aria-label="Mute microphone" aria-pressed="false">
+                <i class="fas fa-microphone" aria-hidden="true"></i>
+                <span>Mute</span>
+            </button>
+            <button class="mobile-ctrl-btn" id="mobileContinueBtn"
+                    title="Continue response" aria-label="Continue J.A.R.V.I.S response">
+                <i class="fas fa-forward" aria-hidden="true"></i>
+                <span>Continue</span>
+            </button>
+            <button class="mobile-ctrl-btn" id="mobileChatBtn"
+                    title="Toggle conversation" aria-label="Toggle conversation view">
+                <i class="fas fa-comments" aria-hidden="true"></i>
+                <span>Chat</span>
+            </button>
+            <button class="mobile-ctrl-btn" id="mobileSettingsBtn"
+                    title="Settings" aria-label="Open settings">
+                <i class="fas fa-cog" aria-hidden="true"></i>
+                <span>Settings</span>
+            </button>
+        </div>
+    </div>
+    <!-- ===== END MOBILE CALL UI ===== -->
     <header class="jarvis-header">
         <div class="arc-reactor">
             <div class="arc-core"></div>
@@ -207,5 +273,129 @@
     <script src="../scripts/jarvis_voice.js"></script>
     <script src="../scripts/jarvis_main.js"></script>
     <script src="../scripts/jarvis_integration.js"></script>
+
+    <!-- ===== MOBILE PHONE-CALL MODE INITIALIZER ===== -->
+    <script>
+    (function initMobileCallMode() {
+        if (window.innerWidth > 768) return;
+
+        var avatarContainer  = document.getElementById('mobileAvatarContainer');
+        var statusDot        = document.getElementById('mobileStatusDot');
+        var statusText       = document.getElementById('mobileStatusText');
+        var muteBtn          = document.getElementById('mobileMuteBtn');
+        var continueBtn      = document.getElementById('mobileContinueBtn');
+        var chatBtn          = document.getElementById('mobileChatBtn');
+        var settingsBtn      = document.getElementById('mobileSettingsBtn');
+        var topSettingsBtn   = document.getElementById('mobileTopSettingsBtn');
+        var transcript       = document.getElementById('mobileTranscript');
+        var transcriptToggle = document.getElementById('mobileTranscriptToggle');
+        var transcriptMsgs   = document.getElementById('mobileTranscriptMessages');
+        var srcMsgs          = document.getElementById('chatMessages');
+
+        var muted               = false;
+        var transcriptCollapsed = false;
+
+        function syncMessages() {
+            if (!srcMsgs || !transcriptMsgs) return;
+            transcriptMsgs.innerHTML = srcMsgs.innerHTML;
+            transcriptMsgs.scrollTop = transcriptMsgs.scrollHeight;
+        }
+
+        if (srcMsgs) {
+            new MutationObserver(syncMessages)
+                .observe(srcMsgs, { childList: true, subtree: true, characterData: true });
+            syncMessages();
+        }
+
+        function setCallState(state) {
+            if (avatarContainer) {
+                avatarContainer.className = 'mobile-avatar-container' + (state ? ' ' + state : '');
+            }
+            if (statusDot) {
+                statusDot.className = 'mobile-status-dot' + (state ? ' ' + state : '');
+            }
+            if (statusText) {
+                if (state === 'speaking')     statusText.textContent = 'J.A.R.V.I.S is speaking…';
+                else if (state === 'processing') statusText.textContent = 'Processing…';
+                else if (state === 'muted')   statusText.textContent = 'Microphone muted';
+                else                          statusText.textContent = 'Always listening…';
+            }
+        }
+
+        setInterval(function() {
+            if (muted)                                            { setCallState('muted');      return; }
+            if (window.isSpeaking || window.isSpeechOutputActive) { setCallState('speaking');   return; }
+            if (document.querySelector('.thinking-indicator'))    { setCallState('processing'); return; }
+            setCallState('listening');
+        }, 350);
+
+        if (muteBtn) {
+            muteBtn.addEventListener('click', function() {
+                muted = !muted;
+                muteBtn.classList.toggle('muted', muted);
+                muteBtn.querySelector('i').className = muted
+                    ? 'fas fa-microphone-slash'
+                    : 'fas fa-microphone';
+                muteBtn.querySelector('span').textContent = muted ? 'Unmute' : 'Mute';
+                muteBtn.setAttribute('aria-pressed', String(muted));
+                if (muted) {
+                    if (window.alwaysListeningHotkeyMode && typeof toggleAlwaysListeningMode === 'function') {
+                        toggleAlwaysListeningMode();
+                    } else if (window.recognition && window.isListening) {
+                        try { window.recognition.abort(); } catch(e) {}
+                        window.isListening = false;
+                    }
+                } else {
+                    if (typeof toggleAlwaysListeningMode === 'function') toggleAlwaysListeningMode();
+                }
+            });
+        }
+
+        if (continueBtn) {
+            continueBtn.addEventListener('click', function() {
+                if (typeof continueConversation === 'function') continueConversation();
+            });
+        }
+
+        function toggleTranscript() {
+            transcriptCollapsed = !transcriptCollapsed;
+            if (transcript) transcript.classList.toggle('collapsed', transcriptCollapsed);
+            if (transcriptToggle) transcriptToggle.setAttribute('aria-expanded', String(!transcriptCollapsed));
+        }
+
+        if (chatBtn)          chatBtn.addEventListener('click', toggleTranscript);
+        if (transcriptToggle) transcriptToggle.addEventListener('click', toggleTranscript);
+        if (transcriptToggle) {
+            transcriptToggle.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleTranscript(); }
+            });
+        }
+
+        function openSettings() {
+            var modal = document.getElementById('settingsModal');
+            if (modal) { modal.classList.add('active'); modal.style.display = 'flex'; }
+        }
+        if (settingsBtn)    settingsBtn.addEventListener('click', openSettings);
+        if (topSettingsBtn) topSettingsBtn.addEventListener('click', openSettings);
+
+        function tryEnableAlwaysListening() {
+            if (typeof toggleAlwaysListeningMode === 'function' && !window.alwaysListeningHotkeyMode) {
+                toggleAlwaysListeningMode();
+                if (statusText) statusText.textContent = 'Always listening…';
+                console.log('📱 Mobile: always-listening mode enabled');
+            }
+        }
+
+        window.addEventListener('load', function() {
+            setTimeout(tryEnableAlwaysListening, 2000);
+            setTimeout(function() {
+                if (!window.alwaysListeningHotkeyMode) tryEnableAlwaysListening();
+            }, 5000);
+        });
+
+        console.log('📱 Mobile call mode initialised');
+    })();
+    </script>
+    <!-- ===== END MOBILE INIT ===== -->
 </body>
 </html>
