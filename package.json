@@ -1,0 +1,12 @@
+{
+  "name": "website",
+  "version": "1.0.0",
+  "description": "Static website with AI5 chat interface",
+  "scripts": {
+    "build": "echo 'Static site - no build needed'",
+    "start": "echo 'Use Vercel to serve static files'"
+  },
+  "keywords": ["website", "ai", "chat"],
+  "author": "",
+  "license": "MIT"
+}
