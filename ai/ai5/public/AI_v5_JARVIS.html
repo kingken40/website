@@ -842,8 +842,10 @@
 
         function closeSettings() {
             const modal = document.getElementById('settingsModal');
+            console.log('🔒 Closing settings modal', { displayBefore: modal.style.display, classesBefore: modal.className });
             modal.style.display = 'none';
             modal.classList.remove('active');
+            console.log('✓ Settings closed', { displayAfter: modal.style.display, classesAfter: modal.className });
         }
 
         function loadVoiceSettings() {
