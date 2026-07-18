@@ -783,7 +783,8 @@
         // Settings Functions
         function openSettings() {
             const modal = document.getElementById('settingsModal');
-            modal.style.display = 'block';
+            modal.style.display = 'flex';
+            modal.classList.add('active');
             
             // Load current voice settings
             loadVoiceSettings();
@@ -840,7 +841,9 @@
         }
 
         function closeSettings() {
-            document.getElementById('settingsModal').style.display = 'none';
+            const modal = document.getElementById('settingsModal');
+            modal.style.display = 'none';
+            modal.classList.remove('active');
         }
 
         function loadVoiceSettings() {
@@ -2035,14 +2038,6 @@
                 if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleTranscript(); }
             });
         }
-
-        // ── Settings ───────────────────────────────────────────────────────
-        function openSettings() {
-            var modal = document.getElementById('settingsModal');
-            if (modal) { modal.classList.add('active'); modal.style.display = 'flex'; }
-        }
-        if (settingsBtn)    settingsBtn.addEventListener('click', openSettings);
-        if (topSettingsBtn) topSettingsBtn.addEventListener('click', openSettings);
 
         // ── Auto-start always-listening after voice system is ready ────────
         function tryEnableAlwaysListening() {
