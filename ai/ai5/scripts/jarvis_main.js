@@ -2786,14 +2786,24 @@ function setupEventListeners() {
     
     if (settingsBtn && settingsModal) {
         settingsBtn.addEventListener('click', () => {
-            settingsModal.classList.add('active');
+            if (typeof window.openSettings === 'function') {
+                window.openSettings();
+            } else {
+                settingsModal.style.display = 'flex';
+                settingsModal.classList.add('active');
+            }
             renderMaterialList();
         });
     }
     
     if (closeSettings && settingsModal) {
         closeSettings.addEventListener('click', () => {
-            settingsModal.classList.remove('active');
+            if (typeof window.closeSettings === 'function') {
+                window.closeSettings();
+            } else {
+                settingsModal.style.display = 'none';
+                settingsModal.classList.remove('active');
+            }
         });
     }
 
@@ -2801,7 +2811,12 @@ function setupEventListeners() {
     if (settingsModal) {
         settingsModal.addEventListener('click', (e) => {
             if (e.target === settingsModal) {
-                settingsModal.classList.remove('active');
+                if (typeof window.closeSettings === 'function') {
+                    window.closeSettings();
+                } else {
+                    settingsModal.style.display = 'none';
+                    settingsModal.classList.remove('active');
+                }
             }
         });
     }

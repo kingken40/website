@@ -789,9 +789,11 @@
             // Load current voice settings
             loadVoiceSettings();
             // Re-inject pack options after other initializers may have overwritten the dropdown
-            setTimeout(() => ensureJarvisPackOptionsInDropdown(), 50);
-            setTimeout(() => ensureJarvisPackOptionsInDropdown(), 300);
-            setTimeout(() => ensureJarvisPackOptionsInDropdown(), 1000);
+            if (typeof ensureJarvisPackOptionsInDropdown === 'function') {
+                setTimeout(() => ensureJarvisPackOptionsInDropdown(), 50);
+                setTimeout(() => ensureJarvisPackOptionsInDropdown(), 300);
+                setTimeout(() => ensureJarvisPackOptionsInDropdown(), 1000);
+            }
 
             // Render saved Knowledge Base list
             if (typeof renderMaterialList === 'function') renderMaterialList();
@@ -842,10 +844,8 @@
 
         function closeSettings() {
             const modal = document.getElementById('settingsModal');
-            console.log('🔒 Closing settings modal', { displayBefore: modal.style.display, classesBefore: modal.className });
             modal.style.display = 'none';
             modal.classList.remove('active');
-            console.log('✓ Settings closed', { displayAfter: modal.style.display, classesAfter: modal.className });
         }
 
         function loadVoiceSettings() {
@@ -1951,6 +1951,24 @@
         var muted              = false;
         var transcriptCollapsed = false;
 
+        function openSettingsFromMobile() {
+            if (typeof openSettings === 'function') {
+                openSettings();
+                return;
+            }
+            var modal = document.getElementById('settingsModal');
+            if (!modal) return;
+            modal.style.display = 'flex';
+            modal.classList.add('active');
+        }
+
+        if (settingsBtn) {
+            settingsBtn.addEventListener('click', openSettingsFromMobile);
+        }
+        if (topSettingsBtn) {
+            topSettingsBtn.addEventListener('click', openSettingsFromMobile);
+        }
+
         // ── Sync desktop chatMessages → mobile transcript ──────────────────
         function syncMessages() {
             if (!srcMsgs || !transcriptMsgs) return;
@@ -2009,9 +2027,7 @@
                     }
                 } else {
                     // Resume always-listening
-                    if (typeof toggleAlwaysListeningMode === 'function') {
-                        toggleAlwaysListeningMode();
-                    }
+                    ensureMobileListeningEnabled();
                 }
             });
         }
@@ -2042,20 +2058,39 @@
         }
 
         // ── Auto-start always-listening after voice system is ready ────────
-        function tryEnableAlwaysListening() {
-            if (typeof toggleAlwaysListeningMode === 'function' && !window.alwaysListeningHotkeyMode) {
-                toggleAlwaysListeningMode();
-                if (statusText) statusText.textContent = 'Always listening…';
-                console.log('📱 Mobile: always-listening mode enabled');
+        async function ensureMobileListeningEnabled() {
+            if (muted) return;
+            try {
+                if (typeof window.requestVoicePermission === 'function' && !window.hasVoicePermission) {
+                    const granted = await window.requestVoicePermission();
+                    if (!granted) {
+                        if (statusText) statusText.textContent = 'Microphone permission needed';
+                        return;
+                    }
+                }
+
+                if (typeof toggleAlwaysListeningMode === 'function') {
+                    if (!window.alwaysListeningHotkeyMode) {
+                        await toggleAlwaysListeningMode();
+                    }
+                    if (statusText) statusText.textContent = 'Always listening…';
+                    return;
+                }
+
+                if (typeof window.startListeningDirect === 'function' && !window.isListening) {
+                    window.startListeningDirect();
+                    if (statusText) statusText.textContent = 'Listening…';
+                }
+            } catch (error) {
+                console.warn('📱 Mobile listening enable failed:', error);
             }
         }
 
         window.addEventListener('load', function() {
             // First attempt at 2 s, retry at 5 s if voice hasn't initialised yet
-            setTimeout(tryEnableAlwaysListening, 2000);
-            setTimeout(function() {
-                if (!window.alwaysListeningHotkeyMode) tryEnableAlwaysListening();
-            }, 5000);
+            setTimeout(ensureMobileListeningEnabled, 2000);
+            setTimeout(ensureMobileListeningEnabled, 5000);
+            setTimeout(ensureMobileListeningEnabled, 9000);
         });
 
         console.log('📱 Mobile call mode initialised');
