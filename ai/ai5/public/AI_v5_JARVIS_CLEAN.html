@@ -171,7 +171,10 @@
             <input type="text" 
                    id="messageInput" 
                    placeholder="Ask J.A.R.V.I.S anything... or use voice commands"
-                   autocomplete="off">
+                   autocomplete="off"
+                   autocapitalize="sentences"
+                   enterkeyhint="send"
+                   spellcheck="true">
             <button class="input-btn voice-input-btn" id="voiceInputBtn" type="button" title="Voice Input">
                 <i class="fas fa-microphone"></i>
             </button>
@@ -287,9 +290,12 @@
         var chatBtn          = document.getElementById('mobileChatBtn');
         var settingsBtn      = document.getElementById('mobileSettingsBtn');
         var topSettingsBtn   = document.getElementById('mobileTopSettingsBtn');
+        var mobileCallUI     = document.getElementById('mobileCallUI');
         var transcript       = document.getElementById('mobileTranscript');
         var transcriptToggle = document.getElementById('mobileTranscriptToggle');
         var transcriptMsgs   = document.getElementById('mobileTranscriptMessages');
+        var inputContainer   = document.querySelector('.input-container');
+        var mobileControls   = document.querySelector('.mobile-call-controls');
         var srcMsgs          = document.getElementById('chatMessages');
 
         var muted               = false;
@@ -305,6 +311,11 @@
             new MutationObserver(syncMessages)
                 .observe(srcMsgs, { childList: true, subtree: true, characterData: true });
             syncMessages();
+        }
+
+        if (mobileCallUI && inputContainer && mobileControls && !mobileCallUI.contains(inputContainer)) {
+            inputContainer.classList.add('mobile-composer');
+            mobileCallUI.insertBefore(inputContainer, mobileControls);
         }
 
         function setCallState(state) {

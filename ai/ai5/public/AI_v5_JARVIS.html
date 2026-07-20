@@ -200,8 +200,9 @@
                    autocomplete="off"
                    name="nova-message-input"
                    autocorrect="off"
-                   autocapitalize="off"
-                   spellcheck="false"
+                   autocapitalize="sentences"
+                   enterkeyhint="send"
+                   spellcheck="true"
                    rows="1"></textarea>
             <button class="input-btn voice-input-btn" id="voiceInputBtn" type="button" title="Voice Input">
                 <i class="fas fa-microphone"></i>
@@ -1943,17 +1944,36 @@
         var chatBtn          = document.getElementById('mobileChatBtn');
         var settingsBtn      = document.getElementById('mobileSettingsBtn');
         var topSettingsBtn   = document.getElementById('mobileTopSettingsBtn');
+        var mobileCallUI     = document.getElementById('mobileCallUI');
         var transcript       = document.getElementById('mobileTranscript');
         var transcriptToggle = document.getElementById('mobileTranscriptToggle');
         var transcriptMsgs   = document.getElementById('mobileTranscriptMessages');
+        var inputContainer   = document.querySelector('.input-container');
+        var mobileControls   = document.querySelector('.mobile-call-controls');
         var srcMsgs          = document.getElementById('chatMessages');
 
         var muted              = false;
         var transcriptCollapsed = false;
 
-        function openSettingsFromMobile() {
-            if (typeof openSettings === 'function') {
-                openSettings();
+        var lastMobileSettingsTapAt = 0;
+
+        function openSettingsFromMobile(event) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                // iOS can fire touch/pointer + click for a single tap.
+                // Ignore the synthetic click that follows a real touch tap.
+                if (event.type === 'click' && (Date.now() - lastMobileSettingsTapAt) < 500) {
+                    return;
+                }
+                if (event.type === 'touchend' || event.type === 'pointerup') {
+                    lastMobileSettingsTapAt = Date.now();
+                }
+            }
+
+            if (typeof window.openSettings === 'function') {
+                window.openSettings();
                 return;
             }
             var modal = document.getElementById('settingsModal');
@@ -1962,12 +1982,15 @@
             modal.classList.add('active');
         }
 
-        if (settingsBtn) {
-            settingsBtn.addEventListener('click', openSettingsFromMobile);
+        function bindMobileSettingsButton(button) {
+            if (!button) return;
+            button.addEventListener('click', openSettingsFromMobile);
+            button.addEventListener('pointerup', openSettingsFromMobile);
+            button.addEventListener('touchend', openSettingsFromMobile);
         }
-        if (topSettingsBtn) {
-            topSettingsBtn.addEventListener('click', openSettingsFromMobile);
-        }
+
+        bindMobileSettingsButton(settingsBtn);
+        bindMobileSettingsButton(topSettingsBtn);
 
         // ── Sync desktop chatMessages → mobile transcript ──────────────────
         function syncMessages() {
@@ -1980,6 +2003,11 @@
             new MutationObserver(syncMessages)
                 .observe(srcMsgs, { childList: true, subtree: true, characterData: true });
             syncMessages();
+        }
+
+        if (mobileCallUI && inputContainer && mobileControls && !mobileCallUI.contains(inputContainer)) {
+            inputContainer.classList.add('mobile-composer');
+            mobileCallUI.insertBefore(inputContainer, mobileControls);
         }
 
         // ── Update avatar + status pill ────────────────────────────────────
