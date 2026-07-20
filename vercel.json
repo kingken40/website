@@ -1,12 +1,3 @@
 {
-  "version": 2,
-  "buildCommand": "echo 'Static site'",
-  "framework": null,
-  "public": ".",
-  "rewrites": [
-    {
-      "source": "/ai/ai5/(.*)",
-      "destination": "/ai/ai5/$1"
-    }
-  ]
+  "version": 2
 }
