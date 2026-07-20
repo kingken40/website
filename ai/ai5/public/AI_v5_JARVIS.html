@@ -29,7 +29,8 @@
                 <i class="fas fa-chevron-left" aria-hidden="true"></i> Back
             </a>
             <span class="mobile-call-label">N.O.V.A AI</span>
-            <button class="mobile-topbar-settings-btn" id="mobileTopSettingsBtn" title="Settings" aria-label="Settings">
+            <button class="mobile-topbar-settings-btn" id="mobileTopSettingsBtn" title="Settings" aria-label="Settings"
+                onclick="(function(){var m=document.getElementById('settingsModal');if(m){m.style.display='flex';m.classList.add('active');}})();">
                 <i class="fas fa-cog" aria-hidden="true"></i>
             </button>
         </div>
@@ -62,6 +63,29 @@
             <div class="mobile-transcript-messages" id="mobileTranscriptMessages" aria-live="polite"></div>
         </div>
 
+        <!-- Mobile text composer -->
+        <div class="mobile-text-composer" aria-label="Type a message">
+            <input
+                type="text"
+                id="mobileMessageInput"
+                class="mobile-text-input"
+                placeholder="Type to N.O.V.A..."
+                autocomplete="off"
+                autocapitalize="sentences"
+                enterkeyhint="send"
+                spellcheck="true"
+            >
+            <button
+                class="mobile-text-send-btn"
+                id="mobileSendBtn"
+                type="button"
+                aria-label="Send typed message"
+                onclick="(function(){var i=document.getElementById('mobileMessageInput');var v=i&&i.value?i.value.trim():'';if(!v){return;}if(typeof window.processUserMessage==='function'){window.processUserMessage(v);}else{var d=document.getElementById('messageInput');var s=document.getElementById('sendBtn');if(d){d.value=v;}if(s){s.click();}}if(i){i.value='';}})();"
+            >
+                <i class="fas fa-paper-plane" aria-hidden="true"></i>
+            </button>
+        </div>
+
         <!-- Call controls -->
         <div class="mobile-call-controls" role="toolbar" aria-label="Call controls">
             <button class="mobile-ctrl-btn" id="mobileMuteBtn"
@@ -80,7 +104,8 @@
                 <span>Chat</span>
             </button>
             <button class="mobile-ctrl-btn" id="mobileSettingsBtn"
-                    title="Settings" aria-label="Open settings">
+                    title="Settings" aria-label="Open settings"
+                    onclick="(function(){var m=document.getElementById('settingsModal');if(m){m.style.display='flex';m.classList.add('active');}})();">
                 <i class="fas fa-cog" aria-hidden="true"></i>
                 <span>Settings</span>
             </button>
@@ -1948,6 +1973,8 @@
         var transcript       = document.getElementById('mobileTranscript');
         var transcriptToggle = document.getElementById('mobileTranscriptToggle');
         var transcriptMsgs   = document.getElementById('mobileTranscriptMessages');
+        var mobileMessageInput = document.getElementById('mobileMessageInput');
+        var mobileSendBtn      = document.getElementById('mobileSendBtn');
         var inputContainer   = document.querySelector('.input-container');
         var mobileControls   = document.querySelector('.mobile-call-controls');
         var srcMsgs          = document.getElementById('chatMessages');
@@ -2003,6 +2030,15 @@
             new MutationObserver(syncMessages)
                 .observe(srcMsgs, { childList: true, subtree: true, characterData: true });
             syncMessages();
+        }
+
+        if (mobileMessageInput && mobileSendBtn) {
+            mobileMessageInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    mobileSendBtn.click();
+                }
+            });
         }
 
         if (mobileCallUI && inputContainer && mobileControls && !mobileCallUI.contains(inputContainer)) {
