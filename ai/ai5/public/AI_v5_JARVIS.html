@@ -1990,12 +1990,15 @@
         var transcriptMsgs   = document.getElementById('mobileTranscriptMessages');
         var mobileMessageInput = document.getElementById('mobileMessageInput');
         var mobileSendBtn      = document.getElementById('mobileSendBtn');
-        var inputContainer   = document.querySelector('.input-container');
-        var mobileControls   = document.querySelector('.mobile-call-controls');
         var srcMsgs          = document.getElementById('chatMessages');
 
         var muted              = false;
+        var mobileAlwaysListeningEnabled = true;
         var transcriptCollapsed = false;
+        var holdToggleTimer = null;
+        var holdToggleTriggered = false;
+        var suppressNextMuteClick = false;
+        var HOLD_TOGGLE_MS = 3000;
 
         var lastMobileSettingsTapAt = 0;
 
@@ -2056,11 +2059,6 @@
             });
         }
 
-        if (mobileCallUI && inputContainer && mobileControls && !mobileCallUI.contains(inputContainer)) {
-            inputContainer.classList.add('mobile-composer');
-            mobileCallUI.insertBefore(inputContainer, mobileControls);
-        }
-
         // ── Update avatar + status pill ────────────────────────────────────
         function setCallState(state) {
             if (avatarContainer) {
@@ -2073,28 +2071,94 @@
                 if (state === 'speaking')    statusText.textContent = 'N.O.V.A is speaking…';
                 else if (state === 'processing') statusText.textContent = 'Processing…';
                 else if (state === 'muted')  statusText.textContent = 'Microphone muted';
+                else if (state === 'disabled') statusText.textContent = 'Always listening off';
                 else                         statusText.textContent = 'Always listening…';
             }
         }
 
         // Poll voice/speaking flags exposed by jarvis_voice.js
         setInterval(function() {
+            if (!mobileAlwaysListeningEnabled)                  { setCallState('disabled');   return; }
             if (muted)                                        { setCallState('muted');      return; }
             if (window.isSpeaking || window.isSpeechOutputActive) { setCallState('speaking');   return; }
             if (document.querySelector('.thinking-indicator'))    { setCallState('processing'); return; }
             setCallState('listening');
         }, 350);
 
+        function updateMuteButtonUI() {
+            if (!muteBtn) return;
+            var icon = muteBtn.querySelector('i');
+            var label = muteBtn.querySelector('span');
+            var isOff = !mobileAlwaysListeningEnabled || muted;
+            if (icon) icon.className = isOff ? 'fas fa-microphone-slash' : 'fas fa-microphone';
+            if (label) {
+                if (!mobileAlwaysListeningEnabled) {
+                    label.textContent = 'Mic Off';
+                } else {
+                    label.textContent = muted ? 'Unmute' : 'Mute';
+                }
+            }
+            muteBtn.setAttribute('aria-pressed', String(isOff));
+        }
+
+        async function toggleMobileAlwaysListeningFromHold() {
+            mobileAlwaysListeningEnabled = !mobileAlwaysListeningEnabled;
+
+            if (!mobileAlwaysListeningEnabled) {
+                muted = true;
+                if (window.alwaysListeningHotkeyMode && typeof toggleAlwaysListeningMode === 'function') {
+                    await toggleAlwaysListeningMode();
+                } else if (window.recognition && window.isListening) {
+                    try { window.recognition.abort(); } catch (e) {}
+                    window.isListening = false;
+                }
+                if (statusText) statusText.textContent = 'Always listening off';
+            } else {
+                muted = false;
+                await ensureMobileListeningEnabled();
+                if (statusText) statusText.textContent = 'Always listening…';
+            }
+
+            updateMuteButtonUI();
+        }
+
+        function clearHoldToggleTimer() {
+            if (holdToggleTimer) {
+                clearTimeout(holdToggleTimer);
+                holdToggleTimer = null;
+            }
+        }
+
+        function startHoldToggleTimer(event) {
+            if (!muteBtn) return;
+            if (event && event.type === 'mousedown' && event.button !== 0) return;
+            holdToggleTriggered = false;
+            clearHoldToggleTimer();
+            holdToggleTimer = setTimeout(function() {
+                holdToggleTriggered = true;
+                suppressNextMuteClick = true;
+                toggleMobileAlwaysListeningFromHold();
+            }, HOLD_TOGGLE_MS);
+        }
+
+        function stopHoldToggleTimer() {
+            clearHoldToggleTimer();
+        }
+
         // ── Mute / unmute ──────────────────────────────────────────────────
         if (muteBtn) {
             muteBtn.addEventListener('click', function() {
+                if (suppressNextMuteClick || holdToggleTriggered) {
+                    suppressNextMuteClick = false;
+                    holdToggleTriggered = false;
+                    return;
+                }
+                if (!mobileAlwaysListeningEnabled) {
+                    if (statusText) statusText.textContent = 'Hold mic 3s to enable always listening';
+                    return;
+                }
                 muted = !muted;
-                muteBtn.classList.toggle('muted', muted);
-                muteBtn.querySelector('i').className = muted
-                    ? 'fas fa-microphone-slash'
-                    : 'fas fa-microphone';
-                muteBtn.querySelector('span').textContent = muted ? 'Unmute' : 'Mute';
-                muteBtn.setAttribute('aria-pressed', String(muted));
+                updateMuteButtonUI();
 
                 if (muted) {
                     // Pause recognition
@@ -2109,6 +2173,15 @@
                     ensureMobileListeningEnabled();
                 }
             });
+
+            muteBtn.addEventListener('mousedown', startHoldToggleTimer);
+            muteBtn.addEventListener('touchstart', startHoldToggleTimer, { passive: true });
+            muteBtn.addEventListener('mouseup', stopHoldToggleTimer);
+            muteBtn.addEventListener('mouseleave', stopHoldToggleTimer);
+            muteBtn.addEventListener('touchend', stopHoldToggleTimer);
+            muteBtn.addEventListener('touchcancel', stopHoldToggleTimer);
+            muteBtn.addEventListener('pointercancel', stopHoldToggleTimer);
+            muteBtn.addEventListener('contextmenu', function(event) { event.preventDefault(); });
         }
 
         // ── Continue button ────────────────────────────────────────────────
@@ -2138,7 +2211,7 @@
 
         // ── Auto-start always-listening after voice system is ready ────────
         async function ensureMobileListeningEnabled() {
-            if (muted) return;
+            if (muted || !mobileAlwaysListeningEnabled) return;
             try {
                 if (typeof window.requestVoicePermission === 'function' && !window.hasVoicePermission) {
                     const granted = await window.requestVoicePermission();
@@ -2164,6 +2237,8 @@
                 console.warn('📱 Mobile listening enable failed:', error);
             }
         }
+
+        updateMuteButtonUI();
 
         window.addEventListener('load', function() {
             // First attempt at 2 s, retry at 5 s if voice hasn't initialised yet
