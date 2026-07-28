@@ -2399,6 +2399,89 @@ body.no-animations * {
     }
 }
 
+/* Desktop mode: when "Switch to Desktop" is clicked on mobile */
+body.desktop-forced .mobile-call-ui {
+    display: none !important;
+}
+
+body.desktop-forced .jarvis-header,
+body.desktop-forced .voice-interface,
+body.desktop-forced .mode-selector,
+body.desktop-forced .chat-container,
+body.desktop-forced .input-container {
+    position: relative !important;
+    z-index: auto !important;
+    pointer-events: auto !important;
+    visibility: visible !important;
+    top: auto !important;
+}
+
+/* Mobile view: when "Mobile View" is clicked on desktop */
+body.mobile-view-forced .mobile-call-ui {
+    display: flex !important;
+}
+
+body.mobile-view-forced .jarvis-header,
+body.mobile-view-forced .voice-interface,
+body.mobile-view-forced .mode-selector,
+body.mobile-view-forced .chat-container,
+body.mobile-view-forced .input-container {
+    position: fixed !important;
+    z-index: -1 !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
+    top: -9999px !important;
+}
+
+/* Desktop button styling */
+.mobile-desktop-btn {
+    background: rgba(0, 68, 34, 0.6) !important;
+    border-color: rgba(0, 255, 128, 0.3) !important;
+}
+
+.mobile-desktop-btn i {
+    color: #00ff80 !important;
+}
+
+/* "Mobile View" button in desktop header */
+.desktop-switch-mobile-btn {
+    margin-top: 0.6rem;
+    padding: 0.4rem 0.9rem;
+    border-radius: 20px;
+    border: 1px solid rgba(0, 170, 255, 0.35);
+    background: rgba(0, 34, 68, 0.55);
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 0.75rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: all 0.2s ease;
+}
+
+.desktop-switch-mobile-btn:hover {
+    background: rgba(0, 170, 255, 0.15);
+    border-color: #00aaff;
+    color: #fff;
+}
+
+.desktop-switch-mobile-btn i {
+    color: #00aaff;
+    font-size: 0.9rem;
+}
+
+/* Hide the mobile-view button when already in mobile layout (overlay handles it) */
+@media (max-width: 768px) {
+    .desktop-switch-mobile-btn {
+        display: none;
+    }
+}
+
+/* But show it again if the user forced desktop view on a mobile device */
+body.desktop-forced .desktop-switch-mobile-btn {
+    display: inline-flex !important;
+}
+
 /* Voice Button States */
 .voice-btn.listening {
     background: linear-gradient(145deg, rgba(0, 255, 0, 0.2), rgba(0, 200, 0, 0.2));

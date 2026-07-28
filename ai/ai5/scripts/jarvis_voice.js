@@ -2889,6 +2889,7 @@ if (document.readyState === 'loading') {
 // Export key functions and variables globally for integration
 window.startWakeListening = startWakeListening;
 window.stopWakeListening = stopWakeListening;
+window.enableWakeListening = enableWakeListening;
 window.toggleMicrophone = toggleMicrophone;
 window.initializeVoice = initializeVoice;
 window.setupVoiceButtons = setupVoiceButtons;
