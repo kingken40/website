@@ -319,9 +319,32 @@
                     <input type="checkbox" id="wakePhraseEnabled" checked>
                 </div>
             </div>
-                
+
                 <div class="setting-section" style="margin-top: 1.5rem;">
-                    <h4 style="color: #FFD700; margin-bottom: 1rem; border-bottom: 1px solid rgba(255, 215, 0, 0.3); padding-bottom: 0.5rem;">📚 Knowledge Base</h4>
+                <h4 style="color: #FFD700; margin-bottom: 1rem; border-bottom: 1px solid rgba(255, 215, 0, 0.3); padding-bottom: 0.5rem;">🧠 AI Model Selection</h4>
+                <div class="setting-group" style="flex-direction:column; align-items:stretch;">
+                    <label style="min-width:unset;">Current active model</label>
+                    <div id="selectedModelDisplay" style="padding:0.55rem 0.75rem;background:rgba(0,170,255,0.08);border:1px solid rgba(0,170,255,0.25);border-radius:6px;color:#8fd8ff;font-size:0.88rem;">Selected: Auto (loading...)</div>
+                    <small style="display:block;margin-top:0.35rem;color:rgba(255,255,255,0.55);">Auto chooses the best model for each request. Static locks one model until you change it back.</small>
+                </div>
+                <div class="setting-group">
+                    <label for="modelSelect">Model mode</label><newLine />
+                    <select id="modelSelect" style="flex:1; padding:0.5rem; background:rgba(0,170,255,0.1); border:1px solid rgba(0,170,255,0.3); border-radius:5px; color:#00aaff;">
+                        <option value="auto">Auto-select (AI5 task routing)</option>
+                    </select>
+                </div>
+                <div class="setting-group" style="flex-direction:column; align-items:stretch;">
+                    <label style="min-width:unset;">Last response model</label>
+                    <div id="responseModelDisplay" style="padding:0.55rem 0.75rem;background:rgba(0,170,255,0.08);border:1px solid rgba(0,170,255,0.25);border-radius:6px;color:#8fd8ff;font-size:0.88rem;">Last used: Awaiting reply</div>
+                    <small id="modelSelectStatus" style="display:block;margin-top:0.35rem;color:rgba(255,255,255,0.55);">Loading model list...</small>
+                </div>
+                <div class="setting-group">
+                    <button type="button" id="refreshModelListBtn" style="padding:0.6rem 1.2rem;background:linear-gradient(135deg,#00aaff,#0088cc);border:none;border-radius:5px;color:#fff;font-weight:600;cursor:pointer;transition:all 0.3s;">Refresh model list</button>
+                </div>
+            </div>
+                 
+            <div class="setting-section" style="margin-top: 1.5rem;">
+                <h4 style="color: #FFD700; margin-bottom: 1rem; border-bottom: 1px solid rgba(255, 215, 0, 0.3); padding-bottom: 0.5rem;">📚 Knowledge Base</h4>
                     <p style="color:rgba(255,255,255,0.6);font-size:0.82rem;margin-bottom:0.8rem;">Add notes, slides, references, or context that N.O.V.A should read, remember, and prioritize across chats.</p>
                     <div class="setting-group">
                         <label>Upload a file (txt, md, pdf, code)</label>

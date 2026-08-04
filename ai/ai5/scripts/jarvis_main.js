@@ -22,11 +22,40 @@ let OPENAI_API_KEY = loadApiKey('openai_api_key', '');
 let HUGGINGFACE_API_KEY = loadApiKey('huggingface_api_key', '');
 
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const OPENROUTER_MODELS_API_URL = 'https://openrouter.ai/api/v1/models';
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
+const MODEL_PREFERENCE_STORAGE_KEY = 'nova_model_preference';
+const MODEL_CACHE_STORAGE_KEY = 'nova_openrouter_model_cache';
+const LAST_RESPONSE_MODEL_STORAGE_KEY = 'nova_last_response_model';
+const NOVELTY_MEMORY_STORAGE_KEY = 'nova_novelty_memory';
+const NOVELTY_MEMORY_LIMIT = 40;
+
+function loadStoredText(keyName, defaultValue = '') {
+    try {
+        const stored = localStorage.getItem(keyName);
+        return stored === null ? defaultValue : stored;
+    } catch (e) {
+        return defaultValue;
+    }
+}
+
+function loadStoredJson(keyName, defaultValue) {
+    try {
+        const stored = localStorage.getItem(keyName);
+        if (!stored) return defaultValue;
+        const parsed = JSON.parse(stored);
+        return parsed == null ? defaultValue : parsed;
+    } catch (e) {
+        return defaultValue;
+    }
+}
 
 // AI Provider Configuration
 let currentProvider = 'openrouter'; // Primary: OpenRouter, Fallback: openai
 let currentModel = 'openai/gpt-4o-mini'; // Default OpenRouter model
+let manualModelOverride = loadStoredText(MODEL_PREFERENCE_STORAGE_KEY, 'auto') || 'auto';
+let lastResponseModel = loadStoredText(LAST_RESPONSE_MODEL_STORAGE_KEY, '');
+let openRouterModelCatalog = [];
 
 const providerConfig = {
     openrouter: {
@@ -95,12 +124,249 @@ function getMaxTokensForTask(task) {
     return tokenBudgets[task] || tokenBudgets.fast;
 }
 
+function getCachedOpenRouterModels() {
+    try {
+        const raw = localStorage.getItem(MODEL_CACHE_STORAGE_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+        console.warn('⚠️ Failed to read cached OpenRouter models:', error);
+        return [];
+    }
+}
+
+function saveCachedOpenRouterModels(models) {
+    try {
+        localStorage.setItem(MODEL_CACHE_STORAGE_KEY, JSON.stringify(models));
+    } catch (error) {
+        console.warn('⚠️ Failed to cache OpenRouter models:', error);
+    }
+}
+
+function isManualModelSelectionEnabled() {
+    return !!manualModelOverride && manualModelOverride !== 'auto';
+}
+
+function getSelectionLabel(resolvedModel) {
+    if (isManualModelSelectionEnabled()) {
+        return `Selected: ${manualModelOverride}`;
+    }
+    return `Selected: Auto (${resolvedModel || currentModel})`;
+}
+
+function refreshModelSelectionUI(resolvedModel = currentModel) {
+    const selectedModelDisplay = document.getElementById('selectedModelDisplay');
+    const responseModelDisplay = document.getElementById('responseModelDisplay');
+    const modelSelect = document.getElementById('modelSelect');
+
+    if (selectedModelDisplay) {
+        selectedModelDisplay.textContent = getSelectionLabel(resolvedModel);
+    }
+
+    if (responseModelDisplay) {
+        responseModelDisplay.textContent = lastResponseModel
+            ? `Last used: ${lastResponseModel}`
+            : 'Last used: Awaiting reply';
+    }
+
+    if (modelSelect) {
+        modelSelect.value = isManualModelSelectionEnabled() ? manualModelOverride : 'auto';
+    }
+}
+
+function setLastResponseModel(modelName) {
+    const normalizedModel = String(modelName || '').trim();
+    if (!normalizedModel) return;
+    lastResponseModel = normalizedModel;
+    window.lastResponseModel = normalizedModel;
+    try {
+        localStorage.setItem(LAST_RESPONSE_MODEL_STORAGE_KEY, normalizedModel);
+    } catch (error) {
+        console.warn('⚠️ Failed to persist last response model:', error);
+    }
+    refreshModelSelectionUI();
+}
+
+function populateModelDropdown(models) {
+    const modelSelect = document.getElementById('modelSelect');
+    if (!modelSelect) return;
+
+    const selectedValue = isManualModelSelectionEnabled() ? manualModelOverride : 'auto';
+    const options = Array.isArray(models) ? models : [];
+
+    function getModelGroupLabel(model) {
+        const text = `${model.id || ''} ${model.name || ''}`.toLowerCase();
+        if (/(claude|sonnet|opus|gpt-4o|gpt-4\.1|o1|o3|reason|deepseek-r1|gemini-2\.5-pro|qwen3|mistral-large|llama-4)/.test(text)) {
+            return 'Best for reasoning';
+        }
+        if (/(flash|haiku|mini|turbo|small|nano|lite|fast)/.test(text)) {
+            return 'For speed';
+        }
+        if (/(write|creative|story|instruct|gpt-4o|gpt-4\.1|gemini-2\.5-flash|sonnet)/.test(text)) {
+            return 'Best for writing';
+        }
+        if (/(long|context|gemini|command-r|qwen2\.5|mistral-small|deepseek-v3)/.test(text)) {
+            return 'For long context';
+        }
+        return 'Other models';
+    }
+
+    const groupedModels = {
+        'Best for reasoning': [],
+        'For speed': [],
+        'Best for writing': [],
+        'For long context': [],
+        'Other models': []
+    };
+
+    options.forEach(model => {
+        if (!model || !model.id) return;
+        const groupLabel = getModelGroupLabel(model);
+        groupedModels[groupLabel].push(model);
+    });
+
+    modelSelect.innerHTML = '';
+
+    const autoOption = document.createElement('option');
+    autoOption.value = 'auto';
+    autoOption.textContent = 'Auto-select (AI5 task routing)';
+    modelSelect.appendChild(autoOption);
+
+    const groupOrder = ['Best for reasoning', 'For speed', 'Best for writing', 'For long context', 'Other models'];
+    groupOrder.forEach(groupLabel => {
+        const modelsInGroup = groupedModels[groupLabel];
+        if (!modelsInGroup.length) return;
+
+        const group = document.createElement('optgroup');
+        group.label = groupLabel;
+
+        modelsInGroup.forEach(model => {
+            const option = document.createElement('option');
+            option.value = model.id;
+            option.textContent = model.name && model.name !== model.id
+                ? `${model.name} (${model.id})`
+                : model.id;
+            group.appendChild(option);
+        });
+
+        modelSelect.appendChild(group);
+    });
+
+    modelSelect.value = selectedValue;
+}
+
+async function fetchOpenRouterModels(forceRefresh = false) {
+    const modelSelect = document.getElementById('modelSelect');
+    const modelStatus = document.getElementById('modelSelectStatus');
+    if (!modelSelect || !modelStatus) return;
+
+    const cachedModels = forceRefresh ? [] : getCachedOpenRouterModels();
+    if (cachedModels.length) {
+        openRouterModelCatalog = cachedModels;
+        populateModelDropdown(cachedModels);
+        modelStatus.textContent = 'Showing cached OpenRouter models while refreshing...';
+    } else {
+        modelStatus.textContent = 'Loading first 20 OpenRouter models...';
+    }
+
+    modelSelect.disabled = true;
+
+    try {
+        const response = await fetch(OPENROUTER_MODELS_API_URL, {
+            headers: {
+                'Accept': 'application/json',
+                'HTTP-Referer': window.location.origin,
+                'X-Title': 'N.O.V.A AI Assistant'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`OpenRouter models request failed (${response.status})`);
+        }
+
+        const responseData = await response.json();
+        const models = Array.isArray(responseData.data)
+            ? responseData.data.slice(0, 20).map(model => ({
+                id: String(model.id || '').trim(),
+                name: String(model.name || model.id || '').trim()
+            })).filter(model => model.id)
+            : [];
+
+        if (!models.length) {
+            throw new Error('OpenRouter returned no model data');
+        }
+
+        openRouterModelCatalog = models;
+        saveCachedOpenRouterModels(models);
+        populateModelDropdown(models);
+        modelStatus.textContent = 'Loaded first 20 OpenRouter models. Auto keeps AI5 task-based routing.';
+    } catch (error) {
+        console.warn('⚠️ Failed loading OpenRouter models:', error);
+        if (cachedModels.length) {
+            modelStatus.textContent = 'Could not refresh models. Using cached OpenRouter list.';
+        } else {
+            populateModelDropdown([]);
+            modelStatus.textContent = 'Could not load OpenRouter models right now.';
+        }
+    } finally {
+        modelSelect.disabled = false;
+        refreshModelSelectionUI();
+    }
+}
+
+function setupModelControls() {
+    const modelSelect = document.getElementById('modelSelect');
+    if (!modelSelect) return;
+
+    const cachedModels = getCachedOpenRouterModels();
+    if (cachedModels.length) {
+        openRouterModelCatalog = cachedModels;
+        populateModelDropdown(cachedModels);
+    } else {
+        populateModelDropdown([]);
+    }
+
+    if (!modelSelect.dataset.listenerAttached) {
+        modelSelect.addEventListener('change', event => {
+            const nextValue = event.target.value || 'auto';
+            manualModelOverride = nextValue === 'auto' ? 'auto' : nextValue;
+            try {
+                localStorage.setItem(MODEL_PREFERENCE_STORAGE_KEY, manualModelOverride);
+            } catch (error) {
+                console.warn('⚠️ Failed to save model preference:', error);
+            }
+            refreshModelSelectionUI();
+            if (typeof showNotification === 'function') {
+                const message = manualModelOverride === 'auto'
+                    ? 'AI5 model selection returned to automatic routing.'
+                    : `AI5 will use ${manualModelOverride} for upcoming replies.`;
+                showNotification(message, 2500);
+            }
+        });
+        modelSelect.dataset.listenerAttached = 'true';
+    }
+
+    const refreshModelListBtn = document.getElementById('refreshModelListBtn');
+    if (refreshModelListBtn && !refreshModelListBtn.dataset.listenerAttached) {
+        refreshModelListBtn.addEventListener('click', function() {
+            fetchOpenRouterModels(true);
+        });
+        refreshModelListBtn.dataset.listenerAttached = 'true';
+    }
+
+    refreshModelSelectionUI();
+    fetchOpenRouterModels();
+}
+
 function updateModelForMessage(userMessage) {
     const task = detectTaskType(userMessage);
-    currentModel = selectModelForTask(task);
+    const autoModel = selectModelForTask(task);
+    currentModel = isManualModelSelectionEnabled() ? manualModelOverride : autoModel;
     providerConfig.openrouter.model = currentModel;
     providerConfig.openrouter.maxTokens = getMaxTokensForTask(task);
-    console.log('🧠 Task detected:', task, '| Model selected:', currentModel, '| Max tokens:', providerConfig.openrouter.maxTokens);
+    refreshModelSelectionUI(currentModel);
+    console.log('🧠 Task detected:', task, '| Auto model:', autoModel, '| Using model:', currentModel, '| Max tokens:', providerConfig.openrouter.maxTokens);
 }
 
 
@@ -108,6 +374,10 @@ function updateModelForMessage(userMessage) {
 // Initialize conversation history
 let conversationHistory = [];
 let isResponseInFlight = false;
+let activeResponseAbortController = null;
+let activeResponseRunId = 0;
+window.lastResponseModel = lastResponseModel;
+let noveltyMemory = loadStoredJson(NOVELTY_MEMORY_STORAGE_KEY, []);
 
 // Interrupt handling state (uses window.isSpeaking from jarvis_voice.js to track speech)
 
@@ -116,7 +386,7 @@ const JARVIS_STYLE_REFERENCE_LIMIT = 24;
 const JARVIS_STYLE_FALLBACK_PHRASES = [
     'At your service.',
     'Ready when you are.',
-    'Systems are now fully operational.',
+    'Systems are nowl.',
     'Shall we rethink that approach?',
     'Technically possible, strategically questionable.',
     'I would advise against that.'
@@ -512,10 +782,35 @@ function getPersistentMaterialContext(materialItems = persistentMaterial, maxTot
 // ====== USER PROFILE / PERSONALIZATION ======
 let userProfile = { preferredName: '', customFacts: [] };
 
+const INVALID_PREFERRED_NAMES = new Set([
+    'a', 'an', 'the', 'not', 'just', 'sir', 'okay', 'fine', 'good', 'here',
+    'no', 'nope', 'none', 'unknown', 'i', 'me', 'myself', 'you', 'yourself', 'nt', 'mr', 'mrs', 'ms', 'dr'
+]);
+
+function sanitizePreferredName(rawName) {
+    const cleaned = String(rawName || '')
+        .replace(/[^\w\s'-]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    if (!cleaned) return '';
+    const lower = cleaned.toLowerCase();
+    if (INVALID_PREFERRED_NAMES.has(lower)) return '';
+    if (/\b(who|what|when|where|why|how)\b/i.test(cleaned)) return '';
+    if (cleaned.length < 2 || cleaned.length > 40) return '';
+    return cleaned;
+}
+
 function loadUserProfile() {
     try {
         const stored = localStorage.getItem('nova_user_profile');
-        if (stored) userProfile = JSON.parse(stored);
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            userProfile = {
+                preferredName: sanitizePreferredName(parsed?.preferredName),
+                customFacts: Array.isArray(parsed?.customFacts) ? parsed.customFacts : []
+            };
+            saveUserProfile();
+        }
     } catch(e) { userProfile = { preferredName: '', customFacts: [] }; }
 }
 
@@ -527,50 +822,75 @@ function saveUserProfile() {
 
 // Detect if user is telling Nova their name or a preference, then remember it
 function detectAndSavePersonalization(userMessage) {
-    const msg = userMessage.trim().toLowerCase();
+    const msg = String(userMessage || '').trim();
+    if (!msg) return;
 
-    // Name correction patterns: "my name is X", "call me X", "I'm X", "it's X not Y"
-    const namePatterns = [
-        /(?:my name is|call me|i(?:'m| am)|i go by)\s+([a-z][a-z\s'-]{1,30}?)(?:\s*[,.]|$)/i,
-        /(?:it'?s|its)\s+([a-z][a-z\s'-]{1,30}?)\s*(?:not|,|$)/i
-    ];
-    for (const pattern of namePatterns) {
-        const match = userMessage.match(pattern);
-        if (match) {
-            const name = match[1].trim().replace(/\s+/g, ' ');
-            // Filter out common false-positives
-            const skip = ['a', 'an', 'the', 'not', 'just', 'sir', 'okay', 'fine', 'good', 'here'];
-            if (!skip.includes(name.toLowerCase()) && name.length >= 2) {
-                userProfile.preferredName = name;
-                saveUserProfile();
-                console.log('👤 User profile updated - name:', name);
-                return;
-            }
+    const lowered = msg.toLowerCase();
+    if (lowered.includes('who am i') || lowered.includes('who am i?') || lowered.includes('who are you') || lowered.includes('what is your name') || lowered.includes('what does nova stand')) {
+        return;
+    }
+
+    const negationMatch = msg.match(/\b(?:my name|call me|i(?:'m| am)|i go by)\b.*\b(?:isn't|is not|not)\b/i);
+    if (negationMatch) {
+        userProfile.preferredName = '';
+        saveUserProfile();
+        console.log('👤 Cleared invalid name preference after negation');
+        return;
+    }
+
+    const explicitNameMatch = msg.match(/\b(?:my name is|call me|i(?:'m| am)|i go by)\b\s+([a-z][a-z\s'-]{1,30}?)(?:\s*[,.!?]|$)/i);
+    if (explicitNameMatch) {
+        const name = sanitizePreferredName(explicitNameMatch[1]);
+        if (name) {
+            userProfile.preferredName = name;
+            saveUserProfile();
+            console.log('👤 User profile updated - name:', name);
+            return;
         }
     }
 
-    // Generic fact: "remember that...", "note that...", "keep in mind..."
-    const factMatch = userMessage.match(/(?:remember|note|keep in mind)[:\s]+(.{10,200})/i);
+    const factMatch = msg.match(/(?:remember|note|keep in mind)[:\s]+(.{10,200})/i);
     if (factMatch) {
         const fact = factMatch[1].trim();
         if (!userProfile.customFacts.includes(fact)) {
             userProfile.customFacts.push(fact);
-            if (userProfile.customFacts.length > 10) userProfile.customFacts.shift(); // keep last 10
+            if (userProfile.customFacts.length > 10) userProfile.customFacts.shift();
             saveUserProfile();
             console.log('👤 User profile updated - added fact:', fact);
         }
     }
 }
 
+// Permanent owner profile - always injected into every system prompt
+const OWNER_PROFILE = {
+    fullName: 'Kenneth Okwunwanne',
+    namePronunciation: 'Last name pronounced "Oh-Ku-Wan-E"',
+    preferredAddress: 'Mr. Ken (highly preferred) or Kenny',
+    role: 'Creator of N.O.V.A',
+    education: "Master's student pursuing a Master's degree in Software Engineering",
+    age: 28,
+    birthdate: 'April 14, 1998'
+};
+
 function getUserProfileContext() {
     const parts = [];
+
+    // Always include the permanent owner profile
+    parts.push(
+        `The user is ${OWNER_PROFILE.fullName} (${OWNER_PROFILE.namePronunciation}). ` +
+        `Always address them as "${OWNER_PROFILE.preferredAddress}". ` +
+        `They are your creator. ` +
+        `They are ${OWNER_PROFILE.age} years old (born ${OWNER_PROFILE.birthdate}). ` +
+        `They are a ${OWNER_PROFILE.education}.`
+    );
+
+    // Layer any runtime-saved name preference on top
     if (userProfile.preferredName) {
-        parts.push(`The user's name is ${userProfile.preferredName}. Always address them as "${userProfile.preferredName}" (not "sir" or generic terms) unless context makes another address more appropriate.`);
+        parts.push(`Runtime name preference: address them as "${userProfile.preferredName}".`);
     }
     if (userProfile.customFacts && userProfile.customFacts.length > 0) {
         parts.push(`Remembered user preferences/facts:\n${userProfile.customFacts.map(f => `- ${f}`).join('\n')}`);
     }
-    if (parts.length === 0) return '';
     return `\n\n=== USER PROFILE (always honor these) ===\n${parts.join('\n')}\n=== END USER PROFILE ===`;
 }
 // ====== END USER PROFILE ======
@@ -1044,7 +1364,7 @@ function selectPersonality(personalityType) {
     showNotification(`Switched to ${personalityConfig.name}`, 2000);
 }
 
-function addMessage(text, sender, timestamp = null) {
+function addMessage(text, sender, timestamp = null, responseModel = null) {
     const chatMessages = document.getElementById('chatMessages');
     if (!chatMessages) return;
     
@@ -1055,12 +1375,17 @@ function addMessage(text, sender, timestamp = null) {
     messageDiv.className = `message ${sender}-message`;
     
     const currentTime = timestamp || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    
+
     let senderName = 'You';
     if (sender === 'Nova') {
         const personality = personalities[currentPersonality] || personalities['Nova'];
         senderName = personality ? personality.name : 'N.O.V.A';
     }
+
+    const modelLabel = responseModel ? String(responseModel).trim() : '';
+    const responseModelBadge = sender === 'Nova' && modelLabel
+        ? `<span class="response-model-badge" title="Model that generated this response">Model: ${escapeHtml(modelLabel)}</span>`
+        : '';
     
     // Add unique ID for message replay/edit functionality
     const messageId = 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
@@ -1068,6 +1393,7 @@ function addMessage(text, sender, timestamp = null) {
     messageDiv.innerHTML = `
         <div class="message-header">
             <span class="sender-name">${senderName}</span>
+            ${responseModelBadge}
             <span class="message-time">${currentTime}</span>
         </div>
         <div class="message-content">${formatMessageContent(text)}</div>
@@ -1079,6 +1405,9 @@ function addMessage(text, sender, timestamp = null) {
     messageDiv.dataset.messageId = messageId;
     messageDiv.dataset.originalText = text;
     messageDiv.dataset.messageIndex = chatHistory.length; // Position in history for truncation
+    if (modelLabel) {
+        messageDiv.dataset.responseModel = modelLabel;
+    }
     
     chatMessages.appendChild(messageDiv);
     chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -1088,10 +1417,123 @@ function addMessage(text, sender, timestamp = null) {
         text: text,
         sender: sender,
         timestamp: currentTime,
-        personality: currentPersonality
+        personality: currentPersonality,
+        responseModel: modelLabel
     });
     
     console.log('💬 Message added:', { sender, text: text.substring(0, 50) + '...', personality: currentPersonality });
+}
+
+function getCurrentModeDisplayName() {
+    const config = personalities[currentPersonality] || personalities.Nova;
+    return config ? config.name : 'N.O.V.A';
+}
+
+function isModeQuestion(message) {
+    const normalized = String(message || '').toLowerCase();
+    return /\b(what\s+mode(?:\s+are\s+you\s+on)?|which\s+mode|current\s+mode|what\s+personality|which\s+personality|what\s+are\s+you\s+in)\b/i.test(normalized);
+}
+
+function getModeQuestionResponse() {
+    const modeName = getCurrentModeDisplayName();
+    return `I’m currently in ${modeName} Mode, sir.`;
+}
+
+function isNoveltyRequest(message) {
+    const normalized = String(message || '').toLowerCase().trim();
+    return /\b(fun\s+fact|interesting\s+fact|tell\s+me\s+something\s+(?:interesting|new)|tell\s+me\s+a\s+fun\s+fact|something\s+new|surprise\s+me\s+with\s+something|another\s+(?:fun\s+fact|interesting\s+thing)|share\s+something\s+interesting)\b/i.test(normalized);
+}
+
+function stripSourcesSection(text) {
+    return String(text || '')
+        .replace(/\n\s*---\s*\n\s*\*\*?\s*Sources\s*&\s*References\s*\*\*?[\s\S]*$/i, '')
+        .replace(/\n\s*Sources\s*&\s*References\s*:?\s*[\s\S]*$/i, '')
+        .trim();
+}
+
+function normalizeNoveltyText(text) {
+    return stripSourcesSection(text)
+        .toLowerCase()
+        .replace(/https?:\/\/\S+/g, ' ')
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function summarizeNoveltyText(text, maxLength = 220) {
+    const cleaned = stripSourcesSection(text).replace(/\s+/g, ' ').trim();
+    if (!cleaned) return '';
+    const sentences = cleaned.match(/[^.!?]+[.!?]?/g) || [cleaned];
+    const summary = sentences.slice(0, 2).join(' ').trim();
+    return summary.length > maxLength ? `${summary.slice(0, maxLength - 1).trim()}…` : summary;
+}
+
+function buildNoveltyFingerprint(text) {
+    return normalizeNoveltyText(text).split(' ').slice(0, 32).join(' ');
+}
+
+function saveNoveltyMemory() {
+    try {
+        localStorage.setItem(NOVELTY_MEMORY_STORAGE_KEY, JSON.stringify(noveltyMemory.slice(-NOVELTY_MEMORY_LIMIT)));
+    } catch (error) {
+        console.warn('⚠️ Failed to persist novelty memory:', error);
+    }
+}
+
+function recordNoveltyResponse(userMessage, reply, modelName = '') {
+    if (!isNoveltyRequest(userMessage)) return;
+
+    const summary = summarizeNoveltyText(reply);
+    const fingerprint = buildNoveltyFingerprint(reply);
+    if (!summary || !fingerprint) return;
+
+    noveltyMemory = noveltyMemory.filter(entry => entry && entry.fingerprint !== fingerprint);
+    noveltyMemory.push({
+        prompt: summarizeNoveltyText(userMessage, 120),
+        summary,
+        fingerprint,
+        model: String(modelName || '').trim(),
+        timestamp: new Date().toISOString()
+    });
+
+    if (noveltyMemory.length > NOVELTY_MEMORY_LIMIT) {
+        noveltyMemory = noveltyMemory.slice(-NOVELTY_MEMORY_LIMIT);
+    }
+    saveNoveltyMemory();
+}
+
+function isNoveltyReplyDuplicate(userMessage, reply) {
+    if (!isNoveltyRequest(userMessage) || !Array.isArray(noveltyMemory) || noveltyMemory.length === 0) {
+        return false;
+    }
+
+    const fingerprint = buildNoveltyFingerprint(reply);
+    const normalizedReply = normalizeNoveltyText(reply);
+    if (!fingerprint || !normalizedReply) return false;
+
+    return noveltyMemory.some(entry => {
+        if (!entry || !entry.fingerprint) return false;
+        if (entry.fingerprint === fingerprint) return true;
+        const prior = String(entry.fingerprint || '');
+        return prior.length > 40 && (normalizedReply.includes(prior) || prior.includes(fingerprint));
+    });
+}
+
+function getNoveltyMemoryContext(userMessage, options = {}) {
+    if (!isNoveltyRequest(userMessage) || !Array.isArray(noveltyMemory) || noveltyMemory.length === 0) {
+        return '';
+    }
+
+    const recentEntries = noveltyMemory.slice(-8);
+    const lines = recentEntries.map((entry, index) => `- Earlier shared item ${index + 1}: ${entry.summary}`);
+    const retryLine = options.noveltyRetry
+        ? '\nYour previous draft was still too similar. You must choose a clearly different topic, example, or fact than any item listed below.'
+        : '';
+
+    return `\nNovelty memory:
+The user has already heard the following kinds of answers. Do not repeat, paraphrase closely, or reuse the same fact/topic.
+${lines.join('\n')}${retryLine}
+When asked for something new or interesting, prefer a genuinely different topic than the ones listed above.\n`;
 }
 
 // ========================================
@@ -1208,8 +1650,49 @@ function processUserMessage(userMessage) {
     console.log('💭 ==========================================');
     
     try {
+        if (isModeQuestion(userMessage)) {
+            const modeResponse = getModeQuestionResponse();
+            console.log('🎭 Mode question detected - responding directly:', modeResponse);
+
+            if (window.speechSynthesis) {
+                window.speechSynthesis.cancel();
+            }
+            if (activeResponseAbortController) {
+                try {
+                    activeResponseAbortController.abort();
+                } catch (error) {
+                    console.warn('🎭 Failed to abort active request for mode question:', error);
+                } finally {
+                    activeResponseAbortController = null;
+                }
+            }
+            window.voiceInterruptInProgress = false;
+            isResponseInFlight = true;
+            updateContinuationButtonState();
+            addMessage(userMessage, 'user');
+            addMessage(modeResponse, 'Nova', null, currentModel);
+            conversationHistory.push({
+                role: 'user',
+                content: userMessage,
+                timestamp: new Date().toISOString()
+            });
+            conversationHistory.push({
+                role: 'assistant',
+                content: modeResponse,
+                personality: currentPersonality,
+                timestamp: new Date().toISOString(),
+                model: currentModel
+            });
+            if (typeof window.speakText === 'function') {
+                window.speakText(modeResponse, () => {});
+            }
+            isResponseInFlight = false;
+            updateContinuationButtonState();
+            return;
+        }
+
         // Handle interrupt if speech is currently playing
-        if (isResponseInFlight && window.isSpeaking) {
+        if (isResponseInFlight && (window.isSpeaking || window.voiceInterruptInProgress)) {
             console.log('🛑 Interrupt detected - speech is in progress');
             handleInterrupt(userMessage);
             return;
@@ -1221,6 +1704,7 @@ function processUserMessage(userMessage) {
         }
 
         isResponseInFlight = true;
+        const requestRunId = ++activeResponseRunId;
         updateContinuationButtonState();
 
         // Detect and save any personalization info from the message
@@ -1247,8 +1731,10 @@ function processUserMessage(userMessage) {
             try {
                 await generateAIResponse(userMessage, currentPersonality);
             } finally {
-                isResponseInFlight = false;
-                updateContinuationButtonState();
+                if (requestRunId === activeResponseRunId) {
+                    isResponseInFlight = false;
+                    updateContinuationButtonState();
+                }
             }
         }, 1000);
     } catch (error) {
@@ -1315,10 +1801,23 @@ ${lastNovaMessage}`;
 
 // Handle interrupt when user speaks during Nova's response (topic change)
 async function handleInterrupt(userMessage) {
+    const interruptRunId = ++activeResponseRunId;
+
     // Stop speech synthesis immediately
     if (window.speechSynthesis) {
         window.speechSynthesis.cancel();
         console.log('🛑 Speech synthesis stopped (interrupt)');
+    }
+
+    if (activeResponseAbortController) {
+        try {
+            activeResponseAbortController.abort();
+            console.log('🛑 Active AI request aborted for interrupt');
+        } catch (error) {
+            console.warn('🛑 Failed to abort active AI request:', error);
+        } finally {
+            activeResponseAbortController = null;
+        }
     }
     
     // If response is in flight, set flag to stop continuation
@@ -1355,6 +1854,7 @@ Now respond to their new input naturally. Determine if they are:
 Respond contextually and intelligently. If related, acknowledge the connection. If unrelated, smoothly transition to the new topic. Do not repeat information you already provided. Keep your response focused on what they just asked or said.`;
     
     try {
+        removeThinkingIndicator();
         addThinkingIndicator();
         const thinkingEl = document.querySelector('.thinking-indicator .thinking-text');
         if (thinkingEl) {
@@ -1363,8 +1863,11 @@ Respond contextually and intelligently. If related, acknowledge the connection. 
         
         await generateAIResponse(interruptPrompt, currentPersonality);
     } finally {
-        isResponseInFlight = false;
-        updateContinuationButtonState();
+        window.voiceInterruptInProgress = false;
+        if (interruptRunId === activeResponseRunId) {
+            isResponseInFlight = false;
+            updateContinuationButtonState();
+        }
     }
 }
 
@@ -1508,7 +2011,7 @@ async function generateViaServerProxy(userMessage, personality, options = {}) {
 
     const messages = prepareOpenAIMessages(proxyMessage, personality, options);
     const requestPayload = {
-        model: shouldUseWeb ? 'perplexity/sonar' : undefined,
+        model: shouldUseWeb ? 'perplexity/sonar' : currentModel,
         messages: messages,
         max_tokens: 2048,
         temperature: personality === 'brainstorm' ? 0.95 : 0.7,
@@ -1517,15 +2020,22 @@ async function generateViaServerProxy(userMessage, personality, options = {}) {
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
+    activeResponseAbortController = controller;
 
-    const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestPayload),
-        signal: controller.signal
-    });
-
-    clearTimeout(timeoutId);
+    let response;
+    try {
+        response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestPayload),
+            signal: controller.signal
+        });
+    } finally {
+        clearTimeout(timeoutId);
+        if (activeResponseAbortController === controller) {
+            activeResponseAbortController = null;
+        }
+    }
 
     if (!response.ok) {
         const errText = await response.text().catch(() => '');
@@ -1533,6 +2043,8 @@ async function generateViaServerProxy(userMessage, personality, options = {}) {
     }
 
     const responseData = await response.json();
+    const responseModel = responseData.model || requestPayload.model || currentModel;
+    setLastResponseModel(responseModel);
     if (!responseData.choices || !responseData.choices[0] || !responseData.choices[0].message) {
         throw new Error('Invalid server proxy response format');
     }
@@ -1540,7 +2052,7 @@ async function generateViaServerProxy(userMessage, personality, options = {}) {
     const payloadSources = _extractSourcesFromProviderPayload(responseData);
     const mergedSources = _mergeSourceLists(payloadSources, collectedWebSources);
     const reply = _ensureWebSourcesInReply(rawReply, mergedSources, shouldUseWeb);
-    return { reply, webUsed: shouldUseWeb };
+    return { reply, webUsed: shouldUseWeb, model: responseModel };
 }
 
 // Enhanced AI integration with multi-provider support and improved error handling
@@ -1558,9 +2070,16 @@ async function generateAIResponse(userMessage, personality, options = {}) {
             await new Promise(resolve => setTimeout(resolve, 400));
             const proxyResult = await generateViaServerProxy(userMessage, personality, options);
             const reply = proxyResult.reply;
+            const responseModel = proxyResult.model || lastResponseModel || currentModel;
+            if (!options.noveltyRetry && isNoveltyReplyDuplicate(userMessage, reply)) {
+                console.log('🧠 Novelty reply duplicated prior memory - retrying with stronger instruction');
+                await generateAIResponse(userMessage, personality, { ...options, noveltyRetry: true, skipUserHistory: true });
+                return;
+            }
             removeThinkingIndicator();
-            addMessage(reply, 'Nova');
-            conversationHistory.push({ role: 'assistant', content: reply, personality, timestamp: new Date().toISOString() });
+            addMessage(reply, 'Nova', null, responseModel);
+            conversationHistory.push({ role: 'assistant', content: reply, personality, timestamp: new Date().toISOString(), model: responseModel });
+            recordNoveltyResponse(userMessage, reply, responseModel);
             if (typeof window.speakText === 'function') {
                 if (window.isWakeWordSession && typeof window.restoreWakeListeningAfterResponse === 'function') {
                     window.speakText(reply, () => { window.restoreWakeListeningAfterResponse(); });
@@ -1570,6 +2089,10 @@ async function generateAIResponse(userMessage, personality, options = {}) {
             }
             return;
         } catch (proxyErr) {
+            if (window.voiceInterruptInProgress && proxyErr && proxyErr.name === 'AbortError') {
+                console.log('🛑 Server proxy request aborted due to user interrupt');
+                return;
+            }
             if (isPromptLimitErrorMessage(proxyErr.message) && !options.slimContext) {
                 console.warn('🌐 Server proxy prompt too large — retrying with slim context');
                 await generateAIResponse(userMessage, personality, { ...options, slimContext: true });
@@ -1649,19 +2172,26 @@ If the user asked for downloadable resources, prioritize official download pages
         // Add timeout to prevent hanging requests
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+        activeResponseAbortController = controller;
         
-        const response = await fetch(provider.apiUrl, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${provider.apiKey}`,
-                ...(provider.extraHeaders || {})
-            },
-            body: JSON.stringify(requestPayload),
-            signal: controller.signal
-        });
-        
-        clearTimeout(timeoutId);
+        let response;
+        try {
+            response = await fetch(provider.apiUrl, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${provider.apiKey}`,
+                    ...(provider.extraHeaders || {})
+                },
+                body: JSON.stringify(requestPayload),
+                signal: controller.signal
+            });
+        } finally {
+            clearTimeout(timeoutId);
+            if (activeResponseAbortController === controller) {
+                activeResponseAbortController = null;
+            }
+        }
         
         console.log('📡 Response received - Status:', response.status, response.statusText);
         
@@ -1700,6 +2230,8 @@ If the user asked for downloadable resources, prioritize official download pages
         }
         
         const responseData = await response.json();
+        const responseModel = responseData.model || requestModel || provider.model || currentModel;
+        setLastResponseModel(responseModel);
         console.log('📦', currentProvider.toUpperCase(), 'Response:', responseData);
         
         // Response format validation
@@ -1713,20 +2245,28 @@ If the user asked for downloadable resources, prioritize official download pages
         const reply = _ensureWebSourcesInReply(rawReply, mergedSources, shouldUseWeb);
         console.log('✅', currentProvider.toUpperCase(), 'Response Success - Length:', reply.length, 'characters');
         console.log('🎭 Personality:', personality);
+
+        if (!options.noveltyRetry && isNoveltyReplyDuplicate(userMessage, reply)) {
+            console.log('🧠 Novelty reply duplicated prior memory - retrying with stronger instruction');
+            await generateAIResponse(userMessage, personality, { ...options, noveltyRetry: true, skipUserHistory: true });
+            return;
+        }
         
         // Remove thinking indicator
         removeThinkingIndicator();
         
         // Add response to chat
-        addMessage(reply, 'Nova');
+        addMessage(reply, 'Nova', null, responseModel);
         
         // Save to conversation history
         conversationHistory.push({
             role: 'assistant',
             content: reply,
             personality: personality,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            model: responseModel
         });
+        recordNoveltyResponse(userMessage, reply, responseModel);
         
         // Speak response if voice is enabled (with proper voice coordination)
         if (typeof window.speakText === 'function') {
@@ -1751,6 +2291,11 @@ If the user asked for downloadable resources, prioritize official download pages
         console.error('🔧 DEBUG - Full error object:', error);
         console.error('🔧 DEBUG - Error message:', error.message);
         console.error('🔧 DEBUG - Error stack:', error.stack);
+
+        if (window.voiceInterruptInProgress && error && error.name === 'AbortError') {
+            console.log('🛑 AI request aborted due to user interrupt');
+            return;
+        }
 
         if (isPromptLimitErrorMessage(error.message) && !options.slimContext) {
             console.warn('🔄 Prompt too large — retrying with slim context');
@@ -1852,7 +2397,7 @@ If the user asked for downloadable resources, prioritize official download pages
         }
 
         // Speak error message if voice is enabled (for voice command flow)
-        if (typeof window.speakText === 'function') {
+        if (typeof window.speakText === 'function') {HUGGINGFACE_API_KEY
             console.log('🔊 AI Error: Speaking error message with coordination...');
             console.log('🔊 AI Error: isWakeWordSession =', window.isWakeWordSession);
 
@@ -1964,6 +2509,23 @@ function _webLoadingText(intent) {
             : `🔍 Searching the web...`;
 }
 
+const _IDENTITY_QUESTION_RE = /\b(who\s+are\s+you|what\s+(?:is|are)\s+(?:your\s+name|you|nova|n\.?o\.?v\.?a\.?)|what\s+does\s+n\.?o\.?v\.?a\.?\s+stand|tell\s+me\s+about\s+yourself|your\s+(?:name|identity|purpose|full\s+name)|introduce\s+yourself|what(?:'s|\s+is)\s+your\s+name|do\s+you\s+know\s+your\s+name|are\s+you\s+nova)\b/i;
+
+function getIdentityKnowledgeBaseItems() {
+    if (!Array.isArray(persistentMaterial) || persistentMaterial.length === 0) return [];
+    const identityGroupNames = ['who you are', 'identity', 'about nova', 'about me', 'persona', 'about', 'your identity', 'self'];
+    return persistentMaterial.filter(item => {
+        const group = String(item.groupName || '').toLowerCase().trim();
+        return identityGroupNames.some(name => group.includes(name));
+    });
+}
+
+function getIdentityKnowledgeBaseContext() {
+    const items = getIdentityKnowledgeBaseItems();
+    if (items.length === 0) return '';
+    return getPersistentMaterialContext(items, 4000, 2000);
+}
+
 function shouldInjectKnowledgeBaseContext(message, personality, options = {}) {
     if (options.slimContext) return false;
 
@@ -1973,6 +2535,9 @@ function shouldInjectKnowledgeBaseContext(message, personality, options = {}) {
     }
 
     if (personality === 'study') return true;
+
+    // Always inject KB for identity/self-reference questions so Nova knows its own name
+    if (_IDENTITY_QUESTION_RE.test(text)) return true;
 
     return _LOCAL_TASK_RE.test(text) ||
         /\b(knowledge\s+base|my\s+(notes|file|document|pdf|slides)|uploaded|attachment|attached|from\s+the\s+(file|pdf|document)|use\s+my\s+notes)\b/i.test(text) ||
@@ -2207,6 +2772,9 @@ If live web blocks are included, treat them as current web data and use them dir
         ? getRelevantPersistentMaterial(userMessage, isSlimContext ? 2 : 4, true)
         : [];
 
+    // Always inject identity KB items (from "Who you are" group) so Nova always knows its own identity
+    const identityContext = isSlimContext ? '' : getIdentityKnowledgeBaseContext();
+
     // Inject persistent Knowledge Base, user profile, and real-time data into context
     const jarvisStyleContext = isSlimContext ? '' : getJarvisStyleReferenceContext(personality);
     const directiveContext = includeKnowledgeBase
@@ -2215,6 +2783,7 @@ If live web blocks are included, treat them as current web data and use them dir
     const materialContext = includeKnowledgeBase
         ? getPersistentMaterialContext(knowledgeBaseItems, isSlimContext ? 1800 : 6000, isSlimContext ? 900 : 1800)
         : '';
+    const noveltyContext = getNoveltyMemoryContext(userMessage, options);
     const profileContext = getUserProfileContext();
     const realtimeContext = getRealtimeContextString({ slim: isSlimContext || isWebBackedRequest });
 
@@ -2223,10 +2792,13 @@ If live web blocks are included, treat them as current web data and use them dir
         role: "system",
         content: `You are ${config.name}, a ${config.style}.
 
-${personalityInstructions}${jarvisStyleContext}${directiveContext}${materialContext}${profileContext}${realtimeContext}
+${personalityInstructions}${jarvisStyleContext}${identityContext}${directiveContext}${materialContext}${noveltyContext}${profileContext}${realtimeContext}
+
+Current active mode: ${config.name} Mode.
+If the user asks what mode you are on, answer with the current active mode above.
 
 Rules:
-- If Knowledge Base blocks are included, treat them as highest-priority user context.
+- If Knowledge Base blocks are included, treat them as highest-priority user context. This includes your identity information — use it to answer questions about who you are, your name, and your purpose.
 - If the message includes "=== LIVE PAGE CONTENT" or "=== LIVE WEB SEARCH RESULTS ===", treat that as current web data and use it directly.
 - For fact-heavy or web-backed answers, end with a "Sources & References" section using source title plus a full clickable markdown URL for each cited source.
 - Never invent URLs, citations, or DOIs.`
@@ -2261,12 +2833,14 @@ Rules:
     });
     
     // Save user message to history
-    conversationHistory.push({
-        role: 'user',
-        content: userMessage,
-        personality: personality,
-        timestamp: new Date().toISOString()
-    });
+    if (!options.skipUserHistory) {
+        conversationHistory.push({
+            role: 'user',
+            content: userMessage,
+            personality: personality,
+            timestamp: new Date().toISOString()
+        });
+    }
     
     console.log('📤 Prepared messages array:', messages);
     return messages;
@@ -3531,6 +4105,8 @@ function setupApiKeyManagement() {
                     openaiApiKeyInput.value = savedKey;
                 }
             }
+            refreshModelSelectionUI();
+            fetchOpenRouterModels();
         });
     }
     
@@ -3634,6 +4210,7 @@ function initializeMainSystem() {
     initializeNova();
     setupEventListeners();
     setupApiKeyManagement();
+    setupModelControls();
     setupFileUploadListeners();
     setupChatHistoryListeners();
 
@@ -3710,6 +4287,8 @@ window.generateAIResponse = generateAIResponse;
 window.addMessage = addMessage;
 window.currentPersonality = currentPersonality;
 window.getRandomJarvisStylePhrase = getRandomJarvisStylePhrase;
+window.fetchOpenRouterModels = fetchOpenRouterModels;
+window.refreshModelSelectionUI = refreshModelSelectionUI;
 console.log('🌐 ✅ window.processUserMessage:', typeof window.processUserMessage);
 console.log('🌐 ✅ window.generateAIResponse:', typeof window.generateAIResponse);
 console.log('🌐 ✅ window.addMessage:', typeof window.addMessage);

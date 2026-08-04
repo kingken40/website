@@ -657,6 +657,26 @@ body {
     color: rgba(255, 255, 255, 0.9);
 }
 
+.message-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.response-model-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.15rem 0.45rem;
+    border-radius: 999px;
+    background: rgba(0, 170, 255, 0.16);
+    border: 1px solid rgba(0, 170, 255, 0.28);
+    color: #8fd8ff;
+    font-size: 0.68rem;
+    line-height: 1;
+    white-space: nowrap;
+}
+
 .message-timestamp {
     font-size: 0.7rem;
     color: rgba(255, 255, 255, 0.4);
