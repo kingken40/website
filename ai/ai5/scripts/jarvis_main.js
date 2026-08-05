@@ -79,6 +79,18 @@ const providerConfig = {
     }
 };
 
+// ========================================
+// FILE UPLOAD CONFIGURATION
+// ========================================
+// File size limits (in bytes)
+const FILE_SIZE_LIMITS = {
+    text: 5 * 1024 * 1024,    // 5MB for text files
+    image: 10 * 1024 * 1024,  // 10MB for images
+    pdf: 20 * 1024 * 1024,    // 20MB for PDFs
+    code: 5 * 1024 * 1024,    // 5MB for code files
+    audio: 25 * 1024 * 1024   // 25MB for audio files (Whisper API limit)
+};
+
 // Smart model selection based on task type
 function detectTaskType(userMessage) {
     const msg = userMessage.toLowerCase();
@@ -1909,7 +1921,8 @@ function sendMessageWithAttachment() {
                 break;
                 
             case 'audio':
-                finalMessage = `I've uploaded an audio file "${name}".${userText ? ' ' + userText : ' Please acknowledge the audio upload.'}`;
+                fileContent = content.length > 15000 ? content.substring(0, 15000) + '\n\n[Transcription truncated due to length...]' : content;
+                finalMessage = `I've uploaded an audio file "${name}". Here is the transcription:\n\n${fileContent}${userText ? '\n\n' + userText : ''}`;
                 break;
         }
         
@@ -4496,21 +4509,20 @@ function setNovaVoice(voiceName) {
 // FILE UPLOAD FUNCTIONALITY
 // ========================================
 
-// File size limits (in bytes)
-const FILE_SIZE_LIMITS = {
-    text: 5 * 1024 * 1024,    // 5MB for text files
-    image: 10 * 1024 * 1024,  // 10MB for images
-    pdf: 20 * 1024 * 1024,    // 20MB for PDFs
-    code: 5 * 1024 * 1024,    // 5MB for code files
-    audio: 25 * 1024 * 1024   // 25MB for audio files (Whisper API limit)
-};
-
 // Setup file upload event listeners
 function setupFileUploadListeners() {
     console.log('📎 Setting up file upload listeners...');
     
+    // Verify file menu exists
+    const fileMenu = document.getElementById('fileMenu');
+    const attachBtn = document.getElementById('attachBtn');
+    console.log('📎 File menu found:', !!fileMenu);
+    console.log('📎 Attach button found:', !!attachBtn);
+    
     // File option buttons
     const fileOptions = document.querySelectorAll('.file-option');
+    console.log('📎 File options found:', fileOptions.length);
+    
     fileOptions.forEach(option => {
         option.addEventListener('click', (e) => {
             e.preventDefault();
@@ -4521,6 +4533,7 @@ function setupFileUploadListeners() {
             
             const fileInput = document.getElementById(`${type}FileInput`);
             if (fileInput) {
+                console.log('📎 File input found for type:', type);
                 fileInput.click();
                 
                 // Close the file menu
@@ -4535,11 +4548,29 @@ function setupFileUploadListeners() {
     });
     
     // File input change listeners
-    document.getElementById('textFileInput')?.addEventListener('change', (e) => handleFileUpload(e, 'text'));
-    document.getElementById('imageFileInput')?.addEventListener('change', (e) => handleFileUpload(e, 'image'));
-    document.getElementById('pdfFileInput')?.addEventListener('change', (e) => handleFileUpload(e, 'pdf'));
-    document.getElementById('codeFileInput')?.addEventListener('change', (e) => handleFileUpload(e, 'code'));
-    document.getElementById('audioFileInput')?.addEventListener('change', (e) => handleFileUpload(e, 'audio'));
+    const audioInput = document.getElementById('audioFileInput');
+    console.log('📎 Audio file input found:', !!audioInput);
+    
+    document.getElementById('textFileInput')?.addEventListener('change', (e) => {
+        console.log('📎 Text file selected');
+        handleFileUpload(e, 'text');
+    });
+    document.getElementById('imageFileInput')?.addEventListener('change', (e) => {
+        console.log('📎 Image file selected');
+        handleFileUpload(e, 'image');
+    });
+    document.getElementById('pdfFileInput')?.addEventListener('change', (e) => {
+        console.log('📎 PDF file selected');
+        handleFileUpload(e, 'pdf');
+    });
+    document.getElementById('codeFileInput')?.addEventListener('change', (e) => {
+        console.log('📎 Code file selected');
+        handleFileUpload(e, 'code');
+    });
+    document.getElementById('audioFileInput')?.addEventListener('change', (e) => {
+        console.log('📎 Audio file selected');
+        handleFileUpload(e, 'audio');
+    });
     
     console.log('✅ File upload listeners setup complete');
 }

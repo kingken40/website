@@ -1725,6 +1725,11 @@ body.no-animations * {
     .quick-action {
         text-align: center;
     }
+    
+    /* Adjust file menu for tablets */
+    .file-menu {
+        bottom: 100px;
+    }
 }
 
 @media (max-width: 480px) {
@@ -1754,6 +1759,12 @@ body.no-animations * {
     .modal-content {
         width: 95%;
         padding: 1rem;
+    }
+    
+    /* Adjust file menu for phones */
+    .file-menu {
+        bottom: 80px;
+        max-width: 90vw;
     }
 }
 
