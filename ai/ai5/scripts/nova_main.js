@@ -1909,7 +1909,9 @@ function sendMessageWithAttachment() {
                 break;
                 
             case 'audio':
-                finalMessage = `I've uploaded an audio file "${name}".${userText ? ' ' + userText : ' Please acknowledge the audio upload.'}`;
+                // Include the actual transcription in the message
+                const transcriptionContent = content.startsWith('Audio transcription:') ? content : `Audio transcription:\n\n${content}`;
+                finalMessage = `I've uploaded an audio file "${name}". Here is the transcription:\n\n${transcriptionContent}${userText ? '\n\nUser note: ' + userText : ''}`;
                 break;
         }
         
@@ -1989,6 +1991,7 @@ function buildWebTaskMessage(userMessage, webContext = '') {
 WEB SEARCH TASK:
 Use real-time web browsing/search to answer with current information and cite sources.
 You MUST include a "Sources & References" section with source title + clickable markdown link for every internet-derived claim.
+You MUST also include a "Where to get more" section with additional official pages, docs, or download links.
 Do not claim you cannot browse.`;
 }
 
@@ -2138,6 +2141,7 @@ async function generateAIResponse(userMessage, personality, options = {}) {
                 requestModel = 'perplexity/sonar';
                 effectiveMessage = `${buildWebTaskMessage(userMessage)}
 For every internet-derived claim, include a source title and clickable markdown URL.
+Also include a "Where to get more" section with additional official pages/docs/download links.
 If the user asked for downloadable resources, prioritize official download pages and direct file links when available.`;
                 console.log('🌐 Web intent detected — routing via online model:', requestModel);
             } else {
@@ -2682,15 +2686,17 @@ function _ensureWebSourcesInReply(reply, sources, webWasUsed) {
 
     const hasSourcesHeader = /sources\s*&\s*references/i.test(text);
     const hasMarkdownLinks = /\[[^\]]+\]\(https?:\/\/[^\s)]+\)/i.test(text);
-    if (hasSourcesHeader && hasMarkdownLinks) {
-        return text;
-    }
+    const hasWhereToGetMoreHeader = /where\s+to\s+get\s+more|learn\s+more|further\s+reading|additional\s+resources/i.test(text);
 
     const mergedSources = _mergeSourceLists(sources, _extractSourcesFromText(text));
-    const lines = [
+    const sourceLines = [
         '',
         '---',
         '**Sources & References**'
+    ];
+    const moreLines = [
+        '',
+        '**Where to get more**'
     ];
 
     if (mergedSources.length === 0) {
@@ -2699,11 +2705,29 @@ function _ensureWebSourcesInReply(reply, sources, webWasUsed) {
     }
 
     for (const src of mergedSources.slice(0, 8)) {
-        lines.push(`- ${src.title}`);
-        lines.push(`  Link: [${src.url}](${src.url})`);
+        sourceLines.push(`- ${src.title}`);
+        sourceLines.push(`  Link: [${src.url}](${src.url})`);
     }
 
-    return `${text}\n${lines.join('\n')}`;
+    for (const src of mergedSources.slice(0, 5)) {
+        moreLines.push(`- ${src.title}: [${src.url}](${src.url})`);
+    }
+
+    const needsSourcesSection = !(hasSourcesHeader && hasMarkdownLinks);
+    const needsWhereToGetMoreSection = !hasWhereToGetMoreHeader;
+    if (!needsSourcesSection && !needsWhereToGetMoreSection) {
+        return text;
+    }
+
+    let output = text;
+    if (needsSourcesSection) {
+        output += `\n${sourceLines.join('\n')}`;
+    }
+    if (needsWhereToGetMoreSection) {
+        output += `\n${moreLines.join('\n')}`;
+    }
+
+    return output;
 }
 
 async function getWebSearchContext(userMessage) {
@@ -2800,7 +2824,7 @@ If the user asks what mode you are on, answer with the current active mode above
 Rules:
 - If Knowledge Base blocks are included, treat them as highest-priority user context. This includes your identity information — use it to answer questions about who you are, your name, and your purpose.
 - If the message includes "=== LIVE PAGE CONTENT" or "=== LIVE WEB SEARCH RESULTS ===", treat that as current web data and use it directly.
-- For fact-heavy or web-backed answers, end with a "Sources & References" section using source title plus a full clickable markdown URL for each cited source.
+- For fact-heavy or web-backed answers, end with BOTH sections: "Sources & References" and "Where to get more". Each must use source title plus a full clickable markdown URL.
 - Never invent URLs, citations, or DOIs.`
    };
     
@@ -4509,8 +4533,16 @@ const FILE_SIZE_LIMITS = {
 function setupFileUploadListeners() {
     console.log('📎 Setting up file upload listeners...');
     
+    // Verify file menu exists
+    const fileMenu = document.getElementById('fileMenu');
+    const attachBtn = document.getElementById('attachBtn');
+    console.log('📎 File menu found:', !!fileMenu);
+    console.log('📎 Attach button found:', !!attachBtn);
+    
     // File option buttons
     const fileOptions = document.querySelectorAll('.file-option');
+    console.log('📎 File options found:', fileOptions.length);
+    
     fileOptions.forEach(option => {
         option.addEventListener('click', (e) => {
             e.preventDefault();
@@ -4521,6 +4553,7 @@ function setupFileUploadListeners() {
             
             const fileInput = document.getElementById(`${type}FileInput`);
             if (fileInput) {
+                console.log('📎 File input found for type:', type);
                 fileInput.click();
                 
                 // Close the file menu
@@ -4535,11 +4568,29 @@ function setupFileUploadListeners() {
     });
     
     // File input change listeners
-    document.getElementById('textFileInput')?.addEventListener('change', (e) => handleFileUpload(e, 'text'));
-    document.getElementById('imageFileInput')?.addEventListener('change', (e) => handleFileUpload(e, 'image'));
-    document.getElementById('pdfFileInput')?.addEventListener('change', (e) => handleFileUpload(e, 'pdf'));
-    document.getElementById('codeFileInput')?.addEventListener('change', (e) => handleFileUpload(e, 'code'));
-    document.getElementById('audioFileInput')?.addEventListener('change', (e) => handleFileUpload(e, 'audio'));
+    const audioInput = document.getElementById('audioFileInput');
+    console.log('📎 Audio file input found:', !!audioInput);
+    
+    document.getElementById('textFileInput')?.addEventListener('change', (e) => {
+        console.log('📎 Text file selected');
+        handleFileUpload(e, 'text');
+    });
+    document.getElementById('imageFileInput')?.addEventListener('change', (e) => {
+        console.log('📎 Image file selected');
+        handleFileUpload(e, 'image');
+    });
+    document.getElementById('pdfFileInput')?.addEventListener('change', (e) => {
+        console.log('📎 PDF file selected');
+        handleFileUpload(e, 'pdf');
+    });
+    document.getElementById('codeFileInput')?.addEventListener('change', (e) => {
+        console.log('📎 Code file selected');
+        handleFileUpload(e, 'code');
+    });
+    document.getElementById('audioFileInput')?.addEventListener('change', (e) => {
+        console.log('📎 Audio file selected');
+        handleFileUpload(e, 'audio');
+    });
     
     console.log('✅ File upload listeners setup complete');
 }
@@ -4731,18 +4782,117 @@ async function handleAudioFile(file) {
             name: file.name,
             type: 'audio',
             content: `Audio transcription:\n\n${transcription}`,
-            extension: file.name.split('.').pop()
+            extension: file.name.split('.').pop(),
+            rawTranscription: transcription // Store raw transcription for summarization
         };
         
         // Display file chip in input area
         displayFileChip(file.name, 'audio');
         
-        showNotification(`Audio "${file.name}" transcribed and attached. Add a message or send.`, 5000);
+        // Show options for what to do with the transcription
+        showAudioTranscriptionOptions(file.name, transcription);
         
     } catch (error) {
         console.error('🎵 Transcription error:', error);
         showNotification('Audio transcription failed: ' + error.message, 5000);
     }
+}
+
+// Show options for audio transcription (summarize, get key points, etc.)
+function showAudioTranscriptionOptions(fileName, transcription) {
+    const inputWrapper = document.querySelector('.input-wrapper');
+    if (!inputWrapper) return;
+    
+    // Remove any existing options panel
+    const existingPanel = document.getElementById('audioOptionsPanel');
+    if (existingPanel) existingPanel.remove();
+    
+    // Create options panel
+    const optionsPanel = document.createElement('div');
+    optionsPanel.id = 'audioOptionsPanel';
+    optionsPanel.style.cssText = `
+        background: rgba(0, 120, 212, 0.15);
+        border: 1px solid rgba(0, 120, 212, 0.5);
+        border-radius: 8px;
+        padding: 12px;
+        margin: 10px 0;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    `;
+    
+    // Create buttons for different actions
+    const summaryBtn = document.createElement('button');
+    summaryBtn.textContent = '📝 Summarize';
+    summaryBtn.style.cssText = `
+        padding: 8px 12px;
+        background: rgba(0, 120, 212, 0.8);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        white-space: nowrap;
+    `;
+    summaryBtn.onclick = () => {
+        summarizeTranscription(transcription, fileName);
+        optionsPanel.remove();
+    };
+    
+    const keyPointsBtn = document.createElement('button');
+    keyPointsBtn.textContent = '🎯 Key Points';
+    keyPointsBtn.style.cssText = `
+        padding: 8px 12px;
+        background: rgba(102, 180, 255, 0.8);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        white-space: nowrap;
+    `;
+    keyPointsBtn.onclick = () => {
+        getKeyPoints(transcription, fileName);
+        optionsPanel.remove();
+    };
+    
+    const actionItemsBtn = document.createElement('button');
+    actionItemsBtn.textContent = '✓ Action Items';
+    actionItemsBtn.style.cssText = `
+        padding: 8px 12px;
+        background: rgba(180, 200, 255, 0.8);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        white-space: nowrap;
+    `;
+    actionItemsBtn.onclick = () => {
+        getActionItems(transcription, fileName);
+        optionsPanel.remove();
+    };
+    
+    const previewBtn = document.createElement('button');
+    previewBtn.textContent = '👁️ Preview';
+    previewBtn.style.cssText = `
+        padding: 8px 12px;
+        background: rgba(100, 100, 120, 0.8);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        white-space: nowrap;
+    `;
+    previewBtn.onclick = () => previewTranscription(transcription, fileName);
+    
+    optionsPanel.appendChild(summaryBtn);
+    optionsPanel.appendChild(keyPointsBtn);
+    optionsPanel.appendChild(actionItemsBtn);
+    optionsPanel.appendChild(previewBtn);
+    
+    inputWrapper.insertBefore(optionsPanel, inputWrapper.firstChild);
 }
 
 // Transcribe audio using OpenAI Whisper API
@@ -4791,8 +4941,248 @@ async function transcribeAudio(audioFile) {
     
     const transcription = await response.text();
     console.log('✅ Transcription successful');
-    
+     
     return transcription;
+}
+ 
+// Preview transcription in a modal
+function previewTranscription(transcription, fileName) {
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        padding: 20px;
+    `;
+     
+    const content = document.createElement('div');
+    content.style.cssText = `
+        background: #1a1a2e;
+        border-radius: 12px;
+        max-width: 800px;
+        width: 100%;
+        max-height: 600px;
+        overflow-y: auto;
+        padding: 20px;
+        color: white;
+    `;
+     
+    const previewLength = Math.min(transcription.length, 2000);
+    const preview = transcription.substring(0, previewLength);
+    const isLong = transcription.length > previewLength;
+     
+    content.innerHTML = `
+        <div style="margin-bottom: 20px;">
+            <h3 style="margin: 0 0 10px 0; color: #00b4ff;">📝 Transcription Preview: ${fileName}</h3>
+            <p style="margin: 0; color: rgba(255,255,255,0.7); font-size: 14px;">Total length: ${transcription.length} characters</p>
+        </div>
+        <div style="background: rgba(100,100,120,0.3); padding: 15px; border-radius: 8px; margin-bottom: 20px; white-space: pre-wrap; word-wrap: break-word; font-family: monospace; font-size: 13px; line-height: 1.5;">
+            ${escapeHtml(preview)}${isLong ? '\n\n[... showing first 2000 characters ...]' : ''}
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button onclick="this.closest('div').parentElement.parentElement.remove();" style="padding: 10px 20px; background: rgba(0,120,212,0.8); color: white; border: none; border-radius: 4px; cursor: pointer;">Close</button>
+        </div>
+    `;
+     
+    modal.appendChild(content);
+    document.body.appendChild(modal);
+    modal.onclick = (e) => {
+        if (e.target === modal) modal.remove();
+    };
+}
+ 
+// Call AI API directly for audio analysis tasks
+async function callAIDirectly(prompt) {
+    console.log('🤖 Calling AI directly for analysis...');
+     
+    // Check if we have an API key
+    if (!OPENROUTER_API_KEY && !OPENAI_API_KEY) {
+        throw new Error('No API key configured. Please add one in Settings.');
+    }
+     
+    // Use OpenRouter if available, fall back to OpenAI
+    const provider = OPENROUTER_API_KEY ? providerConfig.openrouter : providerConfig.openai;
+    const apiKey = OPENROUTER_API_KEY || OPENAI_API_KEY;
+     
+    const requestPayload = {
+        model: provider.model,
+        messages: [
+            {
+                role: 'user',
+                content: prompt
+            }
+        ],
+        max_tokens: 2048,
+        temperature: 0.7
+    };
+     
+    const response = await fetch(provider.apiUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+            ...provider.extraHeaders
+        },
+        body: JSON.stringify(requestPayload)
+    });
+     
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`API error (${response.status}): ${errorText}`);
+    }
+     
+    const data = await response.json();
+    const reply = data.choices?.[0]?.message?.content;
+     
+    if (!reply) {
+        throw new Error('No response from AI API');
+    }
+     
+    return reply;
+}
+ 
+// Summarize transcription using AI
+async function summarizeTranscription(transcription, fileName) {
+    console.log('📋 Summarizing transcription...');
+     
+    // Check if we have an API key
+    if (!OPENROUTER_API_KEY && !OPENAI_API_KEY) {
+        showNotification('API key required for summarization. Please configure in Settings.', 5000);
+        return;
+    }
+     
+    showLoading('Generating summary...');
+     
+    try {
+        const summaryPrompt = `Please provide a concise summary of the following audio transcription. Focus on the main points and key information.\n\nTranscription:\n${transcription.substring(0, 8000)}${transcription.length > 8000 ? '\n[... truncated ...]' : ''}`;
+         
+        const response = await callAIDirectly(summaryPrompt);
+         
+        hideLoading();
+         
+        // Display summary in chat
+        const chatMessages = document.getElementById('chatMessages');
+        if (chatMessages) {
+            const summaryMsg = document.createElement('div');
+            summaryMsg.className = 'message ai-message';
+            summaryMsg.innerHTML = `
+                <div class="message-header">
+                    <span class="message-sender">N.O.V.A (Summary)</span>
+                    <span class="message-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+                <div class="message-content">
+                    <strong>Summary of "${fileName}":</strong><br><br>
+                    ${response.split('\n').map(line => `<div>${escapeHtml(line)}</div>`).join('')}
+                </div>
+            `;
+            chatMessages.appendChild(summaryMsg);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+         
+        showNotification('Summary generated! ✓', 3000);
+         
+    } catch (error) {
+        console.error('📋 Summarization error:', error);
+        hideLoading();
+        showNotification('Summarization failed: ' + error.message, 5000);
+    }
+}
+ 
+// Extract key points from transcription
+async function getKeyPoints(transcription, fileName) {
+    console.log('🎯 Extracting key points...');
+     
+    if (!OPENROUTER_API_KEY && !OPENAI_API_KEY) {
+        showNotification('API key required for analysis. Please configure in Settings.', 5000);
+        return;
+    }
+     
+    showLoading('Extracting key points...');
+     
+    try {
+        const prompt = `Please extract the key points from the following audio transcription and present them as a numbered list:\n\nTranscription:\n${transcription.substring(0, 8000)}${transcription.length > 8000 ? '\n[... truncated ...]' : ''}`;
+         
+        const response = await callAIDirectly(prompt);
+         
+        hideLoading();
+         
+        const chatMessages = document.getElementById('chatMessages');
+        if (chatMessages) {
+            const keyPointsMsg = document.createElement('div');
+            keyPointsMsg.className = 'message ai-message';
+            keyPointsMsg.innerHTML = `
+                <div class="message-header">
+                    <span class="message-sender">N.O.V.A (Key Points)</span>
+                    <span class="message-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+                <div class="message-content">
+                    <strong>Key Points from "${fileName}":</strong><br><br>
+                    ${response.split('\n').map(line => `<div>${escapeHtml(line)}</div>`).join('')}
+                </div>
+            `;
+            chatMessages.appendChild(keyPointsMsg);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+         
+        showNotification('Key points extracted! ✓', 3000);
+         
+    } catch (error) {
+        console.error('🎯 Key points extraction error:', error);
+        hideLoading();
+        showNotification('Key points extraction failed: ' + error.message, 5000);
+    }
+}
+ 
+// Extract action items from transcription
+async function getActionItems(transcription, fileName) {
+    console.log('✓ Extracting action items...');
+     
+    if (!OPENROUTER_API_KEY && !OPENAI_API_KEY) {
+        showNotification('API key required for analysis. Please configure in Settings.', 5000);
+        return;
+    }
+     
+    showLoading('Extracting action items...');
+     
+    try {
+        const prompt = `Please identify and list all action items, tasks, or follow-ups mentioned in the following audio transcription as a numbered list. Include who should do each item if mentioned:\n\nTranscription:\n${transcription.substring(0, 8000)}${transcription.length > 8000 ? '\n[... truncated ...]' : ''}`;
+         
+        const response = await callAIDirectly(prompt);
+         
+        hideLoading();
+         
+        const chatMessages = document.getElementById('chatMessages');
+        if (chatMessages) {
+            const actionItemsMsg = document.createElement('div');
+            actionItemsMsg.className = 'message ai-message';
+            actionItemsMsg.innerHTML = `
+                <div class="message-header">
+                    <span class="message-sender">N.O.V.A (Action Items)</span>
+                    <span class="message-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+                <div class="message-content">
+                    <strong>Action Items from "${fileName}":</strong><br><br>
+                    ${response.split('\n').map(line => `<div>${escapeHtml(line)}</div>`).join('')}
+                </div>
+            `;
+            chatMessages.appendChild(actionItemsMsg);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+         
+        showNotification('Action items extracted! ✓', 3000);
+         
+    } catch (error) {
+        console.error('✓ Action items extraction error:', error);
+        hideLoading();
+        showNotification('Action items extraction failed: ' + error.message, 5000);
+    }
 }
 
 // Add file message to chat

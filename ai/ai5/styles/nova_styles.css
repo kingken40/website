@@ -1257,6 +1257,19 @@ body {
     to { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
+@media (max-width: 768px) {
+    .file-menu {
+        bottom: 100px;
+    }
+}
+
+@media (max-width: 480px) {
+    .file-menu {
+        bottom: 80px;
+        min-width: 180px;
+    }
+}
+
 .file-option {
     display: flex;
     align-items: center;
