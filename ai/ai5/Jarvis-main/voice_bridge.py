@@ -4,10 +4,15 @@ import os
 import tempfile
 import threading
 from io import BytesIO
+
 from flask import Flask, jsonify, request, send_file
 import pythoncom
 import win32com.client
 
+# NOTE:
+# - This bridge currently runs with Windows SAPI (Microsoft voices).
+# - XTTS/Coqui support was attempted before; if you revisit that path,
+#   use a Python version compatible with TTS package releases.
 
 app = Flask(__name__)
 _sapi_lock = threading.Lock()
@@ -50,7 +55,7 @@ def add_cors_headers(response):
 
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"ok": True, "service": "jarvis-main-voice-bridge"})
+    return jsonify({"ok": True, "service": "jarvis-main-voice-bridge", "engine": "sapi"})
 
 
 @app.route("/voices", methods=["GET"])
@@ -114,7 +119,7 @@ def speak():
                 BytesIO(audio_bytes),
                 mimetype="audio/wav",
                 as_attachment=False,
-                download_name="jarvis_bridge.wav"
+                download_name="jarvis_bridge.wav",
             )
         finally:
             if tmp_path and os.path.exists(tmp_path):
@@ -127,4 +132,5 @@ def speak():
 
 if __name__ == "__main__":
     print("Starting Jarvis-main local voice bridge on http://127.0.0.1:8765")
+    print("Engine: Windows SAPI (Microsoft voices)")
     app.run(host="127.0.0.1", port=8765, debug=False)

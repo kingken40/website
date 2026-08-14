@@ -1,28 +1,34 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>J.A.R.V.I.S - AI Professor v5 | Voice-Enabled Assistant</title>
-    <link rel="stylesheet" href="../styles/jarvis_styles.css">
+    <title>N.O.V.A - AI Professor v5 | Voice-Enabled Assistant</title>
+    <link rel="stylesheet" href="../styles/nova_styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </head>
 <body>
     <!-- Background Animation -->
-    <div class="jarvis-background">
+     <!-- PREVIOUSLY Named J.A.R.V.I.S -->
+    <div class="nova-background">
         <div class="circuit-lines"></div>
         <div class="arc-reactor-bg"></div>
     </div>
 
+    <a href="../../../Projects.html" style="position: absolute; top: 20px; left: 20px; padding: 10px 20px; background-color: rgba(0, 120, 212, 0.9); color: white; text-decoration: none; border-radius: 5px; font-weight: bold; z-index: 1000;">â† Back to Projects</a>
+
     <!-- ===== MOBILE PHONE-CALL UI ===== -->
-    <div class="mobile-call-ui" id="mobileCallUI" role="main" aria-label="J.A.R.V.I.S Voice Call">
+    <!-- Hidden on desktop; replaces desktop layout on â‰¤768 px screens.     -->
+    <!-- Always-listening is auto-enabled on mobile (no hotkey required).   -->
+    <div class="mobile-call-ui" id="mobileCallUI" role="main" aria-label="N.O.V.A Voice Call">
 
         <!-- Top bar -->
         <div class="mobile-topbar">
-            <a href="../../Projects.html" class="mobile-back-btn" aria-label="Back to Projects">
+            <a href="../../../Projects.html" class="mobile-back-btn" aria-label="Back to Projects">
                 <i class="fas fa-chevron-left" aria-hidden="true"></i> Back
             </a>
-            <span class="mobile-call-label">J.A.R.V.I.S</span>
+            <span class="mobile-call-label">N.O.V.A AI</span>
             <button class="mobile-topbar-settings-btn" id="mobileTopSettingsBtn" title="Settings" aria-label="Settings"
                 onclick="(function(){var m=document.getElementById('settingsModal');if(m){m.style.display='flex';m.classList.add('active');}})();">
                 <i class="fas fa-cog" aria-hidden="true"></i>
@@ -39,8 +45,8 @@
                     <div class="mobile-avatar-core" aria-hidden="true"></div>
                 </div>
             </div>
-            <h2 class="mobile-ai-name">J.A.R.V.I.S</h2>
-            <p class="mobile-ai-subtitle">Just A Rather Very Intelligent System</p>
+            <h2 class="mobile-ai-name">N.O.V.A</h2>
+            <p class="mobile-ai-subtitle">Networking Orthogonal Virtual Assistant</p>
             <div class="mobile-call-status" aria-live="polite">
                 <span class="mobile-status-dot" id="mobileStatusDot" aria-hidden="true"></span>
                 <span class="mobile-status-text" id="mobileStatusText">Starting up...</span>
@@ -63,7 +69,7 @@
                 type="text"
                 id="mobileMessageInput"
                 class="mobile-text-input"
-                placeholder="Type to J.A.R.V.I.S..."
+                placeholder="Type to N.O.V.A..."
                 autocomplete="off"
                 autocapitalize="sentences"
                 enterkeyhint="send"
@@ -88,7 +94,7 @@
                 <span>Mute</span>
             </button>
             <button class="mobile-ctrl-btn" id="mobileContinueBtn"
-                    title="Continue response" aria-label="Continue J.A.R.V.I.S response">
+                    title="Continue response" aria-label="Continue N.O.V.A response">
                 <i class="fas fa-forward" aria-hidden="true"></i>
                 <span>Continue</span>
             </button>
@@ -103,22 +109,35 @@
                 <i class="fas fa-cog" aria-hidden="true"></i>
                 <span>Settings</span>
             </button>
+            <button class="mobile-ctrl-btn mobile-desktop-btn" id="mobileDesktopBtn"
+                    title="Switch to desktop view" aria-label="Switch to desktop view"
+                    onclick="document.body.classList.remove('mobile-view-forced'); document.body.classList.add('desktop-forced');">
+                <i class="fas fa-desktop" aria-hidden="true"></i>
+                <span>Desktop</span>
+            </button>
         </div>
     </div>
     <!-- ===== END MOBILE CALL UI ===== -->
-    <header class="jarvis-header">
+
+    <!-- Header Section -->
+    <header class="nova-header">
         <div class="arc-reactor">
             <div class="arc-core"></div>
             <div class="arc-ring arc-ring-1"></div>
             <div class="arc-ring arc-ring-2"></div>
             <div class="arc-ring arc-ring-3"></div>
         </div>
-        <h1 class="jarvis-title">J.A.R.V.I.S</h1>
-        <p class="jarvis-subtitle">Just A Rather Very Intelligent System</p>
+        <h1 class="nova-title">N.O.V.A</h1>
+        <p class="nova-subtitle">Networking Orthogonal Virtual Assistant</p>
         <div class="system-status">
             <span class="status-indicator online"></span>
             <span class="status-text">SYSTEM ONLINE</span>
         </div>
+        <button class="desktop-switch-mobile-btn" id="desktopSwitchMobileBtn"
+                title="Switch to mobile view" aria-label="Switch to mobile view"
+                onclick="document.body.classList.remove('desktop-forced'); document.querySelector('.mobile-call-ui') && (document.querySelector('.mobile-call-ui').style.display='');  document.body.classList.add('mobile-view-forced');">
+            <i class="fas fa-mobile-alt" aria-hidden="true"></i> Mobile View
+        </button>
     </header>
 
     <!-- Voice Control Interface -->
@@ -128,13 +147,15 @@
             <div class="voice-circle voice-circle-2"></div>
             <div class="voice-circle voice-circle-3"></div>
         </div>
-        <button class="voice-btn" id="voiceBtn" type="button" title="Activate voice recognition">
-            <i class="fas fa-microphone"></i>
-            <span class="sr-only">Activate voice recognition</span>
-        </button>
+        <div class="voice-controls">
+            <button class="voice-btn" id="voiceBtn" type="button" title="Press and hold to speak">
+                <i class="fas fa-microphone"></i>
+                <span class="sr-only">Activate voice recognition</span>
+            </button>
+        </div>
 
         <div class="voice-status">
-            <span class="voice-status-text">Say "Nova" or "Hey Nova", or click the microphone</span>
+            <span class="voice-status-text">Press and hold microphone to speak (or hold R). Press R+T to toggle always-listening mode.</span>
         </div>
     </div>
 
@@ -142,25 +163,35 @@
     <div class="mode-selector">
         <div class="mode-title">Select AI Mode</div>
         <div class="mode-grid">
-            <div class="mode-card" data-personality="jarvis">
-                <div class="mode-icon">🤖</div>
-                <div class="mode-name">J.A.R.V.I.S</div>
+            <div class="mode-card" data-personality="nova">
+                <div class="mode-icon">&#x1F916;</div>
+                <div class="mode-name">N.O.V.A</div>
                 <div class="mode-desc">Sophisticated AI Assistant</div>
             </div>
             <div class="mode-card" data-personality="genius">
-                <div class="mode-icon">🧠</div>
-                <div class="mode-name">Genius Mode</div>
+                <div class="mode-icon">&#x1F9E0;</div>
+                <div class="mode-name">Genius</div>
                 <div class="mode-desc">Advanced Problem Solving</div>
             </div>
             <div class="mode-card" data-personality="professor">
-                <div class="mode-icon">🎓</div>
+                <div class="mode-icon">&#x1F393;</div>
                 <div class="mode-name">Professor</div>
                 <div class="mode-desc">Educational Teaching</div>
             </div>
             <div class="mode-card" data-personality="analyst">
-                <div class="mode-icon">📊</div>
+                <div class="mode-icon">&#x1F4CA;</div>
                 <div class="mode-name">Data Analyst</div>
                 <div class="mode-desc">Research & Analysis</div>
+            </div>
+            <div class="mode-card" data-personality="brainstorm">
+                <div class="mode-icon">&#x1F4A1;</div>
+                <div class="mode-name">Brainstorm</div>
+                <div class="mode-desc">Creative Idea Generation</div>
+            </div>
+            <div class="mode-card" data-personality="study">
+                <div class="mode-icon">&#x1F4DD;</div>
+                <div class="mode-name">Study Guide</div>
+                <div class="mode-desc">Study & Research</div>
             </div>
         </div>
     </div>
@@ -169,10 +200,16 @@
     <div class="chat-container">
         <div class="chat-header">
             <div class="chat-title">
-                <span class="current-mode">J.A.R.V.I.S Mode</span>
+                <span class="current-mode">N.O.V.A Mode</span>
                 <span class="chat-status">Ready</span>
             </div>
             <div class="chat-controls">
+                <button class="control-btn" id="newChatBtn" type="button" title="New Chat">
+                    <i class="fas fa-plus"></i>
+                </button>
+                <button class="control-btn" id="chatHistoryBtn" type="button" title="Chat History">
+                    <i class="fas fa-history"></i>
+                </button>
                 <button class="control-btn" id="clearChat" type="button" title="Clear Chat">
                     <i class="fas fa-trash"></i>
                 </button>
@@ -193,25 +230,25 @@
             <button class="input-btn" id="attachBtn" type="button" title="Attach File">
                 <i class="fas fa-paperclip"></i>
             </button>
-            <input type="text" 
+            <textarea
                    id="messageInput" 
-                   placeholder="Ask J.A.R.V.I.S anything... or use voice commands"
+                   placeholder="Type anything to N.O.V.A (Shift+Enter for a new line)... or use voice commands "
                    autocomplete="off"
+                   name="nova-message-input"
+                   autocorrect="off"
                    autocapitalize="sentences"
                    enterkeyhint="send"
-                   spellcheck="true">
+                   spellcheck="true"
+                   rows="1"></textarea>
             <button class="input-btn voice-input-btn" id="voiceInputBtn" type="button" title="Voice Input">
                 <i class="fas fa-microphone"></i>
+            </button>
+            <button class="input-btn continue-btn" id="continueBtn" type="button" title="Continue Response">
+                <i class="fas fa-forward"></i>
             </button>
             <button class="send-btn" id="sendBtn" type="button" title="Send Message">
                 <i class="fas fa-paper-plane"></i>
             </button>
-        </div>
-        <div class="quick-actions">
-            <button class="quick-action" data-command="explain quantum physics" type="button">Explain Physics</button>
-            <button class="quick-action" data-command="help me with math" type="button">Math Help</button>
-            <button class="quick-action" data-command="analyze this data" type="button">Data Analysis</button>
-            <button class="quick-action" data-command="create a lesson plan" type="button">Lesson Plan</button>
         </div>
     </div>
 
@@ -219,14 +256,34 @@
     <div class="modal" id="settingsModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>J.A.R.V.I.S Settings</h3>
+                <h3>N.O.V.A Settings</h3>
                 <button class="modal-close" id="closeSettings" type="button" title="Close Settings">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="setting-group">
-                    <label for="voiceEnabled">Voice Recognition</label>
-                    <input type="checkbox" id="voiceEnabled" checked>
+                <div class="setting-section">
+                    <h4 style="color: #FFD700; margin-bottom: 1rem; border-bottom: 1px solid rgba(255, 215, 0, 0.3); padding-bottom: 0.5rem;">🔧 API Configuration</h4>
+                    <div class="setting-group">
+                        <label for="openrouterApiKey">OpenRouter API Key (Primary)</label>
+                        <input type="password" id="openrouterApiKey" placeholder="Enter your OpenRouter API key" style="width: 100%; padding: 0.5rem; background: rgba(0, 170, 255, 0.1); border: 1px solid rgba(0, 170, 255, 0.3); border-radius: 5px; color: #00aaff;">
+                        <small style="display: block; margin-top: 0.5rem; color: rgba(255, 255, 255, 0.6);">Get your free key at <a href="https://openrouter.ai/keys" target="_blank" style="color: #FFD700;">openrouter.ai/keys</a></small>
+                    </div>
+                    <div class="setting-group" style="margin-top: 1rem;">
+                        <label for="openaiApiKey">OpenAI API Key (Fallback)</label>
+                        <input type="password" id="openaiApiKey" placeholder="Enter your OpenAI API key" style="width: 100%; padding: 0.5rem; background: rgba(0, 170, 255, 0.1); border: 1px solid rgba(0, 170, 255, 0.3); border-radius: 5px; color: #00aaff;">
+                        <small style="display: block; margin-top: 0.5rem; color: rgba(255, 255, 255, 0.6);">Used as fallback if OpenRouter is unavailable. Get your key at <a href="https://platform.openai.com/api-keys" target="_blank" style="color: #FFD700;">platform.openai.com/api-keys</a></small>
+                    </div>
+                    <div class="setting-group">
+                        <button id="saveApiKey" style="padding: 0.6rem 1.2rem; background: linear-gradient(135deg, #FFD700, #FFA500); border: none; border-radius: 5px; color: #1a1a2e; font-weight: 600; cursor: pointer; transition: all 0.3s;">Save API Keys</button>
+                        <span id="apiKeySaved" style="margin-left: 1rem; color: #4CAF50; display: none;">âœ“ Saved!</span>
+                    </div>
                 </div>
+                
+                <div class="setting-section" style="margin-top: 1.5rem;">
+                    <h4 style="color: #FFD700; margin-bottom: 1rem; border-bottom: 1px solid rgba(255, 215, 0, 0.3); padding-bottom: 0.5rem;">🗣️ Voice Settings</h4>
+                    <div class="setting-group">
+                        <label for="voiceEnabled">Voice Recognition</label>
+                        <input type="checkbox" id="voiceEnabled" checked>
+                    </div>
                 <div class="setting-group">
                     <label for="voiceResponse">Voice Responses</label>
                     <input type="checkbox" id="voiceResponse" checked>
@@ -240,7 +297,7 @@
                     <input type="range" id="voiceSpeed" min="0.5" max="2" step="0.1" value="1">
                 </div>
                 <div class="setting-group">
-                    <label for="voiceSelection">J.A.R.V.I.S Voice / Audio Pack</label>
+                    <label for="voiceSelection">N.O.V.A Voice / N.O.V.A Pack</label>
                     <select id="voiceSelection">
                         <option value="">Loading voices...</option>
                     </select>
@@ -249,12 +306,129 @@
                     </button>
                 </div>
                 <div class="setting-group">
+                    <label for="localVoiceBridgeEnabled">Local N.O.V.A Python Voice Bridge</label>
+                    <input type="checkbox" id="localVoiceBridgeEnabled">
+                </div>
+                <div class="setting-group">
+                    <label for="localVoiceBridgeUrl">Bridge URL</label>
+                    <input type="text" id="localVoiceBridgeUrl" value="http://127.0.0.1:8765" style="width: 100%; padding: 0.5rem; background: rgba(0, 170, 255, 0.1); border: 1px solid rgba(0, 170, 255, 0.3); border-radius: 5px; color: #00aaff;">
+                </div>
+                <!-- Wake phrase setting - DISABLED/COMMENTED OUT -->
+                <div class="setting-group">
                     <label for="wakePhraseEnabled">Wake Phrase ("Nova" or "Hey Nova")</label>
                     <input type="checkbox" id="wakePhraseEnabled" checked>
                 </div>
+            </div>
+
+                <div class="setting-section" style="margin-top: 1.5rem;">
+                <h4 style="color: #FFD700; margin-bottom: 1rem; border-bottom: 1px solid rgba(255, 215, 0, 0.3); padding-bottom: 0.5rem;">🤖 AI Model Selection</h4>
+                <div class="setting-group" style="flex-direction:column; align-items:stretch;">
+                    <label style="min-width:unset;">Current active model</label>
+                    <div id="selectedModelDisplay" style="padding:0.55rem 0.75rem;background:rgba(0,170,255,0.08);border:1px solid rgba(0,170,255,0.25);border-radius:6px;color:#8fd8ff;font-size:0.88rem;">Selected: Auto (loading...)</div>
+                    <small style="display:block;margin-top:0.35rem;color:rgba(255,255,255,0.55);">Auto chooses the best model for each request. Static locks one model until you change it back.</small>
+                </div>
                 <div class="setting-group">
-                    <label for="animationsEnabled">UI Animations</label>
-                    <input type="checkbox" id="animationsEnabled" checked>
+                    <label for="modelSelect">Model mode</label><newLine />
+                    <select id="modelSelect" style="flex:1; padding:0.5rem; background:rgba(0,170,255,0.1); border:1px solid rgba(0,170,255,0.3); border-radius:5px; color:#00aaff;">
+                        <option value="auto">Auto-Select</option>
+                    </select>
+                </div>
+                <div class="setting-group" style="flex-direction:column; align-items:stretch;">
+                    <label style="min-width:unset;">Last response model</label>
+                    <div id="responseModelDisplay" style="padding:0.55rem 0.75rem;background:rgba(0,170,255,0.08);border:1px solid rgba(0,170,255,0.25);border-radius:6px;color:#8fd8ff;font-size:0.88rem;">Last used: Awaiting reply</div>
+                    <small id="modelSelectStatus" style="display:block;margin-top:0.35rem;color:rgba(255,255,255,0.55);">Loading model list...</small>
+                </div>
+                <div class="setting-group">
+                    <button type="button" id="refreshModelListBtn" style="padding:0.6rem 1.2rem;background:linear-gradient(135deg,#00aaff,#0088cc);border:none;border-radius:5px;color:#fff;font-weight:600;cursor:pointer;transition:all 0.3s;">Refresh model list</button>
+                </div>
+            </div>
+                 
+            <div class="setting-section" style="margin-top: 1.5rem;">
+                <h4 style="color: #FFD700; margin-bottom: 1rem; border-bottom: 1px solid rgba(255, 215, 0, 0.3); padding-bottom: 0.5rem;">🧠 Knowledge Base</h4>
+                    <p style="color:rgba(255,255,255,0.6);font-size:0.82rem;margin-bottom:0.8rem;">Add notes, slides, references, or context that N.O.V.A should read, remember, and prioritize across chats.</p>
+                    <div class="setting-group">
+                        <label>Upload a file (txt, md, pdf, code)</label>
+                        <div style="display:flex;gap:0.5rem;align-items:center;margin-top:0.3rem;">
+                            <button type="button" onclick="document.getElementById('materialFileInput').click()" style="padding:0.45rem 1rem;background:linear-gradient(135deg,#00aaff,#0066cc);border:none;border-radius:5px;color:#fff;cursor:pointer;font-size:0.85rem;">📂 Choose File</button>
+                            <input type="file" id="materialFileInput" accept=".txt,.md,.json,.csv,.js,.py,.html,.css,.java,.cpp,.c,.pdf" style="display:none;">
+                        </div>
+                    </div>
+                    <div class="setting-group" style="margin-top:0.8rem;">
+                        <label>Or paste text</label>
+                        <input type="text" id="materialTextName" placeholder="Label (e.g. Chapter 3 Notes)" style="width:100%;padding:0.4rem 0.6rem;background:rgba(0,170,255,0.08);border:1px solid rgba(0,170,255,0.25);border-radius:5px;color:#00aaff;margin-bottom:0.4rem;">
+                        <textarea id="materialTextInput" rows="4" placeholder="Paste notes, documentation, or any context for your Knowledge Base..." style="width:100%;padding:0.5rem 0.6rem;background:rgba(0,170,255,0.08);border:1px solid rgba(0,170,255,0.25);border-radius:5px;color:#e0e0e0;resize:vertical;font-size:0.85rem;box-sizing:border-box;"></textarea>
+                        <button id="addMaterialTextBtn" type="button" style="margin-top:0.4rem;padding:0.45rem 1rem;background:linear-gradient(135deg,#FFD700,#FFA500);border:none;border-radius:5px;color:#1a1a2e;font-weight:600;cursor:pointer;font-size:0.85rem;">+ Add to Knowledge Base</button>
+                    </div>
+                    <div class="setting-group" style="margin-top:0.8rem;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem;">
+                            <label style="margin:0;">Saved Knowledge Base</label>
+                            <div style="display:flex;gap:0.35rem;align-items:center;">
+                                <button id="kbCreateGroupBtn" type="button" class="kb-group-mode-btn">+ New Group</button>
+                                <button id="clearAllMaterialBtn" type="button" style="background:none;border:1px solid rgba(255,68,68,0.4);color:#ff6666;border-radius:4px;padding:0.2rem 0.6rem;cursor:pointer;font-size:0.78rem;">Clear All</button>
+                            </div>
+                        </div>
+                        <div style="color:rgba(255,255,255,0.55);font-size:0.75rem;margin-bottom:0.35rem;">Click a group to view/edit/delete the notes there, or move notes into existing/new groups.</div>
+                        <div id="materialList"><div style="color:rgba(255,255,255,0.4);font-size:0.85rem;padding:0.5rem 0;">No knowledge base items added yet.</div></div>
+                    </div>
+                </div>
+
+                <div class="setting-section" style="margin-top: 1.5rem;">
+                    <h4 style="color: #FFD700; margin-bottom: 1rem; border-bottom: 1px solid rgba(255, 215, 0, 0.3); padding-bottom: 0.5rem;">⚙️ General Settings</h4>
+                    <div class="setting-group">
+                        <label for="animationsEnabled">UI Animations</label>
+                        <input type="checkbox" id="animationsEnabled" checked>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat History Modal -->
+    <div class="modal" id="chatHistoryModal">
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h3>ðŸ“š Chat History</h3>
+                <button class="modal-close" id="closeChatHistory" type="button" title="Close Chat History">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="chatHistoryList" class="chat-history-list">
+                    <!-- Chat history items will be populated here -->
+                </div>
+                <div class="chat-history-empty" id="chatHistoryEmpty" style="text-align: center; padding: 3rem; color: rgba(255, 255, 255, 0.5);">
+                    <i class="fas fa-history" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.3;"></i>
+                    <p>No saved chat history yet.</p>
+                    <p style="font-size: 0.9rem;">Your conversations will be automatically saved here.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export/Continuation Prompt Modal -->
+    <div class="modal" id="exportModal" style="display: none;">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3>ðŸ“¤ Export Conversation</h3>
+                <button class="modal-close" id="closeExportModal" type="button" title="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 1rem;">
+                    <h4 style="color: #00aaff; margin-bottom: 0.5rem;">Continuation Prompt</h4>
+                    <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; margin-bottom: 1rem;">
+                        Copy this prompt to continue the conversation in a new chat session:
+                    </p>
+                    <textarea id="continuationPrompt" readonly style="width: 100%; height: 300px; background: rgba(0, 17, 34, 0.8); border: 1px solid rgba(0, 170, 255, 0.3); border-radius: 8px; padding: 1rem; color: #ffffff; font-family: 'Courier New', monospace; font-size: 0.85rem; resize: vertical;"></textarea>
+                    <button onclick="copyContinuationPrompt()" style="margin-top: 1rem; padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #00aaff, #0088cc); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                        <i class="fas fa-copy"></i> Copy to Clipboard
+                    </button>
+                </div>
+                <div style="margin-top: 2rem;">
+                    <h4 style="color: #00aaff; margin-bottom: 0.5rem;">Full Chat Export</h4>
+                    <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; margin-bottom: 1rem;">
+                        Download the complete conversation as a text file:
+                    </p>
+                    <button onclick="downloadFullChat()" style="padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #FFD700, #FFA500); color: #001122; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                        <i class="fas fa-download"></i> Download Chat (.txt)
+                    </button>
                 </div>
             </div>
         </div>
@@ -274,6 +448,9 @@
         <button class="file-option" data-type="code" type="button" title="Upload Code File">
             <i class="fas fa-code"></i> Code File
         </button>
+        <button class="file-option" data-type="audio" type="button" title="Upload Audio File">
+            <i class="fas fa-file-audio"></i> Audio File
+        </button>
     </div>
 
     <!-- Hidden file inputs -->
@@ -281,9 +458,77 @@
     <input type="file" id="imageFileInput" accept="image/*" style="display: none;">
     <input type="file" id="pdfFileInput" accept=".pdf" style="display: none;">
     <input type="file" id="codeFileInput" accept=".js,.py,.html,.css,.java,.cpp,.c" style="display: none;">
+    <input type="file" id="audioFileInput" accept="audio/*,.mp3,.wav,.m4a,.ogg,.flac" style="display: none;">
 
     <!-- Notification System -->
     <div class="notification" id="notification"></div>
+
+    <!-- Knowledge Base Edit Modal -->
+    <div id="kbEditModal" style="
+        display:none;position:fixed;inset:0;z-index:10000;
+        background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);
+        align-items:center;justify-content:center;
+    ">
+        <div style="
+            background:linear-gradient(135deg,#0d1b2a,#1a2a3a);
+            border:1px solid rgba(0,170,255,0.35);
+            border-radius:12px;
+            padding:1.6rem;
+            width:min(700px,94vw);
+            max-height:90vh;
+            display:flex;flex-direction:column;gap:1rem;
+            box-shadow:0 0 40px rgba(0,170,255,0.2);
+        ">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <h3 style="color:#FFD700;margin:0;font-size:1.1rem;">âœŽ Edit Knowledge Base Entry</h3>
+                <button id="kbEditClose" type="button" style="
+                    background:none;border:none;color:rgba(255,255,255,0.6);
+                    font-size:1.4rem;cursor:pointer;line-height:1;padding:0 0.2rem;
+                " title="Cancel">&times;</button>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:0.4rem;">
+                <label style="color:rgba(255,255,255,0.75);font-size:0.82rem;">Label</label>
+                <input id="kbEditName" type="text" style="
+                    width:100%;padding:0.5rem 0.7rem;
+                    background:rgba(0,170,255,0.08);
+                    border:1px solid rgba(0,170,255,0.3);
+                    border-radius:6px;color:#00aaff;font-size:0.9rem;
+                    box-sizing:border-box;
+                ">
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:0.4rem;flex:1;min-height:0;">
+                <label style="color:rgba(255,255,255,0.75);font-size:0.82rem;">Content</label>
+                <textarea id="kbEditContent" rows="12" style="
+                    width:100%;padding:0.6rem 0.7rem;
+                    background:rgba(0,170,255,0.05);
+                    border:1px solid rgba(0,170,255,0.25);
+                    border-radius:6px;color:#e0e0e0;font-size:0.85rem;
+                    resize:vertical;box-sizing:border-box;font-family:inherit;
+                    line-height:1.5;max-height:50vh;overflow-y:auto;
+                "></textarea>
+                <small style="color:rgba(255,255,255,0.4);font-size:0.76rem;">
+                    Tip: Prefix lines with <code style="color:#FFD700;">Rule:</code>, <code style="color:#FFD700;">Always:</code>, or <code style="color:#FFD700;">Never:</code> to make them high-priority directives N.O.V.A will follow strictly.
+                </small>
+            </div>
+
+            <div style="display:flex;justify-content:flex-end;gap:0.75rem;margin-top:0.25rem;">
+                <button id="kbEditCancel" type="button" style="
+                    padding:0.5rem 1.2rem;
+                    background:rgba(255,255,255,0.07);
+                    border:1px solid rgba(255,255,255,0.2);
+                    border-radius:6px;color:#ccc;cursor:pointer;font-size:0.88rem;
+                ">Cancel</button>
+                <button id="kbEditSave" type="button" style="
+                    padding:0.5rem 1.4rem;
+                    background:linear-gradient(135deg,#FFD700,#FFA500);
+                    border:none;border-radius:6px;
+                    color:#1a1a2e;font-weight:700;cursor:pointer;font-size:0.88rem;
+                ">Save Changes</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Loading Overlay -->
     <div class="loading-overlay" id="loadingOverlay">
@@ -294,155 +539,25 @@
                 <div class="arc-segment"></div>
             </div>
         </div>
-        <div class="loading-text">J.A.R.V.I.S is processing...</div>
+        <div class="loading-text">N.O.V.A is processing...</div>
     </div>
 
     <!-- Scripts -->
-    <script src="../scripts/jarvis_voice.js"></script>
-    <script src="../scripts/jarvis_main.js"></script>
-    <script src="../scripts/jarvis_integration.js"></script>
-
-    <!-- ===== MOBILE PHONE-CALL MODE INITIALIZER ===== -->
-    <script>
-    (function initMobileCallMode() {
-        if (window.innerWidth > 768) return;
-
-        var avatarContainer  = document.getElementById('mobileAvatarContainer');
-        var statusDot        = document.getElementById('mobileStatusDot');
-        var statusText       = document.getElementById('mobileStatusText');
-        var muteBtn          = document.getElementById('mobileMuteBtn');
-        var continueBtn      = document.getElementById('mobileContinueBtn');
-        var chatBtn          = document.getElementById('mobileChatBtn');
-        var settingsBtn      = document.getElementById('mobileSettingsBtn');
-        var topSettingsBtn   = document.getElementById('mobileTopSettingsBtn');
-        var mobileCallUI     = document.getElementById('mobileCallUI');
-        var transcript       = document.getElementById('mobileTranscript');
-        var transcriptToggle = document.getElementById('mobileTranscriptToggle');
-        var transcriptMsgs   = document.getElementById('mobileTranscriptMessages');
-        var mobileMessageInput = document.getElementById('mobileMessageInput');
-        var mobileSendBtn      = document.getElementById('mobileSendBtn');
-        var inputContainer   = document.querySelector('.input-container');
-        var mobileControls   = document.querySelector('.mobile-call-controls');
-        var srcMsgs          = document.getElementById('chatMessages');
-
-        var muted               = false;
-        var transcriptCollapsed = false;
-
-        function syncMessages() {
-            if (!srcMsgs || !transcriptMsgs) return;
-            transcriptMsgs.innerHTML = srcMsgs.innerHTML;
-            transcriptMsgs.scrollTop = transcriptMsgs.scrollHeight;
-        }
-
-        if (srcMsgs) {
-            new MutationObserver(syncMessages)
-                .observe(srcMsgs, { childList: true, subtree: true, characterData: true });
-            syncMessages();
-        }
-
-        if (mobileMessageInput && mobileSendBtn) {
-            mobileMessageInput.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    mobileSendBtn.click();
-                }
-            });
-        }
-
-        if (mobileCallUI && inputContainer && mobileControls && !mobileCallUI.contains(inputContainer)) {
-            inputContainer.classList.add('mobile-composer');
-            mobileCallUI.insertBefore(inputContainer, mobileControls);
-        }
-
-        function setCallState(state) {
-            if (avatarContainer) {
-                avatarContainer.className = 'mobile-avatar-container' + (state ? ' ' + state : '');
-            }
-            if (statusDot) {
-                statusDot.className = 'mobile-status-dot' + (state ? ' ' + state : '');
-            }
-            if (statusText) {
-                if (state === 'speaking')     statusText.textContent = 'J.A.R.V.I.S is speaking…';
-                else if (state === 'processing') statusText.textContent = 'Processing…';
-                else if (state === 'muted')   statusText.textContent = 'Microphone muted';
-                else                          statusText.textContent = 'Always listening…';
-            }
-        }
-
-        setInterval(function() {
-            if (muted)                                            { setCallState('muted');      return; }
-            if (window.isSpeaking || window.isSpeechOutputActive) { setCallState('speaking');   return; }
-            if (document.querySelector('.thinking-indicator'))    { setCallState('processing'); return; }
-            setCallState('listening');
-        }, 350);
-
-        if (muteBtn) {
-            muteBtn.addEventListener('click', function() {
-                muted = !muted;
-                muteBtn.classList.toggle('muted', muted);
-                muteBtn.querySelector('i').className = muted
-                    ? 'fas fa-microphone-slash'
-                    : 'fas fa-microphone';
-                muteBtn.querySelector('span').textContent = muted ? 'Unmute' : 'Mute';
-                muteBtn.setAttribute('aria-pressed', String(muted));
-                if (muted) {
-                    if (window.alwaysListeningHotkeyMode && typeof toggleAlwaysListeningMode === 'function') {
-                        toggleAlwaysListeningMode();
-                    } else if (window.recognition && window.isListening) {
-                        try { window.recognition.abort(); } catch(e) {}
-                        window.isListening = false;
-                    }
-                } else {
-                    if (typeof toggleAlwaysListeningMode === 'function') toggleAlwaysListeningMode();
-                }
-            });
-        }
-
-        if (continueBtn) {
-            continueBtn.addEventListener('click', function() {
-                if (typeof continueConversation === 'function') continueConversation();
-            });
-        }
-
-        function toggleTranscript() {
-            transcriptCollapsed = !transcriptCollapsed;
-            if (transcript) transcript.classList.toggle('collapsed', transcriptCollapsed);
-            if (transcriptToggle) transcriptToggle.setAttribute('aria-expanded', String(!transcriptCollapsed));
-        }
-
-        if (chatBtn)          chatBtn.addEventListener('click', toggleTranscript);
-        if (transcriptToggle) transcriptToggle.addEventListener('click', toggleTranscript);
-        if (transcriptToggle) {
-            transcriptToggle.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleTranscript(); }
-            });
-        }
-
-        function openSettings() {
-            var modal = document.getElementById('settingsModal');
-            if (modal) { modal.classList.add('active'); modal.style.display = 'flex'; }
-        }
-        if (settingsBtn)    settingsBtn.addEventListener('click', openSettings);
-        if (topSettingsBtn) topSettingsBtn.addEventListener('click', openSettings);
-
-        function tryEnableAlwaysListening() {
-            if (typeof toggleAlwaysListeningMode === 'function' && !window.alwaysListeningHotkeyMode) {
-                toggleAlwaysListeningMode();
-                if (statusText) statusText.textContent = 'Always listening…';
-                console.log('📱 Mobile: always-listening mode enabled');
-            }
-        }
-
-        window.addEventListener('load', function() {
-            setTimeout(tryEnableAlwaysListening, 2000);
-            setTimeout(function() {
-                if (!window.alwaysListeningHotkeyMode) tryEnableAlwaysListening();
-            }, 5000);
-        });
-
-        console.log('📱 Mobile call mode initialised');
-    })();
-    </script>
+    <script src="../scripts/nova_kb_store.js"></script>
+    <script src="../scripts/nova_conversation_flow.js"></script>
+    <script src="../scripts/nova_runtime_ai.js"></script>
+    <script src="../scripts/nova_runtime_ui_voice.js"></script>
+    <script src="../scripts/nova_runtime_ui_events.js"></script>
+    <script src="../scripts/nova_runtime_voice_tools.js"></script>
+    <script src="../scripts/nova_runtime_files.js"></script>
+    <script src="../scripts/nova_runtime_chat.js"></script>
+    <script src="../scripts/nova_main.js"></script>
+    <script src="../scripts/nova_voice.js"></script>
+    
+    <!-- Integration Script to fix voice issues -->
+    <script src="../scripts/nova_page_voice_fix.js"></script>
+    <script src="../scripts/nova_page_ui.js"></script>
+    <script src="../scripts/nova_page_mobile_call.js"></script>
     <!-- ===== END MOBILE INIT ===== -->
 </body>
 </html>

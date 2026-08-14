@@ -583,7 +583,12 @@ function setupSpeechRecognition() {
     };
     
     recognition.onerror = function(event) {
-        console.error('🎤 Voice recognition error:', event.error);
+        const recognitionError = event && event.error ? event.error : 'unknown';
+        if (recognitionError === 'no-speech') {
+            console.log('🎤 Voice recognition no-speech timeout (recoverable)');
+        } else {
+            console.error('🎤 Voice recognition error:', recognitionError);
+        }
         updateVoiceUI(false);
         isListening = false;
         window.isListening = false;
@@ -601,7 +606,7 @@ function setupSpeechRecognition() {
                 updateVoiceStatus('Processing command...');
                 processVoiceCommand(transcript);
             } else {
-                if (event.error === 'network') {
+                if (recognitionError === 'network') {
                     showVoiceNotification('Network error - please press R and repeat', 3000);
                 }
                 updateVoiceStatus(getDefaultReadyStatus());
@@ -611,25 +616,57 @@ function setupSpeechRecognition() {
 
         if (alwaysListeningHotkeyMode) {
             alwaysListeningTurnActive = false;
-            if (event.error !== 'aborted' && event.error !== 'no-speech') {
-                showVoiceNotification(`Voice recognition error: ${event.error}`, 2500);
+            if (recognitionError !== 'aborted' && recognitionError !== 'no-speech') {
+                showVoiceNotification(`Voice recognition error: ${recognitionError}`, 2500);
             }
             setTimeout(() => {
                 if (alwaysListeningHotkeyMode && !isListening && !isSpeechOutputActive) {
                     startAlwaysListeningTurn();
                 }
-            }, event.error === 'network' ? 1200 : 300);
+            }, recognitionError === 'network' ? 1200 : 300);
+            return;
+        }
+
+        // no-speech is expected with browser speech timeouts; treat as a soft reset.
+        if (recognitionError === 'no-speech') {
+            if (hotkeyActive && hotkeyListening && !isSpeechOutputActive) {
+                setTimeout(() => {
+                    if (hotkeyActive && hotkeyListening && !isListening && !isSpeechOutputActive) {
+                        try {
+                            recognition.continuous = true;
+                            recognition.interimResults = true;
+                            recognition.start();
+                            isListening = true;
+                            window.isListening = true;
+                            updateVoiceStatus('Listening...');
+                            console.log('🎤 Recovered from no-speech while hotkey is held');
+                        } catch (restartError) {
+                            console.log('🎤 no-speech recovery restart skipped:', restartError);
+                        }
+                    }
+                }, 180);
+            } else if (isWakeListening && wakeWordEnabled && !restartPending && !isSpeechOutputActive) {
+                restartPending = true;
+                setTimeout(() => {
+                    restartPending = false;
+                    if (isWakeListening && wakeWordEnabled && !isListening && !isSpeechOutputActive) {
+                        startWakeListening();
+                    }
+                }, 400);
+            } else {
+                updateVoiceStatus(getDefaultReadyStatus());
+            }
             return;
         }
         
         // Show user-friendly error message
-        if (event.error === 'not-allowed') {
+        if (recognitionError === 'not-allowed') {
             pendingTranscript = '';
             lastInterimTranscript = '';
             showVoiceNotification('Microphone access denied. Please allow microphone access.', 5000);
             isWakeListening = false;
             window.isWakeListening = false;
-        } else if (event.error === 'network') {
+        } else if (recognitionError === 'network') {
             // Network error during hold: save any transcript already captured, then
             // recreate the recognition object (skip abort — connection already broken).
             // If R is still held, restart recognition immediately so the user doesn't
@@ -661,7 +698,7 @@ function setupSpeechRecognition() {
             } else {
                 showVoiceNotification('Network issue - press R to try again', 2000);
             }
-        } else if (event.error === 'aborted') {
+        } else if (recognitionError === 'aborted') {
             pendingTranscript = '';
             lastInterimTranscript = '';
             if (hotkeyActive) {
@@ -669,7 +706,7 @@ function setupSpeechRecognition() {
             } else {
                 recreateRecognition(true);
             }
-        } else if (event.error !== 'no-speech') {
+        } else if (recognitionError !== 'no-speech') {
             pendingTranscript = '';
             lastInterimTranscript = '';
             showVoiceNotification('Voice recognition error. Please try again.', 3000);
@@ -688,7 +725,7 @@ function setupSpeechRecognition() {
                     restartPending = false;
                 }
             }, 2000);
-        } else if (event.error !== 'aborted' && event.error !== 'network') {
+        } else if (recognitionError !== 'aborted' && recognitionError !== 'network') {
             updateVoiceStatus('Ready - Press and hold to speak');
         }
     };
@@ -1498,6 +1535,10 @@ function speakText(text, onEndCallback = null) {
 
         if (selectedVoiceMode === 'jarvis-pack' && selectedJarvisPackId) {
             ensureJarvisResponseVoice();
+            const playedPackClip = playJarvisPackSample(text, finalOnEndCallback);
+            if (playedPackClip) {
+                return;
+            }
         }
 
         const usedBridge = await playViaLocalVoiceBridge(text, finalOnEndCallback);
@@ -2689,10 +2730,14 @@ function setupPushToTalkHotkey() {
     document.addEventListener('keydown', async function(e) {
         const target = e.target;
         const key = e.key.toLowerCase();
-        const isInInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
-        
-        // Never intercept R or T while user is typing in any input/textarea
-        if (isInInput) {
+        const isTextEditableTarget = target && (
+            target.tagName === 'INPUT' ||
+            target.tagName === 'TEXTAREA' ||
+            target.isContentEditable
+        );
+
+        // Preserve normal typing in message boxes, but still allow the global interrupt keys.
+        if (isTextEditableTarget && !e.metaKey && !e.ctrlKey && !e.altKey && key !== 'r' && key !== 't') {
             return;
         }
 
@@ -3344,6 +3389,7 @@ function playJarvisPackSample(text = '', onEndCallback = null) {
 }
 
 window.JARVIS_AUDIO_PACKS = JARVIS_AUDIO_PACKS;
+window.playJarvisPackSample = playJarvisPackSample;
 window.setVoiceModeSelection = function(mode, packId = null) {
     selectedVoiceMode = mode === 'jarvis-pack' ? 'jarvis-pack' : 'tts';
     selectedJarvisPackId = selectedVoiceMode === 'jarvis-pack' ? packId : null;
@@ -3366,5 +3412,11 @@ window.loadVoiceModeSelection = function() {
 };
 
 window.loadVoiceModeSelection();
+Object.defineProperty(window, 'selectedJarvisPackId', {
+    get: function() { return selectedJarvisPackId; }
+});
+Object.defineProperty(window, 'selectedVoiceMode', {
+    get: function() { return selectedVoiceMode; }
+});
 
 console.log('🎤 N.O.V.A Voice System loaded successfully');

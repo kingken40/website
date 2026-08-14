@@ -1,4 +1,4 @@
-/* ========================================
+﻿/* ========================================
    N.O.V.A AI PROFESSOR v5 STYLES
    Blue Glowing Theme with Arc Reactor Design
 ======================================== */
@@ -20,7 +20,7 @@ body {
 }
 
 /* Background Animation */
-.jarvis-background {
+.nova-background {
     position: fixed;
     top: 0;
     left: 0;
@@ -64,7 +64,7 @@ body {
 }
 
 /* Header Styles */
-.jarvis-header {
+.nova-header {
     text-align: center;
     padding: 2rem 0;
     position: relative;
@@ -149,7 +149,7 @@ body {
     100% { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
-.jarvis-title {
+.nova-title {
     font-size: 3rem;
     font-weight: 300;
     letter-spacing: 4px;
@@ -158,7 +158,7 @@ body {
     margin-bottom: 0.5rem;
 }
 
-.jarvis-subtitle {
+.nova-subtitle {
     font-size: 1.2rem;
     color: rgba(255, 255, 255, 0.7);
     font-weight: 300;
@@ -1696,7 +1696,7 @@ body.no-animations * {
 
 /* Responsive Design */
 @media (max-width: 768px) {
-    .jarvis-title {
+    .nova-title {
         font-size: 2rem;
     }
     
@@ -1733,7 +1733,7 @@ body.no-animations * {
 }
 
 @media (max-width: 480px) {
-    .jarvis-title {
+    .nova-title {
         font-size: 1.5rem;
         letter-spacing: 2px;
     }
@@ -1865,7 +1865,7 @@ body.no-animations * {
     text-align: right;
 }
 
-.jarvis-message {
+.nova-message {
     background: linear-gradient(145deg, rgba(255, 215, 0, 0.15), rgba(255, 193, 7, 0.15));
     border: 1px solid rgba(255, 215, 0, 0.3);
     margin-right: auto;
@@ -1887,7 +1887,7 @@ body.no-animations * {
     text-align: right;
 }
 
-.jarvis-message .message-time {
+.nova-message .message-time {
     text-align: left;
 }
 
@@ -1945,11 +1945,11 @@ body.no-animations * {
 
 /* =========================================
    MOBILE PHONE-CALL LAYOUT
-   Shows on phones (≤768px). Desktop layout
+   Shows on phones (â‰¤768px). Desktop layout
    is preserved unchanged above that width.
    ========================================= */
 
-/* Mobile call UI — hidden on desktop by default */
+/* Mobile call UI â€” hidden on desktop by default */
 .mobile-call-ui {
     display: none;
     position: fixed;
@@ -2013,7 +2013,7 @@ body.no-animations * {
     background: rgba(0, 170, 255, 0.2);
 }
 
-/* Avatar section — fills remaining vertical space */
+/* Avatar section â€” fills remaining vertical space */
 .mobile-avatar-section {
     flex: 1;
     display: flex;
@@ -2360,7 +2360,7 @@ body.no-animations * {
     z-index: 2000;
 }
 
-/* ---- Activate mobile layout at ≤768px ---- */
+/* ---- Activate mobile layout at â‰¤768px ---- */
 @media (max-width: 768px) {
     /* Show the phone-call overlay */
     .mobile-call-ui {
@@ -2368,7 +2368,7 @@ body.no-animations * {
     }
 
     /* Push desktop elements behind the overlay (keep in DOM for JS) */
-    .jarvis-header,
+    .nova-header,
     .voice-interface,
     .mode-selector,
     .chat-container,
@@ -2422,7 +2422,7 @@ body.no-animations * {
         display: none;
     }
 
-    /* Hide the standalone "← Back" anchor that floats on desktop */
+    /* Hide the standalone "â† Back" anchor that floats on desktop */
     body > a[href*="Projects.html"],
     body > a[style*="position: absolute"] {
         display: none !important;
@@ -2434,7 +2434,7 @@ body.desktop-forced .mobile-call-ui {
     display: none !important;
 }
 
-body.desktop-forced .jarvis-header,
+body.desktop-forced .nova-header,
 body.desktop-forced .voice-interface,
 body.desktop-forced .mode-selector,
 body.desktop-forced .chat-container,
@@ -2451,7 +2451,7 @@ body.mobile-view-forced .mobile-call-ui {
     display: flex !important;
 }
 
-body.mobile-view-forced .jarvis-header,
+body.mobile-view-forced .nova-header,
 body.mobile-view-forced .voice-interface,
 body.mobile-view-forced .mode-selector,
 body.mobile-view-forced .chat-container,

@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JARVIS Voice Checker</title>
+    <title>nova Voice Checker</title>
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background: #0a0a0a; color: #00ff41; }
         .container { max-width: 1200px; margin: 0 auto; }
@@ -13,7 +13,7 @@
         .test-btn { background: #00ff41; color: #000; border: none; padding: 8px 15px; margin: 5px; cursor: pointer; }
         .test-btn:hover { background: #00cc33; }
         .british { border-left-color: #ff6b35; background: #2a1a1a; }
-        .jarvis-suitable { border-left-color: #4a90e2; background: #1a2a3a; }
+        .nova-suitable { border-left-color: #4a90e2; background: #1a2a3a; }
         .premium { border-left-color: #ffd700; background: #2a2a1a; }
         .section { margin: 30px 0; }
         .section h2 { color: #00ff41; border-bottom: 2px solid #00ff41; padding-bottom: 10px; }
@@ -24,44 +24,44 @@
 </head>
 <body>
     <div class="container">
-        <h1>🤖 JARVIS Voice System Analysis</h1>
+        <h1>ðŸ¤– nova Voice System Analysis</h1>
         
         <div class="legend">
             <h3>Legend:</h3>
             <div class="legend-item">
-                <div class="legend-color" style="background: #ff6b35;"></div>British & Canadian Voices (Best for JARVIS)
+                <div class="legend-color" style="background: #ff6b35;"></div>British & Canadian Voices (Best for nova)
             </div>
             <div class="legend-item">
-                <div class="legend-color" style="background: #4a90e2;"></div>JARVIS-Suitable Voices
+                <div class="legend-color" style="background: #4a90e2;"></div>nova-Suitable Voices
             </div>
             <div class="legend-item">
                 <div class="legend-color" style="background: #ffd700;"></div>Premium Quality
             </div>
-            <div class="legend-item">🎯 = Local Voice | ☁️ = Online Voice</div>
+            <div class="legend-item">ðŸŽ¯ = Local Voice | â˜ï¸ = Online Voice</div>
         </div>
 
         <div class="section">
-            <h2>🎯 Premium NOVA Voices (British + Masculine)</h2>
+            <h2>ðŸŽ¯ Premium NOVA Voices (British + Masculine)</h2>
             <div id="premiumVoices">Scanning...</div>
         </div>
 
         <div class="section">
-            <h2>🇬🇧 British & Canadian Voices</h2>
+            <h2>ðŸ‡¬ðŸ‡§ British & Canadian Voices</h2>
             <div id="britishVoices">Scanning...</div>
         </div>
 
         <div class="section">
-            <h2>🤖 Nova-Suitable Voices</h2>
-            <div id="jarvisSuitableVoices">Scanning...</div>
+            <h2>ðŸ¤– Nova-Suitable Voices</h2>
+            <div id="novaSuitableVoices">Scanning...</div>
         </div>
 
         <div class="section">
-            <h2>📋 All Available Voices</h2>
+            <h2>ðŸ“‹ All Available Voices</h2>
             <div id="allVoices">Scanning...</div>
         </div>
 
         <div class="section">
-            <h2>🎵 Voice Testing</h2>
+            <h2>ðŸŽµ Voice Testing</h2>
             <button class="test-btn" onclick="testCurrentVoice()">Test Current NOVA Voice</button>
             <button class="test-btn" onclick="stopAllSpeech()">Stop All Speech</button>
         </div>
@@ -99,8 +99,8 @@
                 voice.name.toLowerCase().includes('bettany')
             );
 
-            // JARVIS-suitable voices (masculine characteristics)
-            const jarvisSuitableVoices = voices.filter(voice => {
+            // nova-suitable voices (masculine characteristics)
+            const novaSuitableVoices = voices.filter(voice => {
                 const name = voice.name.toLowerCase();
                 return (
                     name.includes('liam') ||
@@ -124,14 +124,14 @@
                 ) && !name.includes('female') && !name.includes('compact') && voice.lang.startsWith('en');
             });
 
-            // Premium voices (British + JARVIS-suitable)
-            const premiumVoices = jarvisSuitableVoices.filter(voice => 
+            // Premium voices (British + nova-suitable)
+            const premiumVoices = novaSuitableVoices.filter(voice => 
                 britishVoices.includes(voice) || voice.lang.includes('GB')
             );
 
             displayVoices('premiumVoices', premiumVoices, 'premium');
             displayVoices('britishVoices', britishVoices, 'british');
-            displayVoices('jarvisSuitableVoices', jarvisSuitableVoices, 'jarvis-suitable');
+            displayVoices('novaSuitableVoices', novaSuitableVoices, 'nova-suitable');
             displayVoices('allVoices', voices, '');
         }
 
@@ -139,19 +139,19 @@
             const container = document.getElementById(containerId);
             
             if (voiceList.length === 0) {
-                container.innerHTML = '<div class="voice-item">❌ No voices found in this category</div>';
+                container.innerHTML = '<div class="voice-item">âŒ No voices found in this category</div>';
                 return;
             }
 
             let html = '';
             voiceList.forEach((voice, index) => {
-                const indicator = voice.localService ? '🎯 Local' : '☁️ Online';
+                const indicator = voice.localService ? 'ðŸŽ¯ Local' : 'â˜ï¸ Online';
                 const quality = voice.localService ? 'High Quality' : 'Standard Quality';
                 
                 // Special badge for Paul Bettany voices
                 const nameLower = voice.name.toLowerCase();
                 const isPaulBettany = nameLower.includes('paul') || nameLower.includes('bettany');
-                const paulBadge = isPaulBettany ? '<span style="background: #ffd700; color: #000; padding: 2px 8px; border-radius: 4px; margin-left: 10px; font-weight: bold;">🎬 PAUL BETTANY</span>' : '';
+                const paulBadge = isPaulBettany ? '<span style="background: #ffd700; color: #000; padding: 2px 8px; border-radius: 4px; margin-left: 10px; font-weight: bold;">ðŸŽ¬ PAUL BETTANY</span>' : '';
                 
                 html += `
                     <div class="voice-item ${className}">
@@ -160,10 +160,10 @@
                             Language: ${voice.lang} | ${indicator} | ${quality}
                         </div>
                         <button class="test-btn" onclick="testVoice('${voice.name.replace(/'/g, "\\'")}')">
-                            🎵 Test Voice
+                            ðŸŽµ Test Voice
                         </button>
-                        <button class="test-btn" onclick="setAsJarvisVoice('${voice.name.replace(/'/g, "\\'")}')">
-                            ⭐ Set as NOVA Voice
+                        <button class="test-btn" onclick="setAsnovaVoice('${voice.name.replace(/'/g, "\\'")}')">
+                            â­ Set as NOVA Voice
                         </button>
                     </div>
                 `;
@@ -192,22 +192,22 @@
             speechSynthesis.speak(utterance);
         }
 
-        function setAsJarvisVoice(voiceName) {
+        function setAsnovaVoice(voiceName) {
             const voice = voices.find(v => v.name === voiceName);
             if (!voice) return;
 
-            // Save to localStorage using the same key as jarvis_voice.js
-            console.log('🔧 Saving voice to localStorage...');
-            console.log('🔧 Voice name:', voice.name);
+            // Save to localStorage using the same key as nova_voice.js
+            console.log('ðŸ”§ Saving voice to localStorage...');
+            console.log('ðŸ”§ Voice name:', voice.name);
             localStorage.setItem('Nova_selected_voice', voice.name);
             
             // Verify it was saved
             const saved = localStorage.getItem('Nova_selected_voice');
-            console.log('🔧 Verified saved value:', saved);
-            console.log('🔧 Match:', saved === voice.name);
+            console.log('ðŸ”§ Verified saved value:', saved);
+            console.log('ðŸ”§ Match:', saved === voice.name);
             
             console.log('NOVA voice set to:', voice.name);
-            alert(`✅ NOVA voice set to: ${voice.name}\n\nThis voice will now be used in your main NOVA interface.\n\nPlease refresh the main NOVA page to apply the change.`);
+            alert(`âœ… NOVA voice set to: ${voice.name}\n\nThis voice will now be used in your main NOVA interface.\n\nPlease refresh the main NOVA page to apply the change.`);
             
             // Test confirmation
             const confirmPhrase = `Voice successfully updated, sir. J.A.R.V.I.S is now using ${voice.name}.`;
