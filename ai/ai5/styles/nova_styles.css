@@ -352,6 +352,9 @@ body {
 
 .message-content[data-speech-content="true"] {
     cursor: text;
+    user-select: text;
+    -webkit-user-select: text;
+    touch-action: manipulation;
 }
 
 .message-content[data-speech-content="true"]:hover {

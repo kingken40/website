@@ -11,12 +11,11 @@ function setupEventListeners() {
     speechPauseBtn?.addEventListener('click', () => window.pauseSpeech?.());
     speechStopBtn?.addEventListener('click', () => window.stopSpeech?.());
 
-    document.addEventListener('click', (event) => {
-        const messageContent = event.target.closest?.('.message-content[data-speech-content="true"]');
-        if (!messageContent || event.target.closest('a, button, input, textarea, select')) return;
-
-        const point = event;
+    let speechTouchStart = null;
+    const speakFromPoint = (messageContent, point) => {
+        if (!messageContent || !point) return;
         let range = null;
+        let directOffset = null;
         if (document.caretRangeFromPoint) {
             range = document.caretRangeFromPoint(point.clientX, point.clientY);
         } else if (document.caretPositionFromPoint) {
@@ -26,22 +25,76 @@ function setupEventListeners() {
                 range.setStart(caret.offsetNode, caret.offset);
             }
         }
-        if (!range || !messageContent.contains(range.startContainer)) return;
-
         const walker = document.createTreeWalker(messageContent, NodeFilter.SHOW_TEXT);
         let offset = 0;
         let node;
-        while ((node = walker.nextNode())) {
-            if (node === range.startContainer) {
-                offset += range.startOffset;
-                break;
+        if (range && messageContent.contains(range.startContainer)) {
+            while ((node = walker.nextNode())) {
+                if (node === range.startContainer) {
+                    offset += range.startOffset;
+                    break;
+                }
+                offset += node.nodeValue?.length || 0;
             }
-            offset += node.nodeValue?.length || 0;
+        } else {
+            // Some mobile WebKit versions return no caret range for touch coordinates.
+            // Resolve the nearest character from rendered text as a reliable fallback.
+            walker.currentNode = messageContent;
+            while ((node = walker.nextNode())) {
+                const value = node.nodeValue || '';
+                for (let index = 0; index < value.length; index += 1) {
+                    const characterRange = document.createRange();
+                    characterRange.setStart(node, index);
+                    characterRange.setEnd(node, index + 1);
+                    const rect = characterRange.getBoundingClientRect();
+                    if (point.clientX >= rect.left && point.clientX <= rect.right &&
+                        point.clientY >= rect.top && point.clientY <= rect.bottom) {
+                        directOffset = offset + index;
+                        break;
+                    }
+                }
+                if (directOffset !== null) break;
+                offset += value.length;
+            }
         }
+        if (directOffset !== null) offset = directOffset;
+        if (directOffset === null && (!range || !messageContent.contains(range.startContainer))) return;
+
         const fullText = messageContent.textContent || '';
         const wordStart = fullText.slice(0, offset).search(/\S+$/);
         window.speakTextFrom?.(fullText, wordStart < 0 ? offset : wordStart);
+    };
+
+    document.addEventListener('click', (event) => {
+        const messageContent = event.target.closest?.('.message-content[data-speech-content="true"]');
+        if (!messageContent || event.target.closest('a, button, input, textarea, select')) return;
+        speakFromPoint(messageContent, event);
     });
+
+    document.addEventListener('touchstart', (event) => {
+        const touch = event.changedTouches?.[0];
+        const messageContent = event.target.closest?.('.message-content[data-speech-content="true"]');
+        if (!touch || !messageContent || event.target.closest('a, button, input, textarea, select')) {
+            speechTouchStart = null;
+            return;
+        }
+        speechTouchStart = {
+            content: messageContent,
+            x: touch.clientX,
+            y: touch.clientY
+        };
+    }, { passive: true });
+
+    document.addEventListener('touchend', (event) => {
+        const touch = event.changedTouches?.[0];
+        const start = speechTouchStart;
+        speechTouchStart = null;
+        if (!touch || !start || start.content !== event.target.closest?.('.message-content[data-speech-content="true"]')) return;
+        const moved = Math.hypot(touch.clientX - start.x, touch.clientY - start.y);
+        if (moved > 12) return;
+        event.preventDefault();
+        speakFromPoint(start.content, touch);
+    }, { passive: false });
     
     // Mode selection
     const modeCards = document.querySelectorAll('.mode-card');
@@ -1113,4 +1166,3 @@ function updateGlobalPersonality() {
 // ========================================
 // VOICE DISCOVERY AND TESTING FUNCTIONS
 // ========================================
-
