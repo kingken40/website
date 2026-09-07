@@ -209,7 +209,16 @@ async function handlePDFFile(file) {
         console.error('📕 PDF processing error:', error);
         
         // Fallback: Add PDF without text extraction
+        currentChatFiles = Array.isArray(currentChatFiles) ? currentChatFiles : [];
+        currentChatFiles.push({
+            name: file.name,
+            type: 'pdf',
+            extension: 'pdf'
+        });
         addFileMessage(file.name, 'pdf', null);
+        if (typeof saveCurrentChat === 'function') {
+            saveCurrentChat();
+        }
         showNotification('PDF uploaded but text extraction failed: ' + error.message, 5000);
     }
 }
