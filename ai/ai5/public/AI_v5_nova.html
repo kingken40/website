@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -321,14 +321,20 @@
             </div>
 
                 <div class="setting-section" style="margin-top: 1.5rem;">
-                <h4 style="color: #FFD700; margin-bottom: 1rem; border-bottom: 1px solid rgba(255, 215, 0, 0.3); padding-bottom: 0.5rem;">🤖 AI Model Selection</h4>
+                <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255, 215, 0, 0.3); padding-bottom: 0.5rem; margin-bottom: 1rem;">
+                    <h4 style="color: #FFD700; margin: 0;">🤖 AI Model Selection</h4>
+                    <button type="button" class="modelHelpBtnTrigger" style="width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, #00aaff, #0066cc); border: 1px solid rgba(0,221,255,0.6); color: #fff; font-weight: bold; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 8px rgba(0,170,255,0.4); transition: all 0.2s;" title="Explain AI Models & Categories">?</button>
+                </div>
                 <div class="setting-group" style="flex-direction:column; align-items:stretch;">
                     <label style="min-width:unset;">Current active model</label>
                     <div id="selectedModelDisplay" style="padding:0.55rem 0.75rem;background:rgba(0,170,255,0.08);border:1px solid rgba(0,170,255,0.25);border-radius:6px;color:#8fd8ff;font-size:0.88rem;">Selected: Auto (loading...)</div>
                     <small style="display:block;margin-top:0.35rem;color:rgba(255,255,255,0.55);">Auto chooses the best model for each request. Static locks one model until you change it back.</small>
                 </div>
-                <div class="setting-group">
-                    <label for="modelSelect">Model mode</label><newLine />
+                <div class="setting-group" style="align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 0.4rem; min-width: 130px;">
+                        <label for="modelSelect" style="margin: 0;">Model mode</label>
+                        <button type="button" class="modelHelpBtnTrigger" style="width: 20px; height: 20px; border-radius: 50%; background: rgba(0, 170, 255, 0.2); border: 1px solid rgba(0, 170, 255, 0.5); color: #8fd8ff; font-weight: bold; font-size: 0.75rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;" title="What do model choices & categories mean?">?</button>
+                    </div>
                     <select id="modelSelect" style="flex:1; padding:0.5rem; background:rgba(0,170,255,0.1); border:1px solid rgba(0,170,255,0.3); border-radius:5px; color:#00aaff;">
                         <option value="auto">Auto-Select</option>
                     </select>
@@ -379,6 +385,137 @@
                         <input type="checkbox" id="animationsEnabled" checked>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Model Guide & Categories Explanatory Modal -->
+    <div class="modal" id="modelInfoModal" style="display: none;">
+        <div class="modal-content" style="max-width: 780px; max-height: 88vh; display: flex; flex-direction: column;">
+            <div class="modal-header" style="padding-bottom: 0.8rem; border-bottom: 1px solid rgba(0, 170, 255, 0.3);">
+                <h3 style="color: #FFD700; margin: 0; display: flex; align-items: center; gap: 0.5rem; font-size: 1.2rem;">
+                    <span>🤖</span> AI Models & Categories Guide
+                </h3>
+                <button class="modal-close" id="closeModelInfo" type="button" title="Close Model Guide">&times;</button>
+            </div>
+            <div class="modal-body" style="overflow-y: auto; padding: 1.2rem 1.5rem; line-height: 1.6; color: #e0e0e0;">
+                
+                <!-- Category Explanations -->
+                <div style="background: rgba(0, 170, 255, 0.08); border: 1px solid rgba(0, 170, 255, 0.25); border-radius: 8px; padding: 1rem 1.2rem; margin-bottom: 1.5rem;">
+                    <h4 style="color: #FFD700; margin-top: 0; margin-bottom: 0.75rem; border-bottom: 1px solid rgba(255, 215, 0, 0.2); padding-bottom: 0.4rem; font-size: 1.05rem;">
+                        💡 What Model Categories Mean
+                    </h4>
+                    <p style="font-size: 0.88rem; margin-bottom: 0.9rem; color: rgba(255,255,255,0.9);">
+                        N.O.V.A categorizes models into dedicated performance groups to help you choose the right engine for your workload:
+                    </p>
+
+                    <div style="display: flex; flex-direction: column; gap: 0.8rem;">
+                        <div style="background: rgba(0,0,0,0.3); padding: 0.7rem 0.9rem; border-radius: 6px; border-left: 4px solid #00aaff;">
+                            <strong style="color: #8fd8ff; font-size: 0.95rem;">🧠 Best for reasoning</strong>
+                            <span style="font-size: 0.86rem; color: #d0d0d0; display: block; margin-top: 0.25rem;">
+                                Advanced logic engines designed for deep problem solving, multi-step math, complex code debugging, algorithm design, and strategic analysis. These models think step-by-step before producing high-accuracy output.
+                            </span>
+                        </div>
+
+                        <div style="background: rgba(0,0,0,0.3); padding: 0.7rem 0.9rem; border-radius: 6px; border-left: 4px solid #00ffaa;">
+                            <strong style="color: #8fffca; font-size: 0.95rem;">⚡ Best for speed / For speed</strong>
+                            <span style="font-size: 0.86rem; color: #d0d0d0; display: block; margin-top: 0.25rem;">
+                                Low-latency, ultra-fast models optimized for instant answers, quick lookups, simple text formatting, and high-speed chat responses where speed is priority #1.
+                            </span>
+                        </div>
+
+                        <div style="background: rgba(0,0,0,0.3); padding: 0.7rem 0.9rem; border-radius: 6px; border-left: 4px solid #ffaa00;">
+                            <strong style="color: #ffda8f; font-size: 0.95rem;">🎨 Best for creativity</strong>
+                            <span style="font-size: 0.86rem; color: #d0d0d0; display: block; margin-top: 0.25rem;">
+                                Models tuned for creative writing, storytelling, natural conversation, tone matching, and open-ended brainstorming.
+                            </span>
+                        </div>
+
+                        <div style="background: rgba(0,0,0,0.3); padding: 0.7rem 0.9rem; border-radius: 6px; border-left: 4px solid #aa00ff;">
+                            <strong style="color: #e28fff; font-size: 0.95rem;">📚 For long context</strong>
+                            <span style="font-size: 0.86rem; color: #d0d0d0; display: block; margin-top: 0.25rem;">
+                                Models with massive context windows built to read, summarize, and analyze huge documents, codebases, or long conversation histories without losing track of details.
+                            </span>
+                        </div>
+
+                        <div style="background: rgba(0,0,0,0.3); padding: 0.7rem 0.9rem; border-radius: 6px; border-left: 4px solid #FFD700;">
+                            <strong style="color: #FFD700; font-size: 0.95rem;">⚡ Recently Used</strong>
+                            <span style="font-size: 0.86rem; color: #d0d0d0; display: block; margin-top: 0.25rem;">
+                                Automatically stores your up to 7 most recently active models (most recent on top, ordered from top-to-bottom by usage) for fast one-click switching.
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Model Breakdown -->
+                <h4 style="color: #FFD700; margin-bottom: 0.8rem; border-bottom: 1px solid rgba(255, 215, 0, 0.2); padding-bottom: 0.4rem; font-size: 1.05rem;">
+                    📖 Individual Models Guide
+                </h4>
+
+                <div style="display: flex; flex-direction: column; gap: 0.6rem; font-size: 0.86rem;">
+                    <div style="padding: 0.6rem 0.85rem; background: rgba(255,255,255,0.04); border-radius: 6px; border: 1px solid rgba(0,170,255,0.2);">
+                        <strong style="color: #FFD700; font-size: 0.9rem;">Auto-select (AI5 task routing):</strong>
+                        <span style="color: #ccc; display: block; margin-top: 0.2rem;">Dynamically inspects your message intent (logic, speed, creative, or document task) and automatically chooses the best model and max token limit.</span>
+                    </div>
+
+                    <div style="padding: 0.6rem 0.85rem; background: rgba(255,255,255,0.04); border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);">
+                        <strong style="color: #00aaff; font-size: 0.9rem;">Claude Sonnet 4.5 (anthropic/claude-sonnet-4.5):</strong>
+                        <span style="color: #ccc; display: block; margin-top: 0.2rem;">Anthropic's premier model; elite coding ability, complex reasoning, and highly detailed instruction following.</span>
+                    </div>
+
+                    <div style="padding: 0.6rem 0.85rem; background: rgba(255,255,255,0.04); border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);">
+                        <strong style="color: #00aaff; font-size: 0.9rem;">Claude Opus 4.1 (anthropic/claude-opus-4.1):</strong>
+                        <span style="color: #ccc; display: block; margin-top: 0.2rem;">Flagship model built for ultra-deep analysis, complex writing, and maximum reasoning depth.</span>
+                    </div>
+
+                    <div style="padding: 0.6rem 0.85rem; background: rgba(255,255,255,0.04); border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);">
+                        <strong style="color: #00aaff; font-size: 0.9rem;">GPT-4o (openai/gpt-4o):</strong>
+                        <span style="color: #ccc; display: block; margin-top: 0.2rem;">OpenAI's flagship multimodal model; exceptional all-around performance across reasoning, math, and writing.</span>
+                    </div>
+
+                    <div style="padding: 0.6rem 0.85rem; background: rgba(255,255,255,0.04); border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);">
+                        <strong style="color: #00aaff; font-size: 0.9rem;">GPT-4o mini (openai/gpt-4o-mini):</strong>
+                        <span style="color: #ccc; display: block; margin-top: 0.2rem;">Fast, highly responsive model for general conversation, simple coding, and daily assistant tasks.</span>
+                    </div>
+
+                    <div style="padding: 0.6rem 0.85rem; background: rgba(255,255,255,0.04); border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);">
+                        <strong style="color: #00aaff; font-size: 0.9rem;">OpenAI o3-mini (openai/o3-mini):</strong>
+                        <span style="color: #ccc; display: block; margin-top: 0.2rem;">Advanced reasoning model optimized for high-precision science, math, and technical code synthesis.</span>
+                    </div>
+
+                    <div style="padding: 0.6rem 0.85rem; background: rgba(255,255,255,0.04); border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);">
+                        <strong style="color: #00aaff; font-size: 0.9rem;">DeepSeek R1 (deepseek/deepseek-r1):</strong>
+                        <span style="color: #ccc; display: block; margin-top: 0.2rem;">Open-weights reasoning engine with step-by-step chain-of-thought processing.</span>
+                    </div>
+
+                    <div style="padding: 0.6rem 0.85rem; background: rgba(255,255,255,0.04); border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);">
+                        <strong style="color: #00aaff; font-size: 0.9rem;">Gemini 2.5 Pro (google/gemini-2.5-pro):</strong>
+                        <span style="color: #ccc; display: block; margin-top: 0.2rem;">Google's top reasoning model with massive document window capabilities.</span>
+                    </div>
+
+                    <div style="padding: 0.6rem 0.85rem; background: rgba(255,255,255,0.04); border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);">
+                        <strong style="color: #00aaff; font-size: 0.9rem;">Gemini 2.5 Flash (google/gemini-2.5-flash):</strong>
+                        <span style="color: #ccc; display: block; margin-top: 0.2rem;">Lightning-fast long-context model for rapid document processing and fast responses.</span>
+                    </div>
+
+                    <div style="padding: 0.6rem 0.85rem; background: rgba(255,255,255,0.04); border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);">
+                        <strong style="color: #00aaff; font-size: 0.9rem;">Claude Haiku 4.5 (anthropic/claude-haiku-4.5):</strong>
+                        <span style="color: #ccc; display: block; margin-top: 0.2rem;">Anthropic's fastest model for near-instant responses.</span>
+                    </div>
+
+                    <div style="padding: 0.6rem 0.85rem; background: rgba(255,255,255,0.04); border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);">
+                        <strong style="color: #00aaff; font-size: 0.9rem;">Mistral Small 3.1 & Large (mistralai/):</strong>
+                        <span style="color: #ccc; display: block; margin-top: 0.2rem;">Highly efficient models known for concise, precise multi-lingual reasoning and coding.</span>
+                    </div>
+
+                    <div style="padding: 0.6rem 0.85rem; background: rgba(255,255,255,0.04); border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);">
+                        <strong style="color: #00aaff; font-size: 0.9rem;">Llama 3.3 70B Instruct (meta-llama/llama-3.3-70b-instruct):</strong>
+                        <span style="color: #ccc; display: block; margin-top: 0.2rem;">Meta's open-weights model delivering high intelligence and fast performance.</span>
+                    </div>
+                </div>
+            </div>
+            <div style="padding: 0.8rem 1.2rem; border-top: 1px solid rgba(255,255,255,0.1); text-align: right; background: rgba(0,0,0,0.2);">
+                <button id="closeModelInfoBtn" type="button" style="padding: 0.5rem 1.4rem; background: linear-gradient(135deg, #00aaff, #0088cc); border: none; border-radius: 5px; color: #fff; font-weight: 600; cursor: pointer; transition: all 0.2s;">Got It</button>
             </div>
         </div>
     </div>

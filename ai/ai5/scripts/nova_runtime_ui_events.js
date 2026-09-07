@@ -3,6 +3,45 @@
 
 function setupEventListeners() {
     console.log('🔧 Setting up event listeners...');
+
+    const speechResumeBtn = document.getElementById('speechResumeBtn');
+    const speechPauseBtn = document.getElementById('speechPauseBtn');
+    const speechStopBtn = document.getElementById('speechStopBtn');
+    speechResumeBtn?.addEventListener('click', () => window.resumeSpeech?.());
+    speechPauseBtn?.addEventListener('click', () => window.pauseSpeech?.());
+    speechStopBtn?.addEventListener('click', () => window.stopSpeech?.());
+
+    document.addEventListener('click', (event) => {
+        const messageContent = event.target.closest?.('.message-content[data-speech-content="true"]');
+        if (!messageContent || event.target.closest('a, button, input, textarea, select')) return;
+
+        const point = event;
+        let range = null;
+        if (document.caretRangeFromPoint) {
+            range = document.caretRangeFromPoint(point.clientX, point.clientY);
+        } else if (document.caretPositionFromPoint) {
+            const caret = document.caretPositionFromPoint(point.clientX, point.clientY);
+            if (caret) {
+                range = document.createRange();
+                range.setStart(caret.offsetNode, caret.offset);
+            }
+        }
+        if (!range || !messageContent.contains(range.startContainer)) return;
+
+        const walker = document.createTreeWalker(messageContent, NodeFilter.SHOW_TEXT);
+        let offset = 0;
+        let node;
+        while ((node = walker.nextNode())) {
+            if (node === range.startContainer) {
+                offset += range.startOffset;
+                break;
+            }
+            offset += node.nodeValue?.length || 0;
+        }
+        const fullText = messageContent.textContent || '';
+        const wordStart = fullText.slice(0, offset).search(/\S+$/);
+        window.speakTextFrom?.(fullText, wordStart < 0 ? offset : wordStart);
+    });
     
     // Mode selection
     const modeCards = document.querySelectorAll('.mode-card');
@@ -125,6 +164,45 @@ function setupEventListeners() {
                     settingsModal.style.display = 'none';
                     settingsModal.classList.remove('active');
                 }
+            }
+        });
+    }
+
+    // AI Model Guide & Categories Explanatory Modal Controls
+    const modelInfoModal = document.getElementById('modelInfoModal');
+    const closeModelInfo = document.getElementById('closeModelInfo');
+    const closeModelInfoBtn = document.getElementById('closeModelInfoBtn');
+
+    window.openModelInfoGuide = function() {
+        if (modelInfoModal) {
+            modelInfoModal.style.display = 'flex';
+            modelInfoModal.classList.add('active');
+        }
+    };
+
+    window.closeModelInfoGuide = function() {
+        if (modelInfoModal) {
+            modelInfoModal.style.display = 'none';
+            modelInfoModal.classList.remove('active');
+        }
+    };
+
+    const modelHelpBtn = document.getElementById('modelHelpBtn');
+    if (modelHelpBtn) {
+        modelHelpBtn.addEventListener('click', window.openModelInfoGuide);
+    }
+
+    document.querySelectorAll('.modelHelpBtnTrigger').forEach(btn => {
+        btn.addEventListener('click', window.openModelInfoGuide);
+    });
+
+    if (closeModelInfo) closeModelInfo.addEventListener('click', window.closeModelInfoGuide);
+    if (closeModelInfoBtn) closeModelInfoBtn.addEventListener('click', window.closeModelInfoGuide);
+
+    if (modelInfoModal) {
+        modelInfoModal.addEventListener('click', (e) => {
+            if (e.target === modelInfoModal) {
+                window.closeModelInfoGuide();
             }
         });
     }
@@ -1035,5 +1113,4 @@ function updateGlobalPersonality() {
 // ========================================
 // VOICE DISCOVERY AND TESTING FUNCTIONS
 // ========================================
-
 

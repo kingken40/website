@@ -238,32 +238,216 @@ async function handleCodeFile(file) {
 // Handle audio file upload with transcription
 async function handleAudioFile(file) {
     console.log('🎵 Audio file uploaded:', file.name, '| Type:', file.type);
-    
-    const audioURL = URL.createObjectURL(file);
-    
-    // Transcribe audio using OpenAI Whisper API
+
     try {
-        showNotification('Transcribing audio... This may take a moment.', 10000);
-        const transcription = await transcribeAudio(file);
-        
-        console.log('🎵 Transcription complete:', transcription.substring(0, 100) + '...');
-        
-        // Store file attachment with transcription
+        showNotification('Transcribing audio with speaker detection... Longer recordings may take a few minutes.', 15000);
+        const transcriptResult = await transcribeAudioEnhanced(file);
+        const studyPacket = buildAudioStudyPacket(file, transcriptResult);
+
+        console.log('🎵 Transcription complete:', studyPacket.transcript.substring(0, 100) + '...');
+
         currentFileAttachment = {
             name: file.name,
             type: 'audio',
-            content: `Audio transcription:\n\n${transcription}`,
+            content: studyPacket.content,
             extension: file.name.split('.').pop()
         };
-        
-        // Display file chip in input area
+
         displayFileChip(file.name, 'audio');
-        
-        showNotification(`Audio "${file.name}" transcribed and attached. Add a message or send.`, 5000);
+
+        const settingLabel = studyPacket.isLecture ? 'Lecture detected; professor-style tutoring is ready.' : 'Speaker-aware transcription is ready.';
+        showNotification(`Audio "${file.name}" transcribed. ${settingLabel} Add a question or send.`, 7000);
         
     } catch (error) {
         console.error('🎵 Transcription error:', error);
         showNotification('Audio transcription failed: ' + error.message, 5000);
+    }
+}
+
+function formatAudioTimestamp(seconds) {
+    const totalSeconds = Math.max(0, Math.floor(Number(seconds) || 0));
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const remainder = totalSeconds % 60;
+    return hours > 0
+        ? `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`
+        : `${String(minutes).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`;
+}
+
+function normalizeAudioTranscript(data) {
+    if (typeof data === 'string') return { transcript: data.trim(), segments: [] };
+
+    const segments = Array.isArray(data?.segments) ? data.segments : [];
+    const transcript = String(data?.text || segments.map(segment => segment.text || '').join(' ') || '').trim();
+    const formattedSegments = segments.map((segment, index) => {
+        const start = Number.isFinite(Number(segment.start)) ? Number(segment.start) : null;
+        const end = Number.isFinite(Number(segment.end)) ? Number(segment.end) : null;
+        const speaker = String(segment.speaker || segment.speaker_id || '').trim();
+        const timestamp = start === null
+            ? ''
+            : `[${formatAudioTimestamp(start)}${end === null ? '' : `-${formatAudioTimestamp(end)}`}] `;
+        return {
+            start,
+            end,
+            speaker: speaker || `Speaker ${index + 1}`,
+            text: String(segment.text || '').trim(),
+            line: `${timestamp}${speaker ? `${speaker}: ` : ''}${String(segment.text || '').trim()}`.trim()
+        };
+    }).filter(segment => segment.text);
+
+    return { transcript, segments: formattedSegments };
+}
+
+function buildAudioStudyPacket(audioFile, transcriptResult) {
+    const transcript = String(transcriptResult?.transcript || '').trim();
+    const segments = Array.isArray(transcriptResult?.segments) ? transcriptResult.segments : [];
+    const labeledTranscript = segments.length ? segments.map(segment => segment.line).join('\n') : transcript;
+    const isLecture = /\b(lecture|class|professor|instructor|students?|chapter|lesson|seminar|office hours|homework|assignment|exam|quiz|today we|welcome back|any questions|let's begin|take notes)\b/i.test(`${audioFile.name}\n${transcript}`);
+    const speakerCount = new Set(segments.map(segment => segment.speaker).filter(Boolean)).size;
+    const speakerNote = speakerCount > 1
+        ? `Detected ${speakerCount} speaker labels. Preserve them and explain when the professor/instructor is speaking versus a student or other participant.`
+        : 'Speaker diarization was not available in the response; do not invent speaker identities. Use neutral labels when separating turns.';
+    const instructions = isLecture
+        ? [
+            'A recorded lecture/classroom audio file was uploaded.',
+            'Act as the professor and an exceptionally effective tutor for this material.',
+            'First give a concise lecture overview, then identify major concepts, definitions, examples, unresolved questions, and likely exam points.',
+            'When the user asks to learn from it, teach the concepts step by step, check understanding, correct misconceptions, and create practice questions or a study plan.',
+            speakerNote
+        ]
+        : [
+            'An audio recording was uploaded.',
+            'Provide a clear summary, main claims or decisions, action items, and important moments.',
+            'Preserve timestamps and speaker labels when available, and do not guess identities.',
+            speakerNote
+        ];
+
+    return {
+        transcript,
+        isLecture,
+        content: `AUDIO ANALYSIS PACKET
+File: ${audioFile.name}
+${instructions.join('\n')}
+
+TRANSCRIPT
+${labeledTranscript || '[No speech was detected.]'}
+
+END AUDIO ANALYSIS PACKET`
+    };
+}
+
+function encodeMonoWav(audioBuffer, startFrame, frameCount, outputSampleRate = 16000) {
+    const channelCount = audioBuffer.numberOfChannels;
+    const sourceRate = audioBuffer.sampleRate;
+    const outputCount = Math.max(1, Math.floor(frameCount * outputSampleRate / sourceRate));
+    const bytesPerSample = 2;
+    const buffer = new ArrayBuffer(44 + outputCount * bytesPerSample);
+    const view = new DataView(buffer);
+    const writeString = (offset, value) => [...value].forEach((char, index) => view.setUint8(offset + index, char.charCodeAt(0)));
+    writeString(0, 'RIFF');
+    view.setUint32(4, 36 + outputCount * bytesPerSample, true);
+    writeString(8, 'WAVE');
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, outputSampleRate, true);
+    view.setUint32(28, outputSampleRate * bytesPerSample, true);
+    view.setUint16(32, bytesPerSample, true);
+    view.setUint16(34, 16, true);
+    writeString(36, 'data');
+    view.setUint32(40, outputCount * bytesPerSample, true);
+
+    const channels = Array.from({ length: channelCount }, (_, index) => audioBuffer.getChannelData(index));
+    for (let outputIndex = 0; outputIndex < outputCount; outputIndex += 1) {
+        const sourceIndex = startFrame + Math.min(frameCount - 1, Math.floor(outputIndex * sourceRate / outputSampleRate));
+        let sample = 0;
+        channels.forEach(channel => { sample += channel[sourceIndex] || 0; });
+        sample = Math.max(-1, Math.min(1, sample / channelCount));
+        view.setInt16(44 + outputIndex * bytesPerSample, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+    }
+    return new Blob([buffer], { type: 'audio/wav' });
+}
+
+async function splitAudioForTranscription(audioFile) {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) {
+        throw new Error('This browser cannot decode long audio files for chunked transcription. Please upload a smaller compressed file.');
+    }
+    const context = new AudioContextClass();
+    try {
+        const audioBuffer = await context.decodeAudioData(await audioFile.arrayBuffer());
+        const chunkSeconds = 8 * 60;
+        const framesPerChunk = Math.floor(audioBuffer.sampleRate * chunkSeconds);
+        const chunks = [];
+        for (let startFrame = 0; startFrame < audioBuffer.length; startFrame += framesPerChunk) {
+            const frameCount = Math.min(framesPerChunk, audioBuffer.length - startFrame);
+            chunks.push({
+                file: new File([encodeMonoWav(audioBuffer, startFrame, frameCount)], `${audioFile.name}.part-${chunks.length + 1}.wav`, { type: 'audio/wav' }),
+                offset: startFrame / audioBuffer.sampleRate
+            });
+        }
+        return chunks;
+    } finally {
+        await context.close();
+    }
+}
+
+async function transcribeAudioEnhanced(audioFile) {
+    if (!OPENAI_API_KEY || OPENAI_API_KEY === 'YOUR_OPENAI_API_KEY_HERE') {
+        throw new Error('OpenAI API key required for audio transcription. Please add it in Settings.');
+    }
+
+    const maxUploadSize = 25 * 1024 * 1024;
+    const audioChunks = audioFile.size > maxUploadSize
+        ? await splitAudioForTranscription(audioFile)
+        : [{ file: audioFile, offset: 0 }];
+
+    async function request(file, model, responseFormat, includeChunking) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('model', model);
+        formData.append('response_format', responseFormat);
+        if (includeChunking) formData.append('chunking_strategy', 'auto');
+
+        const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` },
+            body: formData
+        });
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Audio transcription API error (${response.status}): ${errorText}`);
+        }
+        return responseFormat === 'text' ? response.text() : response.json();
+    }
+
+    async function transcribeChunks(model, responseFormat, includeChunking) {
+        const combined = { transcript: '', segments: [] };
+        for (let index = 0; index < audioChunks.length; index += 1) {
+            showNotification(`Transcribing audio segment ${index + 1} of ${audioChunks.length}...`, 12000);
+            const result = normalizeAudioTranscript(await request(audioChunks[index].file, model, responseFormat, includeChunking));
+            if (result.transcript) combined.transcript += `${combined.transcript ? ' ' : ''}${result.transcript}`;
+            result.segments.forEach(segment => {
+                const start = typeof segment.start === 'number' ? segment.start + audioChunks[index].offset : null;
+                const end = typeof segment.end === 'number' ? segment.end + audioChunks[index].offset : null;
+                const timestamp = start === null ? '' : `[${formatAudioTimestamp(start)}${end === null ? '' : `-${formatAudioTimestamp(end)}`}] `;
+                combined.segments.push({
+                    ...segment,
+                    start,
+                    end,
+                    line: `${timestamp}${segment.speaker ? `${segment.speaker}: ` : ''}${segment.text}`.trim()
+                });
+            });
+        }
+        return combined;
+    }
+
+    try {
+        return await transcribeChunks('gpt-4o-transcribe-diarize', 'diarized_json', true);
+    } catch (diarizationError) {
+        console.warn('🎤 Diarization unavailable; falling back to Whisper:', diarizationError.message);
+        return transcribeChunks('whisper-1', 'text', false);
     }
 }
 
@@ -643,4 +827,3 @@ function closeExportModal() {
 }
 
 // Replay message (read aloud again)
-

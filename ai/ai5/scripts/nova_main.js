@@ -128,12 +128,67 @@ function selectModelForTask(task) {
 
 function getMaxTokensForTask(task) {
     const tokenBudgets = {
-        'fast': 320,
-        'reasoning': 700,
-        'creative': 520,
-        'long': 900
+        'fast': 512,
+        'reasoning': 1200,
+        'creative': 900,
+        'long': 1600
     };
     return tokenBudgets[task] || tokenBudgets.fast;
+}
+
+// ========================================
+// CURATED MODEL CATALOG
+// ========================================
+// A hand-picked list of well-known, reliable OpenRouter models, grouped by
+// what they're best used for. This is shown ahead of (and preferred over)
+// whatever OpenRouter's live /models endpoint happens to return, since that
+// live list can include obscure/low-quality free-tier models that produce
+// blank or truncated replies (e.g. ibm-granite/granite-4.2-8b).
+const CURATED_OPENROUTER_MODELS = [
+    // Reasoning — strong logic, analysis, coding, multi-step problem solving
+    { id: 'anthropic/claude-sonnet-4.5', name: 'Claude Sonnet 4.5', group: 'Best for reasoning' },
+    { id: 'anthropic/claude-opus-4.1', name: 'Claude Opus 4.1', group: 'Best for reasoning' },
+    { id: 'openai/gpt-4o', name: 'GPT-4o', group: 'Best for reasoning' },
+    { id: 'openai/o3-mini', name: 'OpenAI o3-mini', group: 'Best for reasoning' },
+    { id: 'deepseek/deepseek-r1', name: 'DeepSeek R1', group: 'Best for reasoning' },
+    { id: 'google/gemini-2.5-pro', name: 'Gemini 2.5 Pro', group: 'Best for reasoning' },
+
+    // Speed — fast, cheap, low-latency responses for quick answers
+    { id: 'openai/gpt-4o-mini', name: 'GPT-4o mini', group: 'For speed' },
+    { id: 'anthropic/claude-haiku-4.5', name: 'Claude Haiku 4.5', group: 'For speed' },
+    { id: 'google/gemini-2.5-flash', name: 'Gemini 2.5 Flash', group: 'For speed' },
+    { id: 'mistralai/mistral-small-3.1', name: 'Mistral Small 3.1', group: 'For speed' },
+    { id: 'meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B Instruct', group: 'For speed' },
+
+    // Creativity — writing, storytelling, brainstorming, tone/style
+    { id: 'openai/gpt-4o', name: 'GPT-4o', group: 'Best for creativity' },
+    { id: 'anthropic/claude-sonnet-4.5', name: 'Claude Sonnet 4.5', group: 'Best for creativity' },
+    { id: 'mistralai/mistral-large-2411', name: 'Mistral Large', group: 'Best for creativity' },
+    { id: 'x-ai/grok-4', name: 'Grok 4', group: 'Best for creativity' },
+
+    // Long context — big documents, summaries, detailed explanations
+    { id: 'google/gemini-2.5-pro', name: 'Gemini 2.5 Pro', group: 'For long context' },
+    { id: 'google/gemini-2.5-flash', name: 'Gemini 2.5 Flash', group: 'For long context' },
+    { id: 'anthropic/claude-sonnet-4.5', name: 'Claude Sonnet 4.5', group: 'For long context' },
+    { id: 'cohere/command-r-plus', name: 'Command R+', group: 'For long context' },
+    { id: 'qwen/qwen-2.5-72b-instruct', name: 'Qwen 2.5 72B Instruct', group: 'For long context' }
+];
+
+// Patterns matching model IDs/names known (or likely, based on naming
+// conventions) to be unreliable free-tier models that tend to return
+// blank, truncated, or very short replies. These are excluded from the
+// dropdown even if OpenRouter's live catalog returns them.
+const UNRELIABLE_MODEL_PATTERNS = /(:free\b|granite|sante|experimental|preview-alpha|nano-beta)/i;
+
+function dedupeModelsById(models) {
+    const seen = new Set();
+    const result = [];
+    models.forEach(model => {
+        if (!model || !model.id || seen.has(model.id)) return;
+        seen.add(model.id);
+        result.push(model);
+    });
+    return result;
 }
 
 function getCachedOpenRouterModels() {
@@ -187,6 +242,43 @@ function refreshModelSelectionUI(resolvedModel = currentModel) {
     }
 }
 
+const RECENT_MODELS_STORAGE_KEY = 'nova_recent_models';
+const MAX_RECENT_MODELS = 7;
+
+function getRecentlyUsedModels() {
+    return loadStoredJson(RECENT_MODELS_STORAGE_KEY, []);
+}
+
+function addRecentlyUsedModel(modelId) {
+    const id = String(modelId || '').trim();
+    if (!id || id === 'auto') return;
+    let recents = getRecentlyUsedModels();
+    recents = recents.filter(item => item !== id);
+    recents.unshift(id); // Place most recent model at the top (index 0)
+    if (recents.length > MAX_RECENT_MODELS) {
+        recents = recents.slice(0, MAX_RECENT_MODELS);
+    }
+    try {
+        localStorage.setItem(RECENT_MODELS_STORAGE_KEY, JSON.stringify(recents));
+    } catch (e) {
+        console.warn('⚠️ Failed to save recent models:', e);
+    }
+}
+
+function getFriendlyModelName(modelId) {
+    if (!modelId || modelId === 'auto') return 'Auto-select (AI5 task routing)';
+    const curated = CURATED_OPENROUTER_MODELS.find(m => m.id === modelId);
+    if (curated && curated.name) return curated.name;
+    const catalogItem = openRouterModelCatalog.find(m => m.id === modelId);
+    if (catalogItem && catalogItem.name) return catalogItem.name;
+    const parts = modelId.split('/');
+    const namePart = parts[parts.length - 1] || modelId;
+    return namePart
+        .split('-')
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ');
+}
+
 function setLastResponseModel(modelName) {
     const normalizedModel = String(modelName || '').trim();
     if (!normalizedModel) return;
@@ -197,7 +289,29 @@ function setLastResponseModel(modelName) {
     } catch (error) {
         console.warn('⚠️ Failed to persist last response model:', error);
     }
+    addRecentlyUsedModel(normalizedModel);
+    populateModelDropdown(openRouterModelCatalog);
     refreshModelSelectionUI();
+}
+
+function getModelGroupLabel(model) {
+    // Curated models already carry an explicit group.
+    if (model.group) return model.group;
+
+    const text = `${model.id || ''} ${model.name || ''}`.toLowerCase();
+    if (/(claude|sonnet|opus|gpt-4o|gpt-4\.1|o1|o3|reason|deepseek-r1|gemini-2\.5-pro|qwen3|mistral-large|llama-4)/.test(text)) {
+        return 'Best for reasoning';
+    }
+    if (/(flash|haiku|mini|turbo|small|nano|lite|fast)/.test(text)) {
+        return 'For speed';
+    }
+    if (/(write|creative|story|grok|instruct)/.test(text)) {
+        return 'Best for creativity';
+    }
+    if (/(long|context|gemini|command-r|qwen2\.5|mistral-small|deepseek-v3)/.test(text)) {
+        return 'For long context';
+    }
+    return 'Other models';
 }
 
 function populateModelDropdown(models) {
@@ -205,50 +319,56 @@ function populateModelDropdown(models) {
     if (!modelSelect) return;
 
     const selectedValue = isManualModelSelectionEnabled() ? manualModelOverride : 'auto';
-    const options = Array.isArray(models) ? models : [];
+    const liveModels = (Array.isArray(models) ? models : [])
+        .filter(model => model && model.id && !UNRELIABLE_MODEL_PATTERNS.test(`${model.id} ${model.name || ''}`));
 
-    function getModelGroupLabel(model) {
-        const text = `${model.id || ''} ${model.name || ''}`.toLowerCase();
-        if (/(claude|sonnet|opus|gpt-4o|gpt-4\.1|o1|o3|reason|deepseek-r1|gemini-2\.5-pro|qwen3|mistral-large|llama-4)/.test(text)) {
-            return 'Best for reasoning';
-        }
-        if (/(flash|haiku|mini|turbo|small|nano|lite|fast)/.test(text)) {
-            return 'For speed';
-        }
-        if (/(write|creative|story|instruct|gpt-4o|gpt-4\.1|gemini-2\.5-flash|sonnet)/.test(text)) {
-            return 'Best for writing';
-        }
-        if (/(long|context|gemini|command-r|qwen2\.5|mistral-small|deepseek-v3)/.test(text)) {
-            return 'For long context';
-        }
-        return 'Other models';
-    }
+    // Curated, known-reliable models always appear first within their group;
+    // any extra live-fetched models are appended under "Other models" (or
+    // their heuristically-matched group) so the list stays fresh without
+    // letting unreliable free-tier models crowd out good defaults.
+    const combined = dedupeModelsById([...CURATED_OPENROUTER_MODELS, ...liveModels]);
 
-    const groupedModels = {
-        'Best for reasoning': [],
-        'For speed': [],
-        'Best for writing': [],
-        'For long context': [],
-        'Other models': []
-    };
+    const groupOrder = ['Best for reasoning', 'For speed', 'Best for creativity', 'For long context', 'Other models'];
+    const groupedModels = {};
+    groupOrder.forEach(label => { groupedModels[label] = []; });
 
-    options.forEach(model => {
-        if (!model || !model.id) return;
+    combined.forEach(model => {
         const groupLabel = getModelGroupLabel(model);
+        if (!groupedModels[groupLabel]) groupedModels[groupLabel] = [];
         groupedModels[groupLabel].push(model);
     });
 
     modelSelect.innerHTML = '';
 
+    // Auto option at the top
     const autoOption = document.createElement('option');
     autoOption.value = 'auto';
     autoOption.textContent = 'Auto-select (AI5 task routing)';
     modelSelect.appendChild(autoOption);
 
-    const groupOrder = ['Best for reasoning', 'For speed', 'Best for writing', 'For long context', 'Other models'];
+    // SECTION AT THE TOP: Up to 7 Most Recently Used Models (most recent on top)
+    const recentModelIds = getRecentlyUsedModels().slice(0, MAX_RECENT_MODELS);
+    if (recentModelIds.length > 0) {
+        const recentGroup = document.createElement('optgroup');
+        recentGroup.label = '⚡ Recently Used (Top = Most Recent)';
+
+        recentModelIds.forEach(recId => {
+            const friendlyName = getFriendlyModelName(recId);
+            const option = document.createElement('option');
+            option.value = recId;
+            option.textContent = friendlyName && friendlyName !== recId
+                ? `${friendlyName} (${recId})`
+                : recId;
+            recentGroup.appendChild(option);
+        });
+
+        modelSelect.appendChild(recentGroup);
+    }
+
+    // Main Categorized Groups
     groupOrder.forEach(groupLabel => {
         const modelsInGroup = groupedModels[groupLabel];
-        if (!modelsInGroup.length) return;
+        if (!modelsInGroup || !modelsInGroup.length) return;
 
         const group = document.createElement('optgroup');
         group.label = groupLabel;
@@ -277,9 +397,10 @@ async function fetchOpenRouterModels(forceRefresh = false) {
     if (cachedModels.length) {
         openRouterModelCatalog = cachedModels;
         populateModelDropdown(cachedModels);
-        modelStatus.textContent = 'Showing cached OpenRouter models while refreshing...';
+        modelStatus.textContent = 'Showing curated + cached OpenRouter models while refreshing...';
     } else {
-        modelStatus.textContent = 'Loading first 20 OpenRouter models...';
+        populateModelDropdown([]);
+        modelStatus.textContent = 'Showing curated models. Loading more from OpenRouter...';
     }
 
     modelSelect.disabled = true;
@@ -299,10 +420,10 @@ async function fetchOpenRouterModels(forceRefresh = false) {
 
         const responseData = await response.json();
         const models = Array.isArray(responseData.data)
-            ? responseData.data.slice(0, 20).map(model => ({
+            ? responseData.data.map(model => ({
                 id: String(model.id || '').trim(),
                 name: String(model.name || model.id || '').trim()
-            })).filter(model => model.id)
+            })).filter(model => model.id && !UNRELIABLE_MODEL_PATTERNS.test(`${model.id} ${model.name}`)).slice(0, 40)
             : [];
 
         if (!models.length) {
@@ -312,14 +433,14 @@ async function fetchOpenRouterModels(forceRefresh = false) {
         openRouterModelCatalog = models;
         saveCachedOpenRouterModels(models);
         populateModelDropdown(models);
-        modelStatus.textContent = 'Loaded first 20 OpenRouter models. Auto keeps AI5 task-based routing.';
+        modelStatus.textContent = 'Loaded curated + latest OpenRouter models. Auto keeps AI5 task-based routing.';
     } catch (error) {
         console.warn('⚠️ Failed loading OpenRouter models:', error);
         if (cachedModels.length) {
-            modelStatus.textContent = 'Could not refresh models. Using cached OpenRouter list.';
+            modelStatus.textContent = 'Could not refresh models. Using curated + cached list.';
         } else {
             populateModelDropdown([]);
-            modelStatus.textContent = 'Could not load OpenRouter models right now.';
+            modelStatus.textContent = 'Showing curated models (could not reach OpenRouter for more).';
         }
     } finally {
         modelSelect.disabled = false;
@@ -347,6 +468,10 @@ function setupModelControls() {
                 localStorage.setItem(MODEL_PREFERENCE_STORAGE_KEY, manualModelOverride);
             } catch (error) {
                 console.warn('⚠️ Failed to save model preference:', error);
+            }
+            if (manualModelOverride !== 'auto') {
+                addRecentlyUsedModel(manualModelOverride);
+                populateModelDropdown(openRouterModelCatalog);
             }
             refreshModelSelectionUI();
             if (typeof showNotification === 'function') {
@@ -376,7 +501,9 @@ function updateModelForMessage(userMessage) {
     const autoModel = selectModelForTask(task);
     currentModel = isManualModelSelectionEnabled() ? manualModelOverride : autoModel;
     providerConfig.openrouter.model = currentModel;
-    providerConfig.openrouter.maxTokens = getMaxTokensForTask(task);
+    const taskTokens = getMaxTokensForTask(task);
+    // Give manual models adequate token budget so reasoning/detailed outputs aren't cut off
+    providerConfig.openrouter.maxTokens = isManualModelSelectionEnabled() ? Math.max(2048, taskTokens) : taskTokens;
     refreshModelSelectionUI(currentModel);
     console.log('🧠 Task detected:', task, '| Auto model:', autoModel, '| Using model:', currentModel, '| Max tokens:', providerConfig.openrouter.maxTokens);
 }
@@ -576,8 +703,8 @@ const DEFAULT_KB_GROUP = 'Ungrouped';
 const KNOWLEDGE_BASE_MAX_ENTRY_CHARS = 6000;
 const KNOWLEDGE_BASE_MAX_TOTAL_CHARS = 24000;
 const KNOWLEDGE_BASE_DIRECTIVE_MAX_LINES = 24;
-const CONTEXT_HISTORY_CHAR_LIMIT = 500;
-const CONTEXT_HISTORY_TOTAL_CHARS = 1600;
+const CONTEXT_HISTORY_CHAR_LIMIT = 700;
+const CONTEXT_HISTORY_TOTAL_CHARS = 3200;
 const CONTEXT_HISTORY_CHAR_LIMIT_SLIM = 220;
 const CONTEXT_HISTORY_TOTAL_CHARS_SLIM = 520;
 
@@ -723,4 +850,3 @@ window.testVoiceByName = testVoiceByName;
 window.setNovaVoice = setNovaVoice;
 
 console.log('🌐 Global functions exported for voice integration');
-

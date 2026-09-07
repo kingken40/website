@@ -38,7 +38,7 @@ function sendMessageWithAttachment() {
                 break;
                 
             case 'audio':
-                fileContent = content.length > 15000 ? content.substring(0, 15000) + '\n\n[Transcription truncated due to length...]' : content;
+                fileContent = content.length > 60000 ? content.substring(0, 60000) + '\n\n[Transcript context shortened; ask for a specific timestamp or section for deeper review.]' : content;
                 finalMessage = `I've uploaded an audio file "${name}". Here is the transcription:\n\n${fileContent}${userText ? '\n\n' + userText : ''}`;
                 break;
         }
@@ -117,11 +117,12 @@ function buildWebTaskMessage(userMessage, webContext = '') {
     return `${userMessage}${liveContext}
 
 WEB SEARCH TASK:
-Use real-time web browsing/search to answer with current information and cite sources.
-If the user asks for links, official pages, docs, downloads, product info, pricing, current facts, or recent events, provide clickable markdown links and include a "Sources & References" section.
-You MUST include a "Sources & References" section with source title + clickable markdown link for every internet-derived claim.
-You MUST also include a "Where to get more" section with additional official pages, docs, or download links.
-Do not claim you cannot browse.`;
+Use the live web context to answer accurately and naturally.
+Prefer primary and official sources, and distinguish facts from interpretation.
+Every internet-derived factual claim must have an inline clickable markdown citation when possible.
+Always finish with "Sources & References" containing the source title and full clickable markdown URL for every source used.
+Also include "Where to get more" with useful official pages, documentation, or further reading.
+Never invent a URL or citation, and never claim you cannot browse.`;
 }
 
 // Try the server-side /api/chat proxy (uses OPENROUTER_API_KEY or OPENAI_API_KEY env variable on Vercel)
@@ -190,7 +191,7 @@ async function generateViaServerProxy(userMessage, personality, options = {}) {
         throw new Error(`Server proxy error: ${errMsg}`);
     }
 
-    if (!responseData.choices || !responseData.choices[0] || !responseData.choices[0].message) {
+    if (!responseData.choices || !responseData.choices[0]) {
         if (shouldUseWeb) {
             const jinaResult = await _retryWithJinaFallback('', userMessage);
             if (jinaResult) return { reply: jinaResult, webUsed: true, model: responseModel };
@@ -198,7 +199,25 @@ async function generateViaServerProxy(userMessage, personality, options = {}) {
         throw new Error('Invalid server proxy response format');
     }
 
-    const rawReply = responseData.choices[0].message.content;
+    const choiceObj = responseData.choices[0];
+    const msgObj = choiceObj.message || choiceObj;
+    let extractedText = '';
+    if (msgObj) {
+        extractedText = msgObj.content || msgObj.reasoning || msgObj.reasoning_content || choiceObj.text || '';
+        if (typeof extractedText !== 'string') {
+            try { extractedText = JSON.stringify(extractedText); } catch (e) { extractedText = String(extractedText); }
+        }
+    }
+    extractedText = extractedText.trim();
+    if (!extractedText && !shouldUseWeb) {
+        if (choiceObj.finish_reason === 'length') {
+            extractedText = 'Response was cut off due to length limits. Please ask me to continue.';
+        } else {
+            throw new Error(`The selected model (${responseModel}) returned an empty response. Please select a different model or try Auto-select.`);
+        }
+    }
+
+    const rawReply = extractedText;
     const jinaOverride = shouldUseWeb ? await _retryWithJinaFallback(rawReply, userMessage) : null;
     if (jinaOverride) {
         console.log('Jina fallback in server proxy');
@@ -413,7 +432,7 @@ If the user asked for downloadable resources, prioritize official download pages
         setLastResponseModel(responseModel);
 
         // Response format validation
-        if (!responseData.choices || !responseData.choices[0] || !responseData.choices[0].message) {
+        if (!responseData.choices || !responseData.choices[0]) {
             // If this was a web query, attempt Jina rather than surfacing a cryptic error
             if (shouldUseWeb) {
                 console.warn('🌐 Web model returned unexpected format — falling back to Jina...');
@@ -430,7 +449,25 @@ If the user asked for downloadable resources, prioritize official download pages
             throw new Error(`Invalid ${currentProvider.toUpperCase()} response format`);
         }
         
-        const rawReply = responseData.choices[0].message.content;
+        const choiceObjDirect = responseData.choices[0];
+        const msgObjDirect = choiceObjDirect.message || choiceObjDirect;
+        let extractedTextDirect = '';
+        if (msgObjDirect) {
+            extractedTextDirect = msgObjDirect.content || msgObjDirect.reasoning || msgObjDirect.reasoning_content || choiceObjDirect.text || '';
+            if (typeof extractedTextDirect !== 'string') {
+                try { extractedTextDirect = JSON.stringify(extractedTextDirect); } catch (e) { extractedTextDirect = String(extractedTextDirect); }
+            }
+        }
+        extractedTextDirect = extractedTextDirect.trim();
+        if (!extractedTextDirect && !shouldUseWeb) {
+            if (choiceObjDirect.finish_reason === 'length') {
+                extractedTextDirect = 'Response was cut off due to length limits. Please ask me to continue.';
+            } else {
+                throw new Error(`The selected model (${responseModel}) returned an empty response. Please select a different model or try Auto-select.`);
+            }
+        }
+
+        const rawReply = extractedTextDirect;
         const jinaOverrideDirect = shouldUseWeb ? await _retryWithJinaFallback(rawReply, userMessage) : null;
         if (jinaOverrideDirect) {
             console.log('Jina fallback in direct path');
@@ -598,7 +635,7 @@ If the user asked for downloadable resources, prioritize official download pages
         }
 
         // Speak error message if voice is enabled (for voice command flow)
-        if (typeof window.speakText === 'function') {HUGGINGFACE_API_KEY
+        if (typeof window.speakText === 'function') {
             console.log('🔊 AI Error: Speaking error message with coordination...');
             console.log('🔊 AI Error: isWakeWordSession =', window.isWakeWordSession);
 
@@ -639,6 +676,7 @@ const _WEB_URL_RE = /https?:\/\/[^\s<>"{}|\\^`[\]]+/g;
 // Explicit web intent: URL present OR clear search/browse keywords
 const _WEB_INTENT_RE = /\b(search(?:\s+(?:for|the\s+web|online))?|look\s*(?:it\s+)?up|browse|visit|go\s+to|open\s+(?:the\s+)?(?:site|page|link|url|website)|fetch|check\s+(?:the\s+)?(?:website|page|site)|(?:their|its|the)\s+(?:website|webpage|web\s+page|site)|(?:find|get)\s+(?:online|on\s+the\s+web|current|real.?time|live)|latest\s+news|current\s+news|real.?time|what(?:'?s?|\s+is)\s+(?:on|at)\s+(?:the\s+)?(?:website|site|page)|download(?:able|s)?|installer|setup\s+file|github\s+release|official\s+download|apk|exe|dmg|zip\s+file|pdf\s+download|dataset|what(?:'?s?|\s+is)\s+(?:current|new|happening|going\s+on|trending|breaking)\s*(?:in|with|at|on|for)?|what(?:'?s?|\s+is)\s+(?:new\s+)?(?:in|with|at|on)\s+\w|update\s+on\s+|news\s+(?:about|on|for)|(?:latest|recent)\s+(?:on|in|about|from)|today\s+in|this\s+week\s+in|what'?s?\s+new|whats\s+new|whats\s+(?:current|happening|going)\s+|what\s+is\s+(?:current|happening|going))\b/i;
 const _FACT_LOOKUP_RE = /\b(what\s+is|who\s+is|where\s+is|when\s+is|why\s+is|how\s+to|latest|current|news|price|specs?|release\s+date|documentation|docs|official|best|top\s+\d+|compare|review|download(?:able|s)?|template|example|guide|tutorial|dataset|statistics?|evidence|research|according\s+to|source|happening|update|recent|today|tonight|this\s+week|this\s+year|trending|breaking|announce[dm]|launch[ed]?|reveal[ed]?|new\s+in|2025|2026)\b/i;
+const _EDUCATIONAL_LOOKUP_RE = /\b(explain|teach\s+me|help\s+me\s+learn|learn\s+about|how\s+does|why\s+does|why\s+do|meaning\s+of|definition\s+of|difference\s+between|pros\s+and\s+cons|advantages?\s+and\s+disadvantages?|is\s+.+\s+(?:good|safe|accurate|worth)|understand)\b/i;
 const _LOCAL_TASK_RE = /\b(this\s+(?:chat|conversation|file|project|repo|code|snippet)|from\s+my\s+(?:notes|knowledge\s+base)|summari[sz]e\s+(?:this|above)|rewrite|rephrase|translate|fix\s+my\s+code|debug\s+this|remember\s+that)\b/i;
 const _CASUAL_CHAT_RE = /\b(hi|hello|hey|how are you|thanks|thank you|good morning|good night|tell me a joke|who are you)\b/i;
 const _STOPWORD_SET = new Set([
@@ -726,7 +764,7 @@ function _resolveWebIntent(message) {
     const text = String(message || '').trim();
     if (!text || _LOCAL_TASK_RE.test(text) || _CASUAL_CHAT_RE.test(text)) return null;
 
-    const factualRequest = _FACT_LOOKUP_RE.test(text);
+    const factualRequest = _FACT_LOOKUP_RE.test(text) || _EDUCATIONAL_LOOKUP_RE.test(text);
     if (!factualRequest) return null;
 
     if (_hasLikelyLocalKnowledge(text)) {
@@ -1009,17 +1047,23 @@ function prepareOpenAIMessages(userMessage, personality, options = {}) {
     // Build personality-specific instructions
     const isSlimContext = !!options.slimContext;
     const isWebBackedRequest = !!_resolveWebIntent(userMessage) || /=== LIVE PAGE CONTENT|=== LIVE WEB SEARCH RESULTS ===/i.test(String(userMessage || ''));
+    const isAudioBackedRequest = /AUDIO ANALYSIS PACKET|I've uploaded an audio file/i.test(String(userMessage || ''));
     let personalityInstructions = '';
-    if (personality === 'study') {
+    if (isAudioBackedRequest) {
         personalityInstructions = isSlimContext
-            ? 'Teach clearly, step by step. Explain reasoning, define important terms, and prioritize understanding over just giving answers.'
-            : 'Teach clearly, step by step. Explain reasoning, define important terms, use examples when helpful, and prioritize understanding over just giving answers.';
+            ? 'Analyze the uploaded audio transcript faithfully. Preserve timestamps and speaker labels when present, summarize the key ideas, and answer the user’s specific question without inventing missing words or identities.'
+            : 'Treat the uploaded audio transcript as a primary source. First understand its setting (lecture, classroom, meeting, interview, or conversation) from the content. Preserve timestamps and speaker labels when present, clearly separate what was said from your interpretation, and never invent speaker identities. For lectures, act as the professor: organize the material into concepts, definitions, examples, misconceptions, exam-relevant points, and a step-by-step tutoring path. Offer a concise summary first, then teach any requested concept with examples and a check-for-understanding. For meetings or interviews, identify decisions, action items, owners, and unresolved questions.';
+    } else if (personality === 'study' || personality === 'professor') {
+        personalityInstructions = isSlimContext
+            ? 'Act as an exceptionally efficient tutor: identify the learner goal, explain the key idea step by step, define essential terms, and give a concise check-for-understanding.'
+            : 'Act as an exceptionally effective tutor and teacher. First infer the learner goal and current level, then scaffold the explanation from intuition to precise detail. Define essential terms, use a concrete example, show the reasoning rather than only the answer, call out common mistakes, and end with a brief check-for-understanding or next practice step. Adapt when the learner is confused and never make them feel judged.';
     } else {
         personalityInstructions = isSlimContext
-            ? 'Be helpful, direct, and accurate. Keep the answer concise unless the user asks for depth.'
-            : `Be helpful, direct, and accurate. Teach clearly when needed.
-If you are N.O.V.A, keep a witty but efficient British assistant tone.
-If live web blocks are included, treat them as current web data and use them directly.`;
+            ? 'Be helpful, direct, accurate, and conversational. Answer the actual question, preserve continuity with the conversation, and avoid unnecessary filler.'
+            : `Be an excellent conversational partner: listen for the user's intent and emotional context, answer naturally, remember relevant details from the conversation, ask a useful follow-up only when it genuinely helps, and avoid repetitive canned phrasing.
+Be clear, accurate, efficient, and warm. Explain difficult ideas simply without talking down to the user. When teaching, use progressive disclosure: short answer first, then detail, examples, and a practical next step.
+If you are N.O.V.A, keep a witty but efficient British assistant tone without overusing "sir" or theatrical phrases.
+If live web blocks are included, treat them as current evidence and use them directly.`;
     }
 
     const ownerIdentityUnlocked = shouldInjectOwnerKnowledge(userMessage);
@@ -1051,29 +1095,40 @@ If live web blocks are included, treat them as current web data and use them dir
     // System message with personality
     const systemMessage = {
         role: "system",
-        content: `You are ${config.name}, a ${config.style}.
-
-${personalityInstructions}${novaStyleContext}${identityContext}${ownerIdentityKnowledge}${directiveContext}${materialContext}${noveltyContext}${profileContext}${realtimeContext}
-
-Current active mode: ${config.name} Mode.
-If the user asks what mode you are on, answer with the current active mode above.
-
-Rules:
-- You have real-time web search capability. NEVER say you cannot browse, cannot search the web, or do not have internet access. If asked about current events, recent news, or anything time-sensitive, provide what you know and always attempt a search.
-- If Knowledge Base blocks are included, treat them as highest-priority user context. This includes your identity information — use it to answer questions about who you are, your name, and your purpose.
-- If the message includes "=== LIVE PAGE CONTENT" or "=== LIVE WEB SEARCH RESULTS ===", treat that as current web data and use it directly.
-- For fact-heavy or web-backed answers, end with BOTH sections: "Sources & References" and "Where to get more". Each must use source title plus a full clickable markdown URL.
-- When the user asks for current info, links, official pages, docs, downloads, product info, pricing, recent news, or recent events, search the web and provide clickable markdown links.
-- Never invent URLs, citations, or DOIs.`
+        content: [
+            'You are ' + config.name + ', a ' + config.style + '.',
+            personalityInstructions,
+            novaStyleContext,
+            identityContext,
+            ownerIdentityKnowledge,
+            directiveContext,
+            materialContext,
+            noveltyContext,
+            profileContext,
+            realtimeContext,
+            '',
+            'Current active mode: ' + config.name + ' Mode.',
+            'If the user asks what mode you are on, answer with the current active mode above.',
+            '',
+            'Rules:',
+            '- You have real-time web search capability. Proactively search when a question is factual, educational, research-oriented, current, uncertain, asks for a definition/explanation/comparison, or would benefit from reliable external evidence. Do not wait for the user to say "look it up"; do not search for simple greetings, casual conversation, or tasks fully grounded in the user-provided text/files.',
+            '- NEVER say you cannot browse, cannot search the web, or do not have internet access. If a search fails, be transparent that live verification failed rather than presenting unverified current claims as certain.',
+            '- If Knowledge Base blocks are included, treat them as highest-priority user context. This includes your identity information — use it to answer questions about who you are, your name, and your purpose.',
+            '- For AUDIO ANALYSIS PACKET content, treat the transcript as the primary source. Do not invent words, timestamps, speaker identities, or facts not supported by it.',
+            '- If the message includes "=== LIVE PAGE CONTENT" or "=== LIVE WEB SEARCH RESULTS ===", treat that as current web data and use it directly.',
+            '- For every web-backed answer, cite web-derived claims inline with clickable markdown links where possible, then end with BOTH sections: "Sources & References" and "Where to get more". Each must use source title plus a full clickable markdown URL.',
+            '- Prefer official documentation, primary research, government sources, and first-party announcements for factual claims. Do not cite a search engine or Jina as the authority when the underlying source is available.',
+            '- Never invent URLs, citations, or DOIs.'
+        ].filter(Boolean).join('\n')
    };
     
     // Build messages array starting with system message
     const messages = [systemMessage];
     
     // Add recent conversation history (last 6 messages to avoid token limits)
-    const historyLimit = isSlimContext ? 1 : (isWebBackedRequest ? 2 : includeKnowledgeBase ? 4 : 3);
+    const historyLimit = isSlimContext ? 1 : (isWebBackedRequest ? 4 : includeKnowledgeBase ? 6 : 8);
     const historyCharLimit = isSlimContext ? CONTEXT_HISTORY_CHAR_LIMIT_SLIM : CONTEXT_HISTORY_CHAR_LIMIT;
-    const historyTotalCharLimit = isSlimContext ? CONTEXT_HISTORY_TOTAL_CHARS_SLIM : (isWebBackedRequest ? 700 : CONTEXT_HISTORY_TOTAL_CHARS);
+    const historyTotalCharLimit = isSlimContext ? CONTEXT_HISTORY_TOTAL_CHARS_SLIM : (isWebBackedRequest ? 2200 : CONTEXT_HISTORY_TOTAL_CHARS);
     const recentHistory = conversationHistory.slice(-historyLimit);
     let historyCharsUsed = 0;
     for (const msg of recentHistory) {
@@ -1110,4 +1165,3 @@ Rules:
 }
 
 // Note: Default responses removed - now using OpenAI exclusively for intelligent responses
-

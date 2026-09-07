@@ -1485,6 +1485,8 @@ function speakText(text, onEndCallback = null) {
         console.error('🔊 Speech synthesis not available');
         return;
     }
+
+    window.lastSpeechText = String(text || '');
     
     const shouldResumeWakeListening = wakeWordEnabled && (isWakeListening || isWakeWordSession);
 
@@ -1637,6 +1639,46 @@ function stopSpeech() {
     stopSpeechInterruptListening(true);
     updateSpeakingUI(false);
 }
+
+function pauseSpeech() {
+    if (currentBridgeAudio) {
+        currentBridgeAudio.pause();
+    }
+    if (synthesis && (isSpeaking || synthesis.speaking)) {
+        synthesis.pause();
+        updateSpeakingUI(true);
+    }
+}
+
+function resumeSpeech() {
+    if (currentBridgeAudio) {
+        currentBridgeAudio.play().catch(error => {
+            console.warn('Could not resume local voice playback:', error);
+        });
+        return;
+    }
+    if (synthesis && synthesis.paused) {
+        synthesis.resume();
+        return;
+    }
+    const activeText = window.lastSpeechText || '';
+    if (activeText && !isSpeaking) {
+        speakText(activeText);
+    }
+}
+
+function speakTextFrom(text, characterOffset = 0) {
+    const normalizedText = String(text || '').trim();
+    if (!normalizedText) return;
+    const safeOffset = Math.max(0, Math.min(Number(characterOffset) || 0, normalizedText.length));
+    const remainingText = normalizedText.slice(safeOffset).replace(/^\s+/, '');
+    speakText(remainingText || normalizedText);
+}
+
+window.pauseSpeech = pauseSpeech;
+window.resumeSpeech = resumeSpeech;
+window.stopSpeech = stopSpeech;
+window.speakTextFrom = speakTextFrom;
 
 // Voice Sampling and Selection Functions
 function previewVoice(voice, sampleText = "Greetings, sir. This is how I sound. Do you approve of this voice selection?") {
@@ -2736,8 +2778,9 @@ function setupPushToTalkHotkey() {
             target.isContentEditable
         );
 
-        // Preserve normal typing in message boxes, but still allow the global interrupt keys.
-        if (isTextEditableTarget && !e.metaKey && !e.ctrlKey && !e.altKey && key !== 'r' && key !== 't') {
+        // Preserve normal typing in message boxes - the R/T hotkeys must never
+        // hijack keystrokes while the user is typing into an input/textarea.
+        if (isTextEditableTarget && !e.metaKey && !e.ctrlKey && !e.altKey) {
             return;
         }
 

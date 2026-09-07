@@ -73,9 +73,9 @@ function addMessage(text, sender, timestamp = null, responseModel = null) {
             ${responseModelBadge}
             <span class="message-time">${currentTime}</span>
         </div>
-        <div class="message-content">${formatMessageContent(text)}</div>
+        <div class="message-content" data-speech-content="true" title="${sender === 'Nova' ? 'Click a word to read aloud from that point' : ''}">${formatMessageContent(text)}</div>
         ${sender === 'user' ? `<button class="message-edit-btn" onclick="editMessage('${messageId}')" title="Edit and resubmit message"><i class="fas fa-edit"></i></button>` : ''}
-        <button class="message-replay-btn" onclick="replayMessage('${messageId}')" title="Read message aloud"><i class="fas fa-microphone"></i></button>
+        <button class="message-replay-btn" onclick="replayMessage('${messageId}')" title="Read message aloud"><i class="fas fa-play"></i></button>
     `;
     
     // Store original text and metadata (for replay/edit functionality)
@@ -547,4 +547,3 @@ Respond contextually and intelligently. If related, acknowledge the connection. 
         }
     }
 }
-
