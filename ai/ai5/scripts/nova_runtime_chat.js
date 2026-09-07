@@ -82,7 +82,8 @@ function saveCurrentChat() {
         timestamp: Date.now(),
         personality: normalizedPersonality,
         messages: chatHistory,
-        messageCount: chatHistory.length
+        messageCount: chatHistory.length,
+        files: Array.isArray(currentChatFiles) ? currentChatFiles : []
     };
     
     // Get existing chat history from localStorage
@@ -125,6 +126,7 @@ function startNewChat() {
     
     // Clear current chat
     chatHistory = [];
+    currentChatFiles = [];
     conversationHistory = [];
     currentChatId = generateChatId();
     
@@ -165,6 +167,7 @@ function loadChat(chatId) {
     // Load chat data
     currentChatId = chat.id;
     chatHistory = chat.messages || [];
+    currentChatFiles = Array.isArray(chat.files) ? chat.files : [];
     currentPersonality = normalizePersonalityKey(chat.personality || 'Nova');
     
     // Reconstruct conversation history for AI
@@ -284,6 +287,25 @@ function displayChatHistory() {
         const isCurrent = chat.id === currentChatId;
         const chatPersonality = normalizePersonalityKey(chat.personality);
         const chatName = chat.name || `${personalities[chatPersonality]?.name || 'N.O.V.A'} Chat`;
+        const chatFiles = Array.isArray(chat.files) ? chat.files : [];
+        const fileGroups = chatFiles.reduce((groups, file) => {
+            const extension = String(file.extension || file.name?.split('.').pop() || '').toLowerCase();
+            const type = extension === 'pdf' ? 'PDF' : extension === 'docx' ? 'Docx' : null;
+            if (type) (groups[type] ||= []).push(file);
+            return groups;
+        }, {});
+        const fileBadges = Object.entries(fileGroups).map(([type, files]) => `
+            <button class="chat-file-badge ${type.toLowerCase()}" type="button"
+                    onclick="toggleChatFileList('${chat.id}', '${type}', event)"
+                    title="Show uploaded ${type} files">
+                <i class="fas ${type === 'PDF' ? 'fa-file-pdf' : 'fa-file-word'}"></i> ${type}
+            </button>
+        `).join('');
+        const fileMenus = Object.entries(fileGroups).map(([type, files]) => `
+            <div class="chat-file-list" data-chat-file-list="${chat.id}-${type}" hidden>
+                ${files.map(file => `<div class="chat-file-entry"><i class="fas ${type === 'PDF' ? 'fa-file-pdf' : 'fa-file-word'}"></i><span>${escapeHtml(file.name)}</span></div>`).join('')}
+            </div>
+        `).join('');
         
         return `
             <div class="chat-history-item ${isCurrent ? 'current' : ''}" onclick="loadChat('${chat.id}')" data-chat-id="${chat.id}">
@@ -297,7 +319,9 @@ function displayChatHistory() {
                 <div class="chat-history-meta">
                     <span><i class="fas fa-comments"></i> ${chat.messageCount || chatMessages.length || 0} messages</span>
                     <span><i class="fas fa-robot"></i> ${personalities[chatPersonality]?.name || 'N.O.V.A'}</span>
+                    ${fileBadges}
                 </div>
+                ${fileMenus}
                 <div class="chat-history-actions">
                     <button class="chat-history-btn rename" onclick="renameChat('${chat.id}', event)" title="Rename Chat">
                         <i class="fas fa-edit"></i>
@@ -312,6 +336,16 @@ function displayChatHistory() {
     
     console.log('📚 Displayed', allChats.length, 'chats');
 }
+
+function toggleChatFileList(chatId, type, event) {
+    event?.stopPropagation();
+    const target = document.querySelector(`[data-chat-file-list="${CSS.escape(`${chatId}-${type}`)}"]`);
+    if (!target) return;
+    const wasHidden = target.hidden;
+    document.querySelectorAll('.chat-file-list').forEach(list => { list.hidden = true; });
+    target.hidden = !wasHidden;
+}
+window.toggleChatFileList = toggleChatFileList;
 
 // Open chat history modal
 function openChatHistoryModal() {
@@ -372,4 +406,3 @@ function setupChatHistoryListeners() {
     
     console.log('✅ Chat history system initialized');
 }
-

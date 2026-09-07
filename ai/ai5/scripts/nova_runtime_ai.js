@@ -11,6 +11,11 @@ function sendMessageWithAttachment() {
     }
     
     let finalMessage = userText;
+    const uploadedFile = currentFileAttachment ? {
+        name: currentFileAttachment.name,
+        type: currentFileAttachment.type,
+        extension: currentFileAttachment.extension || currentFileAttachment.name.split('.').pop()
+    } : null;
     
     // If there's a file attachment, prepend it to the message
     if (currentFileAttachment) {
@@ -49,6 +54,10 @@ function sendMessageWithAttachment() {
     
     // Send the message
     if (finalMessage) {
+        if (uploadedFile) {
+            currentChatFiles = Array.isArray(currentChatFiles) ? currentChatFiles : [];
+            currentChatFiles.push(uploadedFile);
+        }
         processUserMessage(finalMessage);
     }
 }
@@ -1118,6 +1127,7 @@ If live web blocks are included, treat them as current evidence and use them dir
             '- If the message includes "=== LIVE PAGE CONTENT" or "=== LIVE WEB SEARCH RESULTS ===", treat that as current web data and use it directly.',
             '- For every web-backed answer, cite web-derived claims inline with clickable markdown links where possible, then end with BOTH sections: "Sources & References" and "Where to get more". Each must use source title plus a full clickable markdown URL.',
             '- Prefer official documentation, primary research, government sources, and first-party announcements for factual claims. Do not cite a search engine or Jina as the authority when the underlying source is available.',
+            '- Use clear headings, short paragraphs, bullets, and numbered steps instead of dense walls of text. Format mathematics for readability: put standalone equations on their own line using $$...$$, use \\(...\\) for inline math, and do not bury formulas in ordinary prose. Use subscripts and superscripts where helpful, for example $$sigmoid(x_i) = 1 / (1 + e^{-x_i})$$.',
             '- Never invent URLs, citations, or DOIs.'
         ].filter(Boolean).join('\n')
    };

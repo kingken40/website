@@ -686,6 +686,38 @@ body {
     border: 1px solid rgba(0, 170, 255, 0.3);
 }
 
+.message-content .math-display {
+    display: block;
+    margin: 0.85rem 0;
+    padding: 0.7rem 0.9rem;
+    overflow-x: auto;
+    border-left: 3px solid rgba(0, 170, 255, 0.7);
+    border-radius: 5px;
+    background: rgba(0, 20, 45, 0.7);
+    color: #f4f7ff;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 1.08em;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+
+.message-content .math-inline {
+    display: inline-block;
+    margin: 0 0.15rem;
+    padding: 0.05rem 0.25rem;
+    border-radius: 3px;
+    background: rgba(0, 170, 255, 0.09);
+    color: #d9efff;
+    font-family: Georgia, "Times New Roman", serif;
+}
+
+.message-content .math-display sub,
+.message-content .math-display sup,
+.message-content .math-inline sub,
+.message-content .math-inline sup {
+    line-height: 0;
+}
+
 .message-content a,
 .message-content .message-link {
     color: #7fd3ff;
@@ -1554,6 +1586,52 @@ body {
     display: flex;
     align-items: center;
     gap: 0.3rem;
+}
+
+.chat-file-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    min-height: 28px;
+    padding: 0.25rem 0.55rem;
+    border: 1px solid rgba(0, 170, 255, 0.45);
+    border-radius: 999px;
+    background: rgba(0, 40, 80, 0.65);
+    color: #8fd8ff;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.78rem;
+}
+
+.chat-file-badge.pdf {
+    border-color: rgba(255, 90, 90, 0.55);
+    color: #ff9d9d;
+}
+
+.chat-file-badge:hover,
+.chat-file-badge:focus-visible {
+    background: rgba(0, 130, 200, 0.35);
+    outline: none;
+}
+
+.chat-file-list {
+    max-height: 150px;
+    overflow-y: auto;
+    margin: 0.45rem 0 0.7rem;
+    padding: 0.35rem;
+    border: 1px solid rgba(0, 170, 255, 0.25);
+    border-radius: 7px;
+    background: rgba(0, 0, 0, 0.25);
+}
+
+.chat-file-entry {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.4rem 0.5rem;
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 0.82rem;
+    overflow-wrap: anywhere;
 }
 
 .chat-history-actions {

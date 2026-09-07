@@ -763,6 +763,7 @@ function getRandomNovaGreeting() {
 
 // Current chat history
 let chatHistory = [];
+let currentChatFiles = [];
 
 function initializeNova() {
     console.log('🤖 Initializing Nova systems...');
