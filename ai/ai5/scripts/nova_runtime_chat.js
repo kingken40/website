@@ -312,6 +312,9 @@ function displayChatHistory() {
                 <div class="chat-history-header">
                     <div class="chat-history-title">
                         ${isCurrent ? '📍 ' : ''}${escapeHtml(chatName)}
+                        <button class="chat-history-rename-btn" type="button" onclick="renameChat('${chat.id}', event)" title="Rename chat" aria-label="Rename ${escapeHtml(chatName)}">
+                            <i class="fas fa-pencil-alt"></i>
+                        </button>
                     </div>
                     <div class="chat-history-date">${dateStr}</div>
                 </div>

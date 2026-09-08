@@ -1098,6 +1098,17 @@ body {
     backdrop-filter: blur(15px);
 }
 
+#chatHistoryModal.active {
+    align-items: center;
+    justify-content: center;
+}
+
+#chatHistoryModal .modal-content {
+    width: min(760px, calc(100% - 2rem));
+    max-width: 760px;
+    margin: 0 auto;
+}
+
 .modal-header {
     display: flex;
     justify-content: space-between;
@@ -1641,9 +1652,34 @@ body {
 }
 
 .chat-history-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
     font-weight: 600;
     color: #FFD700;
     font-size: 1rem;
+}
+
+.chat-history-rename-btn {
+    width: 25px;
+    height: 25px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 1px solid rgba(0, 170, 255, 0.4);
+    border-radius: 50%;
+    background: rgba(0, 60, 110, 0.7);
+    color: #8fd8ff;
+    cursor: pointer;
+    font-size: 0.72rem;
+}
+
+.chat-history-rename-btn:hover,
+.chat-history-rename-btn:focus-visible {
+    background: rgba(0, 140, 210, 0.55);
+    border-color: #00aaff;
+    outline: none;
 }
 
 .chat-history-date {
