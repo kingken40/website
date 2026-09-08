@@ -49,18 +49,20 @@ function addMessage(text, sender, timestamp = null, responseModel = null) {
     removeThinkingIndicator();
     
     const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${sender}-message`;
+    messageDiv.className = `message ${String(sender).toLowerCase()}-message`;
     
     const currentTime = timestamp || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     let senderName = 'You';
     if (sender === 'Nova') {
         const personality = personalities[currentPersonality] || personalities['Nova'];
-        senderName = personality ? personality.name : 'N.O.V.A';
+        senderName = 'N.O.V.A';
+    } else if (sender === 'Avon') {
+        senderName = 'A.V.O.N.';
     }
 
     const modelLabel = responseModel ? String(responseModel).trim() : '';
-    const responseModelBadge = sender === 'Nova' && modelLabel
+    const responseModelBadge = (sender === 'Nova' || sender === 'Avon') && modelLabel
         ? `<span class="response-model-badge" title="Model that generated this response">Model: ${escapeHtml(modelLabel)}</span>`
         : '';
     
@@ -99,7 +101,7 @@ function addMessage(text, sender, timestamp = null, responseModel = null) {
     });
     
     console.log('💬 Message added:', { sender, text: text.substring(0, 50) + '...', personality: currentPersonality });
-    if (sender === 'Nova') updateChatSuggestions(text);
+    if (sender === 'Nova' || sender === 'Avon') updateChatSuggestions(text);
 }
 
 function getCurrentModeDisplayName() {
@@ -407,18 +409,26 @@ function processUserMessage(userMessage) {
         // Generate AI response
         setTimeout(async () => {
             try {
-                if (mutedGroupAssistant !== 'other') {
-                    await generateAIResponse(userMessage, currentPersonality, { assistant: 'nova' });
+                const voiceTarget = window.activeVoiceAssistant || null;
+                const novaAllowed = voiceTarget !== 'other' && mutedGroupAssistant !== 'other';
+                const avonAllowed = groupChatEnabled && voiceTarget !== 'nova' && mutedGroupAssistant !== 'nova';
+                if (novaAllowed) {
+                    await generateAIResponse(userMessage, currentPersonality, {
+                        assistant: 'nova',
+                        groupChat: groupChatEnabled
+                    });
                 }
-                if (groupChatEnabled && groupChatModel && mutedGroupAssistant !== 'nova') {
+                if (avonAllowed && groupChatModel) {
                     await generateAIResponse(userMessage, currentPersonality, {
                         assistant: 'other',
                         modelOverride: groupChatModel,
+                        groupChat: true,
                         skipUserHistory: true
                     });
                 }
                 updateChatSuggestions(userMessage);
             } finally {
+                window.activeVoiceAssistant = null;
                 if (requestRunId === activeResponseRunId) {
                     isResponseInFlight = false;
                     updateContinuationButtonState();

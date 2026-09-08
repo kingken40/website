@@ -241,6 +241,7 @@ async function generateViaServerProxy(userMessage, personality, options = {}) {
 // Enhanced AI integration with multi-provider support and improved error handling
 async function generateAIResponse(userMessage, personality, options = {}) {
     console.log('🤖 Generating AI response for personality:', personality);
+    const responseSender = options.assistant === 'other' ? 'Avon' : 'Nova';
     
     // Check if user has configured a provider API key
     const hasUserKey = (OPENROUTER_API_KEY && OPENROUTER_API_KEY.trim() !== '') ||
@@ -260,7 +261,7 @@ async function generateAIResponse(userMessage, personality, options = {}) {
                 return;
             }
             removeThinkingIndicator();
-            addMessage(reply, 'Nova', null, responseModel);
+            addMessage(reply, responseSender, null, responseModel);
             conversationHistory.push({ role: 'assistant', content: reply, personality, timestamp: new Date().toISOString(), model: responseModel });
             recordNoveltyResponse(userMessage, reply, responseModel);
             if (typeof window.speakText === 'function') {
@@ -427,7 +428,7 @@ If the user asked for downloadable resources, prioritize official download pages
                     const fallbackModel = provider.model || currentModel;
                     setLastResponseModel(fallbackModel);
                     removeThinkingIndicator();
-                    addMessage(jinaResult, 'Nova', null, fallbackModel);
+                    addMessage(jinaResult, responseSender, null, fallbackModel);
                     conversationHistory.push({ role: 'assistant', content: jinaResult, personality, timestamp: new Date().toISOString(), model: fallbackModel });
                     recordNoveltyResponse(userMessage, jinaResult, fallbackModel);
                     if (typeof window.speakText === 'function') window.speakText(jinaResult, () => {});
@@ -448,7 +449,7 @@ If the user asked for downloadable resources, prioritize official download pages
                 const jinaResult = await _retryWithJinaFallback('', userMessage);
                 if (jinaResult) {
                     removeThinkingIndicator();
-                    addMessage(jinaResult, 'Nova', null, responseModel);
+                    addMessage(jinaResult, responseSender, null, responseModel);
                     conversationHistory.push({ role: 'assistant', content: jinaResult, personality, timestamp: new Date().toISOString(), model: responseModel });
                     recordNoveltyResponse(userMessage, jinaResult, responseModel);
                     if (typeof window.speakText === 'function') window.speakText(jinaResult, () => {});
@@ -481,7 +482,7 @@ If the user asked for downloadable resources, prioritize official download pages
         if (jinaOverrideDirect) {
             console.log('Jina fallback in direct path');
             removeThinkingIndicator();
-            addMessage(jinaOverrideDirect, 'Nova', null, responseModel);
+            addMessage(jinaOverrideDirect, responseSender, null, responseModel);
             conversationHistory.push({ role: 'assistant', content: jinaOverrideDirect, personality, timestamp: new Date().toISOString(), model: responseModel });
             recordNoveltyResponse(userMessage, jinaOverrideDirect, responseModel);
             if (typeof window.speakText === 'function') window.speakText(jinaOverrideDirect, () => {});
@@ -503,7 +504,7 @@ If the user asked for downloadable resources, prioritize official download pages
         removeThinkingIndicator();
         
         // Add response to chat
-        addMessage(reply, 'Nova', null, responseModel);
+        addMessage(reply, responseSender, null, responseModel);
         
         // Save to conversation history
         conversationHistory.push({
@@ -609,7 +610,7 @@ If the user asked for downloadable resources, prioritize official download pages
         
         // Ensure error message is always added to chat
         try {
-            addMessage(errorMsg, 'Nova');
+            addMessage(errorMsg, responseSender);
         } catch (e) {
             console.error('Failed to add error message to chat:', e);
         }
@@ -1105,7 +1106,10 @@ If live web blocks are included, treat them as current evidence and use them dir
     const systemMessage = {
         role: "system",
         content: [
-            'You are ' + config.name + ', a ' + config.style + '.',
+            'You are ' + (options.assistant === 'other' ? 'A.V.O.N.' : 'N.O.V.A') + ', a ' + config.style + '.',
+            options.groupChat
+                ? `You are participating in a group chat with two distinct assistants: N.O.V.A and A.V.O.N. You are ${options.assistant === 'other' ? 'A.V.O.N.' : 'N.O.V.A'}. Only answer as your assigned assistant, never impersonate the other assistant, and keep your response relevant to the user message.`
+                : '',
             personalityInstructions,
             novaStyleContext,
             identityContext,
@@ -1129,7 +1133,7 @@ If live web blocks are included, treat them as current evidence and use them dir
             '- Prefer official documentation, primary research, government sources, and first-party announcements for factual claims. Do not cite a search engine or Jina as the authority when the underlying source is available.',
             '- Use clear headings, short paragraphs, bullets, and numbered steps instead of dense walls of text. Format mathematics for readability: put standalone equations on their own line using $$...$$, use \\(...\\) for inline math, and do not bury formulas in ordinary prose. Use subscripts and superscripts where helpful, for example $$sigmoid(x_i) = 1 / (1 + e^{-x_i})$$.',
             assistantPersonalities?.nova ? `Custom N.O.V.A personality knowledge:\n${assistantPersonalities.nova}` : '',
-            assistantPersonalities?.other && options.assistant === 'other' ? `Custom Other Assistant personality knowledge:\n${assistantPersonalities.other}` : '',
+            assistantPersonalities?.other && options.assistant === 'other' ? `Custom A.V.O.N. personality knowledge:\n${assistantPersonalities.other}` : '',
             '- Never invent URLs, citations, or DOIs.'
         ].filter(Boolean).join('\n')
    };

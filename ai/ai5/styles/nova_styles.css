@@ -2172,6 +2172,12 @@ body.no-animations * {
     margin-right: auto;
 }
 
+.avon-message {
+    background: linear-gradient(145deg, rgba(180, 90, 255, 0.18), rgba(95, 55, 180, 0.18));
+    border: 1px solid rgba(185, 110, 255, 0.5);
+    margin-right: auto;
+}
+
 .message-content {
     color: #ffffff;
     line-height: 1.5;
@@ -2190,6 +2196,15 @@ body.no-animations * {
 
 .nova-message .message-time {
     text-align: left;
+}
+
+.avon-message .message-time {
+    text-align: left;
+    color: rgba(220, 190, 255, 0.72);
+}
+
+.avon-message .sender-name {
+    color: #d5a6ff;
 }
 
 /* Thinking Indicator Styles */

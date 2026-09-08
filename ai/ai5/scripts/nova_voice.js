@@ -180,8 +180,11 @@ async function playViaLocalVoiceBridge(text, onEndCallback) {
 
 // Wake phrase detection
 const wakePhrases = ['hey nova', 'nova'];
+const avonWakePhrases = ['hey avon', 'avon'];
 const wakePhrasePatterns = wakePhrases.map((phrase) => new RegExp(`\\b${phrase.replace(/\s+/g, '\\s+')}\\b`));
 const wakePhraseCompactPatterns = wakePhrases.map((phrase) => phrase.replace(/\s+/g, ''));
+const avonWakePhrasePatterns = avonWakePhrases.map((phrase) => new RegExp(`\\b${phrase.replace(/\s+/g, '\\s+')}\\b`));
+const avonWakePhraseCompactPatterns = avonWakePhrases.map((phrase) => phrase.replace(/\s+/g, ''));
 let wakeListeningTimeout = null;
 let restartPending = false; // Prevent multiple restart attempts
 let isSpeechOutputActive = false; // Track if Nova is currently speaking
@@ -206,8 +209,24 @@ function countTranscriptWords(text) {
 }
 
 function isWakePhraseOnlyTranscript(normalizedTranscript) {
-    return normalizedTranscript === 'nova' || normalizedTranscript === 'hey nova';
+    return ['nova', 'hey nova', 'avon', 'hey avon'].includes(normalizedTranscript);
 }
+
+function detectWakeAssistant(text) {
+    const normalized = normalizeVoiceTranscript(text);
+    const compact = normalized.replace(/\s+/g, '');
+    const novaDetected = wakePhrasePatterns.some(pattern => pattern.test(normalized)) ||
+        wakePhraseCompactPatterns.some(phrase => compact.includes(phrase));
+    const avonDetected = groupChatEnabled && (
+        avonWakePhrasePatterns.some(pattern => pattern.test(normalized)) ||
+        avonWakePhraseCompactPatterns.some(phrase => compact.includes(phrase))
+    );
+    if (avonDetected && !novaDetected) return 'other';
+    if (novaDetected) return 'nova';
+    return null;
+}
+
+window.detectWakeAssistant = detectWakeAssistant;
 
 function isLikelySpeechEcho(normalizedTranscript) {
     if (!normalizedTranscript || !activeSpeechOutputText) return false;
@@ -758,13 +777,10 @@ function setupSpeechRecognition() {
                 .replace(/[^\w\s]/g, ' ')
                 .replace(/\s+/g, ' ')
                 .trim();
-            const compactCombinedText = combinedText.replace(/\s+/g, '');
-            const wakeDetected =
-                wakePhrasePatterns.some(pattern => pattern.test(combinedText)) ||
-                wakePhraseCompactPatterns.some(phrase => compactCombinedText.includes(phrase));
-            if (wakeDetected) {
-                console.log('🎯 Wake phrase detected:', combinedText);
-                handleWakePhrase();
+            const targetAssistant = detectWakeAssistant(combinedText);
+            if (targetAssistant) {
+                console.log('🎯 Wake phrase detected:', combinedText, 'target:', targetAssistant);
+                handleWakePhrase(targetAssistant);
                 return;
             }
             
@@ -854,7 +870,9 @@ function startWakeListening() {
     try {
         recognition.continuous = true;
         recognition.start();
-        updateVoiceStatus('Listening for "Nova" or "Hey Nova"...');
+        updateVoiceStatus(groupChatEnabled
+            ? 'Listening for "Nova", "Hey Nova", "Avon", or "Hey Avon"...'
+            : 'Listening for "Nova" or "Hey Nova"...');
         
         wakeListeningTimeout = setTimeout(() => {
             if (isWakeListening && isListening && wakeWordEnabled) {
@@ -904,6 +922,7 @@ function stopWakeListening() {
 // Function to restore wake listening after voice response completes
 function restoreWakeListeningAfterResponse() {
     console.log('🔄 restoreWakeListeningAfterResponse called');
+    window.activeVoiceAssistant = null;
     console.log('🔄 wakeWordEnabled:', wakeWordEnabled);
     console.log('🔄 isWakeListening:', isWakeListening);
     console.log('🔄 isListening:', isListening);
@@ -979,12 +998,14 @@ function toggleMicrophone() {
     }
 }
 
-function handleWakePhrase() {
+function handleWakePhrase(targetAssistant = 'nova') {
     console.log('🎯 Wake phrase detected - transitioning to command mode');
     isWakeListening = false;
     isListening = false;
     isWakeWordSession = true; // Mark this as wake word session
     window.isWakeWordSession = true; // Also set global flag
+    window.activeVoiceAssistant = targetAssistant;
+    const assistantName = targetAssistant === 'other' ? 'A.V.O.N.' : 'N.O.V.A';
     console.log('🎯 ✅ isWakeWordSession = true');
     
     // Stop recognition cleanly
@@ -997,11 +1018,11 @@ function handleWakePhrase() {
     }
     
     // Visual feedback
-    updateVoiceStatus('N.O.V.A activated! Listening...');
-    showVoiceNotification('N.O.V.A listening...', 3000);
+    updateVoiceStatus(`${assistantName} activated! Listening...`);
+    showVoiceNotification(`${assistantName} listening...`, 3000);
     
     // Audio feedback with proper callback
-    speakText('Yes, sir? How may I assist you?', () => {
+    speakText(`Yes, sir? ${assistantName} here. How may I assist you?`, () => {
         console.log('🎯 Wake phrase response finished - starting command listening');
         // Start command listening after a small delay
         setTimeout(() => {
@@ -3030,12 +3051,14 @@ function sendMessage() {
 function addMessageToChat(message, sender = 'user', responseModel = null) {
     const chatMessages = document.getElementById('chatMessages');
     if (!chatMessages) return;
+
+    const resolvedSender = sender === 'Nova' && window.activeVoiceAssistant === 'other' ? 'Avon' : sender;
     
     const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${sender}-message`;
+    messageDiv.className = `message ${String(resolvedSender).toLowerCase()}-message`;
 
     const modelLabel = responseModel ? String(responseModel).trim() : '';
-    const responseModelBadge = sender === 'Nova' && modelLabel
+    const responseModelBadge = (resolvedSender === 'Nova' || resolvedSender === 'Avon') && modelLabel
         ? `<span class="response-model-badge" title="Model that generated this response">Model: ${modelLabel}</span>`
         : '';
     
@@ -3047,10 +3070,10 @@ function addMessageToChat(message, sender = 'user', responseModel = null) {
     messageTime.className = 'message-time';
     messageTime.textContent = new Date().toLocaleTimeString();
 
-    if (sender === 'Nova') {
+    if (resolvedSender === 'Nova' || resolvedSender === 'Avon') {
         messageDiv.innerHTML = `
             <div class="message-header">
-                <span class="sender-name">N.O.V.A</span>
+                <span class="sender-name">${resolvedSender === 'Avon' ? 'A.V.O.N.' : 'N.O.V.A'}</span>
                 ${responseModelBadge}
                 <span class="message-time">${messageTime.textContent}</span>
             </div>

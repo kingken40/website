@@ -17,6 +17,17 @@ function setupEventListeners() {
     const mutedAssistant = document.getElementById('mutedGroupAssistant');
     groupEnabled?.addEventListener('change', () => {
         groupChatEnabled = groupEnabled.checked;
+        if (groupChatEnabled && groupModel && !groupModel.value) {
+            const primaryModel = document.getElementById('modelSelect')?.value;
+            const fallbackModel = primaryModel && primaryModel !== 'auto' ? primaryModel : currentModel;
+            if (fallbackModel && !groupModel.querySelector(`option[value="${CSS.escape(fallbackModel)}"]`)) {
+                groupModel.appendChild(new Option(fallbackModel, fallbackModel));
+            }
+            if (fallbackModel) {
+                groupModel.value = fallbackModel;
+                groupChatModel = fallbackModel;
+            }
+        }
         if (groupModel) groupModel.disabled = !groupChatEnabled;
         if (groupMute) groupMute.hidden = !groupChatEnabled;
         localStorage.setItem('nova_group_chat_enabled', String(groupChatEnabled));
@@ -39,7 +50,7 @@ function setupEventListeners() {
         if (!value) return showNotification('Add personality or knowledge first.', 2500);
         assistantPersonalities[assistant] = value;
         localStorage.setItem('nova_assistant_personalities', JSON.stringify(assistantPersonalities));
-        showNotification(`${assistant === 'nova' ? 'N.O.V.A' : 'Other Assistant'} personality added to knowledge.`, 2500);
+        showNotification(`${assistant === 'nova' ? 'N.O.V.A' : 'A.V.O.N.'} personality added to knowledge.`, 2500);
     });
     setTimeout(() => {
         if (!groupModel) return;

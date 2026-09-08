@@ -767,6 +767,7 @@ let currentChatFiles = [];
 let groupChatEnabled = false;
 let groupChatModel = '';
 let mutedGroupAssistant = 'both';
+let activeVoiceAssistant = null;
 let assistantPersonalities = JSON.parse(localStorage.getItem('nova_assistant_personalities') || '{}');
 
 function initializeNova() {
