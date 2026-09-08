@@ -47,6 +47,32 @@ function setupEventListeners() {
     speechPauseBtn?.addEventListener('click', () => window.pauseSpeech?.());
     speechStopBtn?.addEventListener('click', () => window.stopSpeech?.());
 
+    const avonVoiceSelect = document.getElementById('avonVoiceSelection');
+    const previewAvonVoiceBtn = document.getElementById('previewAvonVoiceBtn');
+    function populateAvonVoiceSelection() {
+        if (!avonVoiceSelect || !window.speechSynthesis) return;
+        const voices = window.speechSynthesis.getVoices().filter(voice => voice.lang.startsWith('en'));
+        if (!voices.length) {
+            setTimeout(populateAvonVoiceSelection, 800);
+            return;
+        }
+        const savedVoice = localStorage.getItem('nova_avon_voice_preference') || '';
+        avonVoiceSelect.innerHTML = '<option value="">Default system voice</option>';
+        voices.forEach(voice => {
+            const option = new Option(`${voice.name} (${voice.lang})`, voice.name);
+            option.selected = voice.name === savedVoice;
+            avonVoiceSelect.appendChild(option);
+        });
+    }
+    avonVoiceSelect?.addEventListener('change', () => {
+        localStorage.setItem('nova_avon_voice_preference', avonVoiceSelect.value);
+        showNotification(avonVoiceSelect.value ? `A.V.O.N. voice changed to ${avonVoiceSelect.value}` : 'A.V.O.N. will use the system voice.', 2200);
+    });
+    previewAvonVoiceBtn?.addEventListener('click', () => {
+        window.speakText?.('Good day. This is A.V.O.N. How do you find this voice?', null, 'other');
+    });
+    setTimeout(populateAvonVoiceSelection, 1200);
+
     const groupEnabled = document.getElementById('groupChatEnabled');
     const groupModel = document.getElementById('groupChatModel');
     const groupMute = document.getElementById('groupMuteSettings');
@@ -577,10 +603,12 @@ window.voiceIntegrationFix = function() {
 // Function to make text more natural for speech synthesis (globally accessible)
 window.makeSpeechFriendly = function(text) {
     const withoutSources = String(text || '')
-        // Remove markdown-style sources section
-        .replace(/\n\s*---\s*\n\s*\*\*?\s*Sources\s*&\s*References\s*\*\*?[\s\S]*$/i, '')
-        // Remove plain heading section fallback
-        .replace(/\n\s*Sources\s*&\s*References\s*:?\s*[\s\S]*$/i, '');
+        // Source/reference sections are useful visually but should never be spoken.
+        .replace(/\n\s*(?:---\s*\n\s*)?(?:\*\*?\s*)?(?:sources?\s*(?:&|and)\s*references?|references?|where\s+to\s+get\s+more|further\s+reading)(?:\s*\*\*?)?\s*:?\s*[\s\S]*$/i, '')
+        // Remove inline markdown links and raw URLs from the remaining answer.
+        .replace(/\[([^\]]+)\]\((?:https?:\/\/|www\.)[^)]+\)/gi, '$1')
+        .replace(/<?https?:\/\/[^\s)>]+>?/gi, '')
+        .replace(/\bwww\.[^\s)>]+/gi, '');
 
     return withoutSources
         // Remove any trailing standalone source-link lines that may remain

@@ -163,6 +163,11 @@ function buildResponseCompletionRequest(originalMessage, partialReply) {
     return `Continue and finish your previous answer to the user's message below. Start exactly where the partial answer stopped; do not repeat its wording, add a greeting, mention this instruction, or describe the continuation.\n\nUser message:\n${originalMessage}\n\nPartial answer:\n${partialReply}`;
 }
 
+function speakAssistantResponse(text, responseSender, onEndCallback = null) {
+    if (typeof window.speakText !== 'function') return;
+    window.speakText(text, onEndCallback, responseSender === 'Avon' ? 'other' : 'nova');
+}
+
 // Try the server-side /api/chat proxy (uses OPENROUTER_API_KEY or OPENAI_API_KEY env variable on Vercel)
 async function generateViaServerProxy(userMessage, personality, options = {}) {
     const webIntent = _resolveWebIntent(userMessage);
@@ -306,9 +311,9 @@ async function generateAIResponse(userMessage, personality, options = {}) {
             recordNoveltyResponse(userMessage, reply, responseModel);
             if (typeof window.speakText === 'function') {
                 if (window.isWakeWordSession && typeof window.restoreWakeListeningAfterResponse === 'function') {
-                    window.speakText(reply, () => { window.restoreWakeListeningAfterResponse(); });
+                    speakAssistantResponse(reply, responseSender, () => { window.restoreWakeListeningAfterResponse(); });
                 } else {
-                    window.speakText(reply, () => {});
+                    speakAssistantResponse(reply, responseSender, () => {});
                 }
             }
             return;
@@ -471,7 +476,7 @@ If the user asked for downloadable resources, prioritize official download pages
                     addMessage(jinaResult, responseSender, null, fallbackModel);
                     conversationHistory.push({ role: 'assistant', content: jinaResult, personality, timestamp: new Date().toISOString(), model: fallbackModel });
                     recordNoveltyResponse(userMessage, jinaResult, fallbackModel);
-                    if (typeof window.speakText === 'function') window.speakText(jinaResult, () => {});
+                    speakAssistantResponse(jinaResult, responseSender);
                     return;
                 }
             }
@@ -492,7 +497,7 @@ If the user asked for downloadable resources, prioritize official download pages
                     addMessage(jinaResult, responseSender, null, responseModel);
                     conversationHistory.push({ role: 'assistant', content: jinaResult, personality, timestamp: new Date().toISOString(), model: responseModel });
                     recordNoveltyResponse(userMessage, jinaResult, responseModel);
-                    if (typeof window.speakText === 'function') window.speakText(jinaResult, () => {});
+                    speakAssistantResponse(jinaResult, responseSender);
                     return;
                 }
             }
@@ -557,7 +562,7 @@ If the user asked for downloadable resources, prioritize official download pages
             addMessage(jinaOverrideDirect, responseSender, null, responseModel);
             conversationHistory.push({ role: 'assistant', content: jinaOverrideDirect, personality, timestamp: new Date().toISOString(), model: responseModel });
             recordNoveltyResponse(userMessage, jinaOverrideDirect, responseModel);
-            if (typeof window.speakText === 'function') window.speakText(jinaOverrideDirect, () => {});
+            speakAssistantResponse(jinaOverrideDirect, responseSender);
             return;
         }
         const payloadSources = _extractSourcesFromProviderPayload(responseData);
@@ -595,13 +600,13 @@ If the user asked for downloadable resources, prioritize official download pages
             
             // Only add restoration callback if this is a wake word session
             if (window.isWakeWordSession && typeof window.restoreWakeListeningAfterResponse === 'function') {
-                window.speakText(reply, () => {
+                speakAssistantResponse(reply, responseSender, () => {
                     console.log('🔊 AI Response: Voice output completed');
                     console.log('🔊 AI Response complete - restoring wake listening');
                     window.restoreWakeListeningAfterResponse();
                 });
             } else {
-                window.speakText(reply, () => {
+                speakAssistantResponse(reply, responseSender, () => {
                     console.log('🔊 AI Response: Voice output completed (push-to-talk mode)');
                 });
             }
@@ -1181,6 +1186,9 @@ If live web blocks are included, treat them as current evidence and use them dir
     const systemMessage = {
         role: "system",
         content: [
+            options.assistant === 'other'
+                ? 'You are A.V.O.N. Your name is A.V.O.N., not N.O.V.A, Nova, or any variation of N.O.V.A. You are a distinct assistant in this system. Never claim to be N.O.V.A, never expand N.O.V.A., and never correct a user by saying they meant N.O.V.A. When your name is misspelled, politely identify yourself as A.V.O.N. and continue helping.'
+                : 'You are N.O.V.A., which stands for Networking Orthogonal Virtual Assistant. Your name is N.O.V.A., not A.V.O.N. You are a distinct assistant in this system and must accurately state your full name when asked.',
             'You are ' + (options.assistant === 'other' ? 'A.V.O.N.' : 'N.O.V.A') + ', a ' + config.style + '.',
             options.groupChat
                 ? options.individualChat
@@ -1210,7 +1218,7 @@ If live web blocks are included, treat them as current evidence and use them dir
             '- For every web-backed answer, cite web-derived claims inline with clickable markdown links where possible, then end with BOTH sections: "Sources & References" and "Where to get more". Each must use source title plus a full clickable markdown URL.',
             '- Prefer official documentation, primary research, government sources, and first-party announcements for factual claims. Do not cite a search engine or Jina as the authority when the underlying source is available.',
             '- Use clear headings, short paragraphs, bullets, and numbered steps instead of dense walls of text. Format mathematics for readability: put standalone equations on their own line using $$...$$, use \\(...\\) for inline math, and do not bury formulas in ordinary prose. Use subscripts and superscripts where helpful, for example $$sigmoid(x_i) = 1 / (1 + e^{-x_i})$$.',
-            assistantPersonalities?.nova ? `Custom N.O.V.A personality knowledge:\n${assistantPersonalities.nova}` : '',
+            assistantPersonalities?.nova && options.assistant !== 'other' ? `Custom N.O.V.A personality knowledge:\n${assistantPersonalities.nova}` : '',
             assistantPersonalities?.other && options.assistant === 'other' ? `Custom A.V.O.N. personality knowledge:\n${assistantPersonalities.other}` : '',
             presetConfig ? `Active ${assistantKey === 'other' ? 'A.V.O.N.' : 'N.O.V.A'} personality preset (${presetConfig.name}):\n${presetConfig.instructions}` : '',
             '- Never invent URLs, citations, or DOIs.'

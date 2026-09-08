@@ -1495,7 +1495,7 @@ function getNovaLikeVoices(voices) {
     return rankedVoices;
 }
 
-function speakText(text, onEndCallback = null) {
+function speakText(text, onEndCallback = null, assistant = 'nova') {
     console.log('🔊 speakText called with:', text);
     console.log('🔊 synthesis available:', !!synthesis);
     console.log('🔊 isSpeaking:', isSpeaking);
@@ -1507,7 +1507,14 @@ function speakText(text, onEndCallback = null) {
         return;
     }
 
-    window.lastSpeechText = String(text || '');
+    const speechText = typeof window.makeSpeechFriendly === 'function'
+        ? window.makeSpeechFriendly(text)
+        : String(text || '');
+    window.lastSpeechText = speechText;
+    if (!speechText) {
+        if (typeof onEndCallback === 'function') onEndCallback();
+        return;
+    }
     
     const shouldResumeWakeListening = wakeWordEnabled && (isWakeListening || isWakeWordSession);
 
@@ -1552,38 +1559,41 @@ function speakText(text, onEndCallback = null) {
         if (isSpeaking) {
             console.log('🔊 Already speaking, canceling previous');
             synthesis.cancel();
-            setTimeout(() => speakText(text, finalOnEndCallback), 100);
+            setTimeout(() => speakText(speechText, finalOnEndCallback, assistant), 100);
             return;
         }
 
-        if (selectedVoiceMode === 'jarvis-pack' && selectedJarvisPackId) {
+        if (assistant !== 'other' && selectedVoiceMode === 'jarvis-pack' && selectedJarvisPackId) {
             ensureJarvisResponseVoice();
-            const playedPackClip = playJarvisPackSample(text, finalOnEndCallback);
+            const playedPackClip = playJarvisPackSample(speechText, finalOnEndCallback);
             if (playedPackClip) {
                 return;
             }
         }
 
-        const usedBridge = await playViaLocalVoiceBridge(text, finalOnEndCallback);
+        const usedBridge = assistant !== 'other' && await playViaLocalVoiceBridge(speechText, finalOnEndCallback);
         if (usedBridge) {
             return;
         }
 
-        setupUtteranceAndSpeak(text, finalOnEndCallback);
+        setupUtteranceAndSpeak(speechText, finalOnEndCallback, assistant);
     };
     
     // Wait a bit before speaking to ensure any active recognition has stopped
     setTimeout(startSpeaking, 600);
 }
 
-function setupUtteranceAndSpeak(text, onEndCallback) {
+function setupUtteranceAndSpeak(text, onEndCallback, assistant = 'nova') {
     const utterance = new SpeechSynthesisUtterance(text);
     
     // Apply current voice settings with validation
-    if (isUsableSpeechVoice(currentVoiceSettings.voice)) {
+    const configuredAssistantVoice = assistant === 'other'
+        ? window.speechSynthesis?.getVoices().find(voice => voice.name === localStorage.getItem('nova_avon_voice_preference'))
+        : currentVoiceSettings.voice;
+    if (isUsableSpeechVoice(configuredAssistantVoice)) {
         try {
-            utterance.voice = currentVoiceSettings.voice;
-            console.log('🔊 Using voice:', currentVoiceSettings.voice.name);
+            utterance.voice = configuredAssistantVoice;
+            console.log('🔊 Using voice:', configuredAssistantVoice.name);
         } catch (error) {
             console.error('🔊 Error setting voice:', error);
             console.log('🔊 Voice object:', currentVoiceSettings.voice);
