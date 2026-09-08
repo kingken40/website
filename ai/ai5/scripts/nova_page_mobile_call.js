@@ -96,11 +96,11 @@
                 statusDot.className = 'mobile-status-dot' + (state ? ' ' + state : '');
             }
             if (statusText) {
-                if (state === 'speaking')    statusText.textContent = 'N.O.V.A is speakingâ€¦';
-                else if (state === 'processing') statusText.textContent = 'Processingâ€¦';
+                if (state === 'speaking')    statusText.textContent = 'N.O.V.A is speaking...';
+                else if (state === 'processing') statusText.textContent = 'Processing...';
                 else if (state === 'muted')  statusText.textContent = 'Microphone muted';
                 else if (state === 'disabled') statusText.textContent = 'Always listening off';
-                else                         statusText.textContent = 'Always listeningâ€¦';
+                else                         statusText.textContent = 'Always listening...';
             }
         }
 
@@ -144,7 +144,7 @@
             } else {
                 muted = false;
                 await ensureMobileListeningEnabled();
-                if (statusText) statusText.textContent = 'Always listeningâ€¦';
+                if (statusText) statusText.textContent = 'Always listening...';
             }
 
             updateMuteButtonUI();
@@ -253,13 +253,13 @@
                     if (!window.alwaysListeningHotkeyMode) {
                         await toggleAlwaysListeningMode();
                     }
-                    if (statusText) statusText.textContent = 'Always listeningâ€¦';
+                    if (statusText) statusText.textContent = 'Always listening...';
                     return;
                 }
 
                 if (typeof window.startListeningDirect === 'function' && !window.isListening) {
                     window.startListeningDirect();
-                    if (statusText) statusText.textContent = 'Listeningâ€¦';
+                    if (statusText) statusText.textContent = 'Listening...';
                 }
             } catch (error) {
                 console.warn('ðŸ“± Mobile listening enable failed:', error);
@@ -277,4 +277,3 @@
 
         console.log('ðŸ“± Mobile call mode initialised');
     })();
-
