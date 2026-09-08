@@ -3199,18 +3199,19 @@ function generateNovaResponse(message) {
     return defaultResponses[Math.floor(Math.random() * defaultResponses.length)];
 }
 
-function addThinkingIndicator() {
+function addThinkingIndicator(sender = 'Nova') {
     const chatMessages = document.getElementById('chatMessages');
     if (!chatMessages) return;
     
+    const isAvon = sender === 'Avon';
     const thinkingDiv = document.createElement('div');
-    thinkingDiv.className = 'message Nova-message thinking-indicator';
+    thinkingDiv.className = `message ${isAvon ? 'avon' : 'nova'}-message thinking-indicator`;
     thinkingDiv.innerHTML = `
         <div class="message-content">
             <div class="thinking-dots">
                 <span></span><span></span><span></span>
             </div>
-            N.O.V.A is thinking...
+            <span class="thinking-text">${isAvon ? 'A.V.O.N.' : 'N.O.V.A'} is thinking...</span>
         </div>
     `;
     

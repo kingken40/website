@@ -396,8 +396,17 @@ function processUserMessage(userMessage) {
         // Add user message to chat
         addMessage(userMessage, 'user');
         
-        // Add thinking indicator
-        addThinkingIndicator();
+        const voiceTarget = window.activeVoiceAssistant || null;
+        const novaAllowed = voiceTarget !== 'other' && mutedGroupAssistant !== 'other';
+        const avonAllowed = groupChatEnabled && voiceTarget !== 'nova' && mutedGroupAssistant !== 'nova';
+        const soleResponder = novaAllowed && !avonAllowed
+            ? 'nova'
+            : avonAllowed && !novaAllowed
+                ? 'other'
+                : null;
+
+        // Show the specific assistant that will answer when only one is selected.
+        addThinkingIndicator(soleResponder === 'other' ? 'Avon' : 'Nova');
         
         // Clear input and reset height
         const messageInput = document.getElementById('messageInput');
@@ -409,13 +418,11 @@ function processUserMessage(userMessage) {
         // Generate AI response
         setTimeout(async () => {
             try {
-                const voiceTarget = window.activeVoiceAssistant || null;
-                const novaAllowed = voiceTarget !== 'other' && mutedGroupAssistant !== 'other';
-                const avonAllowed = groupChatEnabled && voiceTarget !== 'nova' && mutedGroupAssistant !== 'nova';
                 if (novaAllowed) {
                     await generateAIResponse(userMessage, currentPersonality, {
                         assistant: 'nova',
-                        groupChat: groupChatEnabled
+                        groupChat: groupChatEnabled,
+                        individualChat: soleResponder === 'nova'
                     });
                 }
                 if (avonAllowed && groupChatModel) {
@@ -423,6 +430,7 @@ function processUserMessage(userMessage) {
                         assistant: 'other',
                         modelOverride: groupChatModel,
                         groupChat: true,
+                        individualChat: soleResponder === 'other',
                         skipUserHistory: true
                     });
                 }

@@ -1014,18 +1014,19 @@ window.testFullVoiceWorkflow = function() {
 };
 
 // Helper functions
-function addThinkingIndicator() {
+function addThinkingIndicator(sender = 'Nova') {
     const chatMessages = document.getElementById('chatMessages');
     if (!chatMessages) return;
     
+    const isAvon = sender === 'Avon';
     const thinkingDiv = document.createElement('div');
-    thinkingDiv.className = 'message Nova-message thinking-indicator';
+    thinkingDiv.className = `message ${isAvon ? 'avon' : 'nova'}-message thinking-indicator`;
     thinkingDiv.innerHTML = `
         <div class="message-content">
             <div class="thinking-dots">
                 <span></span><span></span><span></span>
             </div>
-            <span class="thinking-text">N.O.V.A is thinking...</span>
+            <span class="thinking-text">${isAvon ? 'A.V.O.N.' : 'N.O.V.A'} is thinking...</span>
         </div>
     `;
     
