@@ -2510,6 +2510,10 @@ body.no-animations * {
     max-height: 44px;
 }
 
+.mobile-transcript.collapsed .mobile-transcript-messages {
+    display: none;
+}
+
 .mobile-transcript-header {
     display: flex;
     align-items: center;
@@ -2627,6 +2631,21 @@ body.no-animations * {
     transition: all 0.2s ease;
     min-width: 62px;
     -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 420px) {
+    .mobile-call-controls {
+        gap: 0.25rem;
+        padding-left: 0.35rem;
+        padding-right: 0.35rem;
+    }
+
+    .mobile-ctrl-btn {
+        min-width: 0;
+        flex: 1 1 0;
+        padding-left: 0.35rem;
+        padding-right: 0.35rem;
+    }
 }
 
 .mobile-ctrl-btn i {
