@@ -11,6 +11,47 @@ function setupEventListeners() {
     speechPauseBtn?.addEventListener('click', () => window.pauseSpeech?.());
     speechStopBtn?.addEventListener('click', () => window.stopSpeech?.());
 
+    const groupEnabled = document.getElementById('groupChatEnabled');
+    const groupModel = document.getElementById('groupChatModel');
+    const groupMute = document.getElementById('groupMuteSettings');
+    const mutedAssistant = document.getElementById('mutedGroupAssistant');
+    groupEnabled?.addEventListener('change', () => {
+        groupChatEnabled = groupEnabled.checked;
+        if (groupModel) groupModel.disabled = !groupChatEnabled;
+        if (groupMute) groupMute.hidden = !groupChatEnabled;
+        localStorage.setItem('nova_group_chat_enabled', String(groupChatEnabled));
+    });
+    if (groupEnabled) {
+        groupChatEnabled = localStorage.getItem('nova_group_chat_enabled') === 'true';
+        groupEnabled.checked = groupChatEnabled;
+        if (groupModel) groupModel.disabled = !groupChatEnabled;
+        if (groupMute) groupMute.hidden = !groupChatEnabled;
+    }
+    groupModel?.addEventListener('change', () => { groupChatModel = groupModel.value; });
+    mutedAssistant?.addEventListener('change', () => { mutedGroupAssistant = mutedAssistant.value; });
+
+    const personalityAssistant = document.getElementById('personalityAssistant');
+    const personalityText = document.getElementById('assistantPersonalityText');
+    const savePersonality = document.getElementById('saveAssistantPersonality');
+    savePersonality?.addEventListener('click', () => {
+        const assistant = personalityAssistant?.value || 'nova';
+        const value = personalityText?.value.trim() || '';
+        if (!value) return showNotification('Add personality or knowledge first.', 2500);
+        assistantPersonalities[assistant] = value;
+        localStorage.setItem('nova_assistant_personalities', JSON.stringify(assistantPersonalities));
+        showNotification(`${assistant === 'nova' ? 'N.O.V.A' : 'Other Assistant'} personality added to knowledge.`, 2500);
+    });
+    setTimeout(() => {
+        if (!groupModel) return;
+        const source = document.getElementById('modelSelect');
+        if (!source) return;
+        [...source.options].filter(option => option.value && option.value !== 'auto').forEach(option => {
+            if (!groupModel.querySelector(`option[value="${CSS.escape(option.value)}"]`)) {
+                groupModel.appendChild(new Option(option.textContent, option.value));
+            }
+        });
+    }, 1500);
+
     let speechTouchStart = null;
     const speakFromPoint = (messageContent, point) => {
         if (!messageContent || !point) return;

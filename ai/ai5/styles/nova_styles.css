@@ -1528,6 +1528,30 @@ body {
     padding: 0.5rem;
 }
 
+.chat-suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    padding: 0.45rem 0.75rem;
+}
+
+.chat-suggestion {
+    border: 1px solid rgba(0, 170, 255, 0.35);
+    border-radius: 999px;
+    background: rgba(0, 42, 80, 0.55);
+    color: #9bdcff;
+    padding: 0.4rem 0.7rem;
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.8rem;
+}
+
+.chat-suggestion:hover,
+.chat-suggestion:focus-visible {
+    background: rgba(0, 130, 200, 0.35);
+    outline: none;
+}
+
 .chat-history-item {
     background: linear-gradient(145deg, rgba(0, 34, 68, 0.6), rgba(0, 17, 34, 0.6));
     border: 1px solid rgba(0, 170, 255, 0.3);

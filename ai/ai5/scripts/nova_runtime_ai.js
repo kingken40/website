@@ -153,7 +153,7 @@ async function generateViaServerProxy(userMessage, personality, options = {}) {
 
     const messages = prepareOpenAIMessages(proxyMessage, personality, options);
     const requestPayload = {
-        model: shouldUseWeb ? 'perplexity/sonar' : currentModel,
+        model: shouldUseWeb ? 'perplexity/sonar' : (options.modelOverride || currentModel),
         messages: messages,
         max_tokens: 2048,
         temperature: personality === 'brainstorm' ? 0.95 : 0.7,
@@ -306,7 +306,7 @@ async function generateAIResponse(userMessage, personality, options = {}) {
 
         // --- Web search / URL fetch ---
         let effectiveMessage = userMessage;
-        let requestModel = provider.model;
+        let requestModel = options.modelOverride || provider.model;
         const webIntent = _resolveWebIntent(userMessage);
         const shouldUseWeb = !!webIntent;
         let collectedWebSources = [];
@@ -1128,6 +1128,8 @@ If live web blocks are included, treat them as current evidence and use them dir
             '- For every web-backed answer, cite web-derived claims inline with clickable markdown links where possible, then end with BOTH sections: "Sources & References" and "Where to get more". Each must use source title plus a full clickable markdown URL.',
             '- Prefer official documentation, primary research, government sources, and first-party announcements for factual claims. Do not cite a search engine or Jina as the authority when the underlying source is available.',
             '- Use clear headings, short paragraphs, bullets, and numbered steps instead of dense walls of text. Format mathematics for readability: put standalone equations on their own line using $$...$$, use \\(...\\) for inline math, and do not bury formulas in ordinary prose. Use subscripts and superscripts where helpful, for example $$sigmoid(x_i) = 1 / (1 + e^{-x_i})$$.',
+            assistantPersonalities?.nova ? `Custom N.O.V.A personality knowledge:\n${assistantPersonalities.nova}` : '',
+            assistantPersonalities?.other && options.assistant === 'other' ? `Custom Other Assistant personality knowledge:\n${assistantPersonalities.other}` : '',
             '- Never invent URLs, citations, or DOIs.'
         ].filter(Boolean).join('\n')
    };

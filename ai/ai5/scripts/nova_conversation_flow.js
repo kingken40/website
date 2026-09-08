@@ -99,6 +99,7 @@ function addMessage(text, sender, timestamp = null, responseModel = null) {
     });
     
     console.log('💬 Message added:', { sender, text: text.substring(0, 50) + '...', personality: currentPersonality });
+    if (sender === 'Nova') updateChatSuggestions(text);
 }
 
 function getCurrentModeDisplayName() {
@@ -406,12 +407,23 @@ function processUserMessage(userMessage) {
         // Generate AI response
         setTimeout(async () => {
             try {
-                await generateAIResponse(userMessage, currentPersonality);
+                if (mutedGroupAssistant !== 'other') {
+                    await generateAIResponse(userMessage, currentPersonality, { assistant: 'nova' });
+                }
+                if (groupChatEnabled && groupChatModel && mutedGroupAssistant !== 'nova') {
+                    await generateAIResponse(userMessage, currentPersonality, {
+                        assistant: 'other',
+                        modelOverride: groupChatModel,
+                        skipUserHistory: true
+                    });
+                }
+                updateChatSuggestions(userMessage);
             } finally {
                 if (requestRunId === activeResponseRunId) {
                     isResponseInFlight = false;
                     updateContinuationButtonState();
                 }
+
             }
         }, 1000);
     } catch (error) {
@@ -421,7 +433,30 @@ function processUserMessage(userMessage) {
         removeThinkingIndicator();
         addMessage('System error processing your message. Please try again.', 'Nova');
     }
+
 }
+
+function updateChatSuggestions(currentText = '') {
+    const container = document.getElementById('chatSuggestions');
+    if (!container) return;
+    const text = String(currentText || '').toLowerCase();
+    const suggestions = text.includes('code') || text.includes('error')
+        ? ['Explain this step by step', 'Show a corrected example', 'Find the likely bug']
+        : text.includes('lecture') || text.includes('class')
+            ? ['Create a study guide', 'Quiz me on this', 'Explain the hardest concept']
+            : ['Ask a follow-up question', 'Give me an example', 'Summarize the key points'];
+    container.innerHTML = suggestions.map(suggestion =>
+        `<button type="button" class="chat-suggestion" onclick="applyChatSuggestion('${escapeHtml(suggestion).replace(/'/g, '&#39;')}')">${escapeHtml(suggestion)}</button>`
+    ).join('');
+}
+
+function applyChatSuggestion(suggestion) {
+    const input = document.getElementById('messageInput');
+    if (!input) return;
+    input.value = suggestion;
+    input.focus();
+}
+window.applyChatSuggestion = applyChatSuggestion;
 
 function getLastNovaMessageText() {
     for (let i = conversationHistory.length - 1; i >= 0; i--) {
