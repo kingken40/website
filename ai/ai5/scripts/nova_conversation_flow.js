@@ -440,14 +440,26 @@ function updateChatSuggestions(currentText = '') {
     const container = document.getElementById('chatSuggestions');
     if (!container) return;
     const text = String(currentText || '').toLowerCase();
-    const suggestions = text.includes('code') || text.includes('error')
-        ? ['Explain this step by step', 'Show a corrected example', 'Find the likely bug']
+    const suggestionSets = text.includes('code') || text.includes('error')
+        ? [
+            ['Explain this step by step', 'Show a corrected example', 'Find the likely bug'],
+            ['Review this for edge cases', 'Make this more efficient', 'Add a test for it']
+        ]
         : text.includes('lecture') || text.includes('class')
-            ? ['Create a study guide', 'Quiz me on this', 'Explain the hardest concept']
-            : ['Ask a follow-up question', 'Give me an example', 'Summarize the key points'];
-    container.innerHTML = suggestions.map(suggestion =>
+            ? [
+                ['Create a study guide', 'Quiz me on this', 'Explain the hardest concept'],
+                ['Make flashcards', 'Give me a real-world example', 'What should I memorize?']
+            ]
+            : [
+                ['Ask a follow-up question', 'Give me an example', 'Summarize the key points'],
+                ['Explain it more simply', 'Compare the alternatives', 'What should I do next?']
+            ];
+    const suggestionSetIndex = Number(container.dataset.suggestionSet || 0) % suggestionSets.length;
+    const suggestions = suggestionSets[suggestionSetIndex];
+    container.dataset.suggestionSet = String(suggestionSetIndex);
+    container.innerHTML = `<span class="suggestion-spacer" aria-hidden="true"></span>${suggestions.map(suggestion =>
         `<button type="button" class="chat-suggestion" onclick="applyChatSuggestion('${escapeHtml(suggestion).replace(/'/g, '&#39;')}')">${escapeHtml(suggestion)}</button>`
-    ).join('');
+    ).join('')}<button type="button" class="chat-suggestions-refresh" onclick="refreshChatSuggestions()" title="Show different relevant suggestions" aria-label="Show different relevant suggestions"><i class="fas fa-sync-alt"></i></button>`;
 }
 
 function applyChatSuggestion(suggestion) {
@@ -457,6 +469,14 @@ function applyChatSuggestion(suggestion) {
     input.focus();
 }
 window.applyChatSuggestion = applyChatSuggestion;
+
+function refreshChatSuggestions() {
+    const container = document.getElementById('chatSuggestions');
+    const input = document.getElementById('messageInput');
+    if (container) container.dataset.suggestionSet = String((Number(container.dataset.suggestionSet || 0) + 1) % 2);
+    updateChatSuggestions(input?.value || '');
+}
+window.refreshChatSuggestions = refreshChatSuggestions;
 
 function getLastNovaMessageText() {
     for (let i = conversationHistory.length - 1; i >= 0; i--) {

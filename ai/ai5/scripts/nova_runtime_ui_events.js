@@ -156,6 +156,12 @@ function setupEventListeners() {
         });
     }
 
+    document.getElementById('randomSuggestionBtn')?.addEventListener('click', () => {
+        const suggestionButtons = [...document.querySelectorAll('.chat-suggestion')];
+        if (!suggestionButtons.length) return;
+        applyChatSuggestion(suggestionButtons[Math.floor(Math.random() * suggestionButtons.length)].textContent);
+    });
+
     const continueBtn = document.getElementById('continueBtn');
     if (continueBtn) {
         continueBtn.addEventListener('click', () => {

@@ -851,9 +851,21 @@ body {
     align-items: flex-start;
 }
 
+.random-suggestion-btn {
+    flex: 0 0 40px;
+}
+
 .input-wrapper:focus-within {
     border-color: #00aaff;
     box-shadow: 0 0 20px rgba(0, 170, 255, 0.2);
+}
+
+.model-mode-settings {
+    gap: 0.9rem;
+}
+
+.model-mode-settings > div {
+    min-width: 165px !important;
 }
 
 .input-btn {
@@ -1183,7 +1195,7 @@ body {
 
 .setting-group.group-chat-settings {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto minmax(220px, 1fr);
+    grid-template-columns: minmax(0, 1fr) 40px minmax(220px, 1fr);
     align-items: center;
     gap: 0.75rem;
 }
@@ -1201,6 +1213,15 @@ body {
 
 .group-chat-settings input[type="checkbox"] {
     flex: 0 0 auto;
+    justify-self: start;
+}
+
+.group-chat-settings + .group-chat-settings {
+    grid-template-columns: minmax(0, 1fr) minmax(240px, 1fr);
+}
+
+.group-chat-settings + .group-chat-settings select {
+    justify-self: end;
 }
 
 .setting-group input[type="range"]::-webkit-slider-thumb {
@@ -1555,6 +1576,11 @@ body {
     flex-wrap: wrap;
     gap: 0.45rem;
     padding: 0.45rem 0.75rem;
+    align-items: center;
+}
+
+.suggestion-spacer {
+    flex: 1 1 auto;
 }
 
 .chat-suggestion {
@@ -1572,6 +1598,17 @@ body {
 .chat-suggestion:focus-visible {
     background: rgba(0, 130, 200, 0.35);
     outline: none;
+}
+
+.chat-suggestions-refresh {
+    flex: 0 0 32px;
+    width: 32px;
+    height: 32px;
+    border: 1px solid rgba(0, 170, 255, 0.35);
+    border-radius: 50%;
+    background: rgba(0, 42, 80, 0.55);
+    color: #9bdcff;
+    cursor: pointer;
 }
 
 .chat-history-item {
@@ -1970,6 +2007,14 @@ body.no-animations * {
 
     .setting-group.group-chat-settings {
         grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .model-mode-settings {
+        gap: 0.5rem;
+    }
+
+    .model-mode-settings > div {
+        min-width: 125px !important;
     }
 
     .group-chat-settings select {
