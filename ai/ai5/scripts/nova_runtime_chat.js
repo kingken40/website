@@ -326,9 +326,6 @@ function displayChatHistory() {
                 </div>
                 ${fileMenus}
                 <div class="chat-history-actions">
-                    <button class="chat-history-btn rename" onclick="renameChat('${chat.id}', event)" title="Rename Chat">
-                        <i class="fas fa-edit"></i>
-                    </button>
                     <button class="chat-history-btn delete" onclick="deleteChat('${chat.id}', event)" title="Delete Chat">
                         <i class="fas fa-trash"></i>
                     </button>
