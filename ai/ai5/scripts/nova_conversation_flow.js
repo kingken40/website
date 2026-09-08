@@ -1,6 +1,23 @@
 // Conversation flow module
 // Extracted from nova_main.js for modular structure.
 
+function getModeChangeAssistant() {
+    if (window.activeVoiceAssistant === 'other') return 'other';
+    if (groupChatEnabled && mutedGroupAssistant === 'other') return 'other';
+    return 'nova';
+}
+
+function getModeChangeGreeting(personalityType, personalityConfig, assistant) {
+    if (assistant !== 'other') {
+        return personalityType === 'Nova' ? getRandomNovaGreeting() : personalityConfig.greeting;
+    }
+
+    if (personalityType === 'Nova') {
+        return 'A.V.O.N. is ready. How may I assist you?';
+    }
+    return `A.V.O.N. is ready in ${personalityConfig.name} Mode. ${personalityConfig.greeting}`;
+}
+
 function selectPersonality(personalityType) {
     const normalizedPersonality = normalizePersonalityKey(personalityType);
     console.log('🎭 Switching to personality:', personalityType, '=>', normalizedPersonality);
@@ -26,19 +43,21 @@ function selectPersonality(personalityType) {
         currentModeElement.textContent = personalityConfig.name + ' Mode';
     }
     
-    // Greet with new personality
-    const greeting = normalizedPersonality === 'Nova' ? getRandomNovaGreeting() : personalityConfig.greeting;
-    addMessage(greeting, 'Nova');
+    // Keep the mode-change acknowledgement with the assistant currently addressing the user.
+    const assistant = getModeChangeAssistant();
+    const sender = assistant === 'other' ? 'Avon' : 'Nova';
+    const greeting = getModeChangeGreeting(normalizedPersonality, personalityConfig, assistant);
+    addMessage(greeting, sender);
     
     // Speak greeting if voice is enabled (with proper voice coordination)
     if (typeof window.speakText === 'function') {
-        console.log('🔊 Mode Switch: Starting voice greeting with coordination...');
+        console.log(`🔊 Mode Switch: Starting ${sender} mode greeting with coordination...`);
         window.speakText(greeting, () => {
-            console.log('🔊 Mode Switch: Voice greeting completed');
-        });
+            console.log(`🔊 Mode Switch: ${sender} mode greeting completed`);
+        }, assistant);
     }
     
-    showNotification(`Switched to ${personalityConfig.name}`, 2000);
+    showNotification(`${sender} switched to ${personalityConfig.name} Mode`, 2000);
 }
 
 function addMessage(text, sender, timestamp = null, responseModel = null) {
