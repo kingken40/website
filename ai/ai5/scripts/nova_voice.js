@@ -1698,12 +1698,12 @@ function resumeSpeech() {
     }
 }
 
-function speakTextFrom(text, characterOffset = 0) {
+function speakTextFrom(text, characterOffset = 0, assistant = 'nova') {
     const normalizedText = String(text || '').trim();
     if (!normalizedText) return;
     const safeOffset = Math.max(0, Math.min(Number(characterOffset) || 0, normalizedText.length));
     const remainingText = normalizedText.slice(safeOffset).replace(/^\s+/, '');
-    speakText(remainingText || normalizedText);
+    speakText(remainingText || normalizedText, null, assistant);
 }
 
 window.pauseSpeech = pauseSpeech;

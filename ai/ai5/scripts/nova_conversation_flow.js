@@ -75,7 +75,7 @@ function addMessage(text, sender, timestamp = null, responseModel = null) {
             ${responseModelBadge}
             <span class="message-time">${currentTime}</span>
         </div>
-        <div class="message-content" data-speech-content="true" title="${sender === 'Nova' ? 'Click a word to read aloud from that point' : ''}">${formatMessageContent(text)}</div>
+        <div class="message-content" data-speech-content="true" title="${sender === 'Nova' || sender === 'Avon' ? 'Click a word to read aloud from that point' : ''}">${formatMessageContent(text)}</div>
         ${sender === 'user' ? `<button class="message-edit-btn" onclick="editMessage('${messageId}')" title="Edit and resubmit message"><i class="fas fa-edit"></i></button>` : ''}
         <button class="message-replay-btn" onclick="replayMessage('${messageId}')" title="Read message aloud"><i class="fas fa-play"></i></button>
     `;
@@ -83,6 +83,7 @@ function addMessage(text, sender, timestamp = null, responseModel = null) {
     // Store original text and metadata (for replay/edit functionality)
     messageDiv.dataset.messageId = messageId;
     messageDiv.dataset.originalText = text;
+    messageDiv.dataset.sender = sender;
     messageDiv.dataset.messageIndex = chatHistory.length; // Position in history for truncation
     if (modelLabel) {
         messageDiv.dataset.responseModel = modelLabel;

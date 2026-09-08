@@ -190,7 +190,8 @@ function setupEventListeners() {
 
         const fullText = messageContent.textContent || '';
         const wordStart = fullText.slice(0, offset).search(/\S+$/);
-        window.speakTextFrom?.(fullText, wordStart < 0 ? offset : wordStart);
+        const sender = messageContent.closest('.message')?.dataset.sender;
+        window.speakTextFrom?.(fullText, wordStart < 0 ? offset : wordStart, sender === 'Avon' ? 'other' : 'nova');
     };
 
     document.addEventListener('click', (event) => {

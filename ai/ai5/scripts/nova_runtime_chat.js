@@ -20,7 +20,7 @@ function replayMessage(messageId) {
     // Use the speakText function if available
     if (typeof window.speakText === 'function') {
         console.log('🔊 Replaying:', originalText.substring(0, 50) + '...');
-        window.speakText(originalText);
+        window.speakText(originalText, null, messageDiv.dataset.sender === 'Avon' ? 'other' : 'nova');
     } else {
         showNotification('Voice system not available', 2000);
         console.error('❌ speakText function not available');
