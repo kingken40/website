@@ -1943,7 +1943,7 @@ function startVoiceRecognition(options = {}) {
     const allowSpeechInterrupt = !!options.allowSpeechInterrupt;
     console.log('🎤 startVoiceRecognition called - isVoiceSupported:', isVoiceSupported, 'hasPermission:', hasVoicePermission, 'recognition:', !!recognition);
     
-    if (!isVoiceSupported || !recognition || !hasVoicePermission) {
+    if (!hasUsableVoiceRecognition() || !hasVoicePermission) {
         console.log('🎤 Cannot start recognition - requirements not met');
         showVoiceNotification('Voice recognition not available or permission not granted', 3000);
         return;
@@ -2661,6 +2661,7 @@ let hotkeyRPressed = false;
 let hotkeyTPressed = false;
 let hotkeyComboHandled = false;
 let hotkeyInterruptPending = false;
+let hotkeyStartTimer = null;
 
 function getDefaultReadyStatus() {
     return alwaysListeningHotkeyMode
@@ -2679,17 +2680,70 @@ function clearHotkeyRecordingUI() {
     }
 }
 
+function hasUsableVoiceRecognition() {
+    const speechRecognitionAvailable = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
+    if (recognition && speechRecognitionAvailable) {
+        isVoiceSupported = true;
+        return true;
+    }
+    return isVoiceSupported && !!recognition;
+}
+
+function startPushToTalkFromHotkey() {
+    hotkeyStartTimer = null;
+    if (!hotkeyRPressed || hotkeyTPressed || alwaysListeningHotkeyMode || hotkeyActive) {
+        return;
+    }
+
+    hotkeyActive = true;
+    console.log('⌨️ Hotkey R pressed - starting voice recognition...');
+
+    if (!hasUsableVoiceRecognition()) {
+        showVoiceNotification('Voice recognition not supported in this browser', 3000);
+        hotkeyActive = false;
+        return;
+    }
+
+    // Ensure this is NOT a wake word session (push-to-talk mode)
+    isWakeWordSession = false;
+    window.isWakeWordSession = false;
+
+    const voiceBtn = document.getElementById('voiceBtn');
+
+    // Request mic permission if needed, then start listening
+    if (!hasVoicePermission) {
+        requestVoicePermission().then(granted => {
+            if (!granted || !hotkeyActive || !hotkeyRPressed) {
+                hotkeyActive = false;
+                return;
+            }
+            hotkeyListening = true;
+            updateVoiceStatus('Hold R to speak - Release when done');
+            showVoiceNotification('Listening...', 2000);
+            if (voiceBtn) voiceBtn.classList.add('recording');
+            startVoiceRecognition({ allowSpeechInterrupt: true });
+        });
+        return;
+    }
+
+    updateVoiceStatus('Hold R to speak - Release when done');
+    showVoiceNotification('Listening...', 2000);
+    if (voiceBtn) voiceBtn.classList.add('recording');
+    hotkeyListening = true;
+    startVoiceRecognition({ allowSpeechInterrupt: true });
+}
+
 async function startHotkeyListeningDuringSpeech() {
-    if (!isVoiceSupported) {
+    if (!hasUsableVoiceRecognition()) {
         showVoiceNotification('Voice recognition not supported in this browser', 3000);
         return;
     }
 
-    console.log('🛑 Hotkey interrupt: stopping speech first, then will listen on release');
+    console.log('🛑 Hotkey interrupt: stopping speech, then listening while R remains held');
     isWakeWordSession = false;
     window.isWakeWordSession = false;
-    hotkeyActive = true;
-    hotkeyInterruptPending = true;
+    hotkeyActive = false;
+    hotkeyInterruptPending = false;
     window.voiceInterruptInProgress = true;
     setTimeout(() => {
         if (window.voiceInterruptInProgress) {
@@ -2698,8 +2752,13 @@ async function startHotkeyListeningDuringSpeech() {
     }, 1500);
 
     stopSpeech();
-    updateVoiceStatus('Release R, then speak...');
-    showVoiceNotification('Interrupting... release R to speak', 1500);
+    updateVoiceStatus('Hold R to speak - Release when done');
+    showVoiceNotification('Interrupting... keep holding R to speak', 1500);
+    setTimeout(() => {
+        if (hotkeyRPressed && !hotkeyTPressed && !alwaysListeningHotkeyMode) {
+            startPushToTalkFromHotkey();
+        }
+    }, 80);
 }
 
 async function toggleAlwaysListeningMode() {
@@ -2790,7 +2849,7 @@ function startAlwaysListeningTurn() {
 function setupPushToTalkHotkey() {
     console.log('⌨️ Setting up push-to-talk hotkey (R) and always-listening toggle (R+T)...');
     
-    document.addEventListener('keydown', async function(e) {
+    window.addEventListener('keydown', async function(e) {
         const target = e.target;
         const key = e.key.toLowerCase();
         const isTextEditableTarget = target && (
@@ -2810,6 +2869,10 @@ function setupPushToTalkHotkey() {
 
         if (hotkeyRPressed && hotkeyTPressed && !hotkeyComboHandled) {
             e.preventDefault();
+            if (hotkeyStartTimer) {
+                clearTimeout(hotkeyStartTimer);
+                hotkeyStartTimer = null;
+            }
             hotkeyComboHandled = true;
             await toggleAlwaysListeningMode();
             return;
@@ -2831,52 +2894,24 @@ function setupPushToTalkHotkey() {
             return;
         }
         
-        // Check if 'R' key is pressed (case insensitive)
+        // Briefly defer push-to-talk so R+T can be recognized as a chord instead
+        // of starting and immediately cancelling a recording.
         if (key === 'r' && !hotkeyActive) {
             e.preventDefault();
-            hotkeyActive = true;
-            
-            console.log('⌨️ Hotkey R pressed - starting voice recognition...');
-            
-            if (!isVoiceSupported) {
-                showVoiceNotification('Voice recognition not supported in this browser', 3000);
-                hotkeyActive = false;
-                return;
+            if (!hotkeyStartTimer) {
+                hotkeyStartTimer = setTimeout(startPushToTalkFromHotkey, 80);
             }
-            
-            // Ensure this is NOT a wake word session (push-to-talk mode)
-            isWakeWordSession = false;
-            window.isWakeWordSession = false;
-            
-            const voiceBtn = document.getElementById('voiceBtn');
-            
-            // Request mic permission if needed, then start listening
-            if (!hasVoicePermission) {
-                requestVoicePermission().then(granted => {
-                    if (!granted) { hotkeyActive = false; return; }
-                    hotkeyListening = true;
-                    updateVoiceStatus('Hold R to speak - Release when done');
-                    showVoiceNotification('Listening...', 2000);
-                    if (voiceBtn) voiceBtn.classList.add('recording');
-                    startVoiceRecognition({ allowSpeechInterrupt: true });
-                });
-                return;
-            }
-            
-            // Visual feedback
-            updateVoiceStatus('Hold R to speak - Release when done');
-            showVoiceNotification('Listening...', 2000);
-            if (voiceBtn) voiceBtn.classList.add('recording');
-            
-            hotkeyListening = true;
-            startVoiceRecognition({ allowSpeechInterrupt: true });
         }
-    });
+    }, true);
     
-    document.addEventListener('keyup', function(e) {
+    window.addEventListener('keyup', function(e) {
         const key = e.key.toLowerCase();
         if (key === 'r') hotkeyRPressed = false;
         if (key === 't') hotkeyTPressed = false;
+        if (key === 'r' && hotkeyStartTimer) {
+            clearTimeout(hotkeyStartTimer);
+            hotkeyStartTimer = null;
+        }
         if (!hotkeyRPressed && !hotkeyTPressed) {
             hotkeyComboHandled = false;
         }
@@ -2894,7 +2929,7 @@ function setupPushToTalkHotkey() {
                 voiceBtn.classList.remove('recording');
             }
 
-            if (!isVoiceSupported) {
+            if (!hasUsableVoiceRecognition()) {
                 return;
             }
 
@@ -2911,7 +2946,7 @@ function setupPushToTalkHotkey() {
                         return;
                     }
                     startVoiceRecognition();
-                });
+                }, true);
                 return;
             }
             startVoiceRecognition();

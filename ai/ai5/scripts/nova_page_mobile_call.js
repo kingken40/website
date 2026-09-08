@@ -239,6 +239,7 @@
 
         // â”€â”€ Auto-start always-listening after voice system is ready â”€â”€â”€â”€â”€â”€â”€â”€
         async function ensureMobileListeningEnabled() {
+            if (!window.matchMedia('(max-width: 768px)').matches) return;
             if (muted || !mobileAlwaysListeningEnabled) return;
             try {
                 if (typeof window.requestVoicePermission === 'function' && !window.hasVoicePermission) {
