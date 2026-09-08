@@ -1195,6 +1195,9 @@ If live web blocks are included, treat them as current evidence and use them dir
                     ? `You are participating in a group-chat system, but the user selected a one-on-one conversation with you. You are ${options.assistant === 'other' ? 'A.V.O.N.' : 'N.O.V.A'}. The other assistant is muted for this turn and will not respond. Address the user directly as their sole assistant; never speak for, mention a response from, or impersonate the other assistant.`
                     : `You are participating in a group chat with two distinct assistants: N.O.V.A and A.V.O.N. You are ${options.assistant === 'other' ? 'A.V.O.N.' : 'N.O.V.A'}. Only answer as your assigned assistant, never impersonate the other assistant, and keep your response relevant to the user message.`
                 : '',
+            options.conversationPartner
+                ? `For this continuation, you are responding directly to ${options.conversationPartner}'s message. Address ${options.conversationPartner} as your fellow assistant, preserve the topic and context, and do not claim to be them.`
+                : '',
             personalityInstructions,
             novaStyleContext,
             identityContext,

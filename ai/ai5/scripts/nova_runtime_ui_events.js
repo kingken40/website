@@ -255,6 +255,24 @@ function setupEventListeners() {
             continueConversation();
         });
     }
+
+    const continueAssistantModal = document.getElementById('continueAssistantModal');
+    const closeContinueAssistantModal = () => {
+        if (!continueAssistantModal) return;
+        continueAssistantModal.classList.remove('active');
+    };
+    document.getElementById('closeContinueAssistantModal')?.addEventListener('click', closeContinueAssistantModal);
+    document.getElementById('continueWithNova')?.addEventListener('click', () => {
+        closeContinueAssistantModal();
+        continueConversation('nova');
+    });
+    document.getElementById('continueWithAvon')?.addEventListener('click', () => {
+        closeContinueAssistantModal();
+        continueConversation('other');
+    });
+    continueAssistantModal?.addEventListener('click', event => {
+        if (event.target === continueAssistantModal) closeContinueAssistantModal();
+    });
     
     // Enter key for message input
     const messageInput = document.getElementById('messageInput');

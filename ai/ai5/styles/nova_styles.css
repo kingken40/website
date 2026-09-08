@@ -1160,6 +1160,36 @@ body {
     transform: scale(0.95);
 }
 
+.continue-assistant-choices {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.continue-assistant-choice {
+    flex: 1;
+    min-height: 48px;
+    border-radius: 8px;
+    color: #fff;
+    cursor: pointer;
+    font-weight: 700;
+    transition: filter 0.2s ease, transform 0.2s ease;
+}
+
+.continue-assistant-choice:hover {
+    filter: brightness(1.14);
+    transform: translateY(-1px);
+}
+
+.nova-choice {
+    background: rgba(22, 137, 232, 0.24);
+    border: 1px solid rgba(22, 137, 232, 0.7);
+}
+
+.avon-choice {
+    background: rgba(217, 54, 54, 0.24);
+    border: 1px solid rgba(217, 54, 54, 0.7);
+}
+
 .setting-group {
     display: flex;
     justify-content: space-between;

@@ -658,6 +658,20 @@
         </div>
     </div>
 
+    <div class="modal" id="continueAssistantModal" role="dialog" aria-modal="true" aria-labelledby="continueAssistantTitle">
+        <div class="modal-content" style="max-width: 430px;">
+            <div class="modal-header">
+                <h3 id="continueAssistantTitle">Who should continue?</h3>
+                <button class="modal-close" id="closeContinueAssistantModal" type="button" title="Cancel">&times;</button>
+            </div>
+            <p style="color: rgba(255,255,255,0.72); margin: 0 0 1.25rem;">Choose the assistant that should respond next.</p>
+            <div class="continue-assistant-choices">
+                <button type="button" id="continueWithNova" class="continue-assistant-choice nova-choice">Continue with N.O.V.A.</button>
+                <button type="button" id="continueWithAvon" class="continue-assistant-choice avon-choice">Continue with A.V.O.N.</button>
+            </div>
+        </div>
+    </div>
+
     <!-- File Upload Menu -->
     <div class="file-menu" id="fileMenu">
         <button class="file-option" data-type="text" type="button" title="Upload Text File">

@@ -496,13 +496,14 @@ function refreshChatSuggestions() {
 }
 window.refreshChatSuggestions = refreshChatSuggestions;
 
-function getLastNovaMessageText() {
-    for (let i = conversationHistory.length - 1; i >= 0; i--) {
-        if (conversationHistory[i].role === 'assistant' && conversationHistory[i].content) {
-            return conversationHistory[i].content;
+function getLastAssistantMessage() {
+    for (let i = chatHistory.length - 1; i >= 0; i--) {
+        const message = chatHistory[i];
+        if ((message.sender === 'Nova' || message.sender === 'Avon') && message.text) {
+            return message;
         }
     }
-    return '';
+    return null;
 }
 
 function updateContinuationButtonState() {
@@ -512,37 +513,63 @@ function updateContinuationButtonState() {
     continueBtn.classList.toggle('disabled', isResponseInFlight);
 }
 
-async function continueConversation() {
+async function continueConversation(selectedAssistant = null) {
     if (isResponseInFlight) {
         showNotification('Please wait for N.O.V.A to finish the current response.', 2200);
         return;
     }
 
-    const lastNovaMessage = getLastNovaMessageText();
-    if (!lastNovaMessage) {
+    const lastAssistantMessage = getLastAssistantMessage();
+    if (!lastAssistantMessage) {
         showNotification('No response yet to continue from.', 2200);
         return;
     }
 
+    const bothAssistantsActive = groupChatEnabled && mutedGroupAssistant === 'both';
+    if (bothAssistantsActive && !selectedAssistant) {
+        const chooser = document.getElementById('continueAssistantModal');
+        if (chooser) {
+            chooser.classList.add('active');
+            document.getElementById('continueWithNova')?.focus();
+            return;
+        }
+    }
+
+    const recipient = selectedAssistant || (lastAssistantMessage.sender === 'Avon' ? 'other' : 'nova');
+    const recipientName = recipient === 'other' ? 'A.V.O.N.' : 'N.O.V.A.';
+    const previousSpeaker = lastAssistantMessage.sender === 'Avon' ? 'A.V.O.N.' : 'N.O.V.A.';
+
     isResponseInFlight = true;
     updateContinuationButtonState();
-    addThinkingIndicator();
+    addThinkingIndicator(recipient === 'other' ? 'Avon' : 'Nova');
 
     const thinkingEl = document.querySelector('.thinking-indicator .thinking-text');
     if (thinkingEl) {
-        thinkingEl.textContent = 'N.O.V.A is continuing the response...';
+        thinkingEl.textContent = `${recipientName} is continuing the response...`;
     }
 
-    const continuationPrompt = `Continue your previous response naturally based on this ongoing chat.
+    const continuationPrompt = recipientName === previousSpeaker
+        ? `Continue your previous response naturally based on this ongoing chat.
 Keep it directly relevant to what we are discussing right now.
 Do not restart from scratch, do not repeat the same points, and do not be random.
 Build from where you left off with useful next details.
 
-Last assistant response:
-${lastNovaMessage}`;
+Your previous response:
+${lastAssistantMessage.text}`
+        : `You are ${recipientName}. Respond directly to ${previousSpeaker}'s prior message in this group chat, as a distinct assistant addressing ${previousSpeaker}.
+Stay relevant to the same topic, add useful perspective or continue the thought, and do not impersonate ${previousSpeaker} or repeat their answer.
+
+${previousSpeaker}'s message:
+${lastAssistantMessage.text}`;
 
     try {
-        await generateAIResponse(continuationPrompt, currentPersonality);
+        await generateAIResponse(continuationPrompt, currentPersonality, {
+            assistant: recipient,
+            modelOverride: recipient === 'other' ? groupChatModel : undefined,
+            groupChat: groupChatEnabled,
+            conversationPartner: previousSpeaker,
+            skipUserHistory: true
+        });
     } finally {
         isResponseInFlight = false;
         updateContinuationButtonState();
