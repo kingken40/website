@@ -732,8 +732,8 @@ body {
 }
 
 .user-message .message-content {
-    background: linear-gradient(135deg, rgba(0, 170, 255, 0.2), rgba(0, 136, 204, 0.2));
-    border: 1px solid rgba(0, 170, 255, 0.3);
+    background: linear-gradient(135deg, var(--user-bubble-fill, rgba(46, 175, 104, 0.24)), var(--user-bubble-fill-soft, rgba(46, 175, 104, 0.12)));
+    border: 1px solid var(--user-bubble-border, rgba(46, 175, 104, 0.55));
     color: #ffffff;
 }
 
@@ -741,6 +741,16 @@ body {
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
     border: 1px solid rgba(255, 255, 255, 0.1);
     color: rgba(255, 255, 255, 0.9);
+}
+
+.nova-message .message-content {
+    background: linear-gradient(135deg, var(--nova-bubble-fill, rgba(22, 137, 232, 0.24)), var(--nova-bubble-fill-soft, rgba(22, 137, 232, 0.12)));
+    border: 1px solid var(--nova-bubble-border, rgba(22, 137, 232, 0.55));
+}
+
+.avon-message .message-content {
+    background: linear-gradient(135deg, var(--avon-bubble-fill, rgba(217, 54, 54, 0.24)), var(--avon-bubble-fill-soft, rgba(217, 54, 54, 0.12)));
+    border: 1px solid var(--avon-bubble-border, rgba(217, 54, 54, 0.6));
 }
 
 .message-header {
@@ -2160,21 +2170,21 @@ body.no-animations * {
 }
 
 .user-message {
-    background: linear-gradient(145deg, rgba(0, 170, 255, 0.2), rgba(0, 136, 204, 0.2));
-    border: 1px solid rgba(0, 170, 255, 0.3);
+    background: linear-gradient(145deg, var(--user-bubble-fill, rgba(46, 175, 104, 0.24)), var(--user-bubble-fill-soft, rgba(46, 175, 104, 0.12)));
+    border: 1px solid var(--user-bubble-border, rgba(46, 175, 104, 0.55));
     margin-left: auto;
     text-align: right;
 }
 
 .nova-message {
-    background: linear-gradient(145deg, rgba(255, 215, 0, 0.15), rgba(255, 193, 7, 0.15));
-    border: 1px solid rgba(255, 215, 0, 0.3);
+    background: linear-gradient(145deg, var(--nova-bubble-fill, rgba(22, 137, 232, 0.24)), var(--nova-bubble-fill-soft, rgba(22, 137, 232, 0.12)));
+    border: 1px solid var(--nova-bubble-border, rgba(22, 137, 232, 0.55));
     margin-right: auto;
 }
 
 .avon-message {
-    background: linear-gradient(145deg, rgba(180, 90, 255, 0.18), rgba(95, 55, 180, 0.18));
-    border: 1px solid rgba(185, 110, 255, 0.5);
+    background: linear-gradient(145deg, var(--avon-bubble-fill, rgba(217, 54, 54, 0.24)), var(--avon-bubble-fill-soft, rgba(217, 54, 54, 0.12)));
+    border: 1px solid var(--avon-bubble-border, rgba(217, 54, 54, 0.6));
     margin-right: auto;
 }
 

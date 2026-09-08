@@ -4,6 +4,42 @@
 function setupEventListeners() {
     console.log('🔧 Setting up event listeners...');
 
+    function hexToRgba(hex, alpha) {
+        const normalized = String(hex || '').replace('#', '');
+        if (!/^[0-9a-f]{6}$/i.test(normalized)) return `rgba(22, 137, 232, ${alpha})`;
+        const value = parseInt(normalized, 16);
+        return `rgba(${(value >> 16) & 255}, ${(value >> 8) & 255}, ${value & 255}, ${alpha})`;
+    }
+
+    function applyChatBubbleColors() {
+        const root = document.documentElement;
+        root.style.setProperty('--nova-bubble-fill', hexToRgba(chatBubbleColors.nova, 0.24));
+        root.style.setProperty('--nova-bubble-fill-soft', hexToRgba(chatBubbleColors.nova, 0.12));
+        root.style.setProperty('--nova-bubble-border', hexToRgba(chatBubbleColors.nova, 0.55));
+        root.style.setProperty('--avon-bubble-fill', hexToRgba(chatBubbleColors.avon, 0.24));
+        root.style.setProperty('--avon-bubble-fill-soft', hexToRgba(chatBubbleColors.avon, 0.12));
+        root.style.setProperty('--avon-bubble-border', hexToRgba(chatBubbleColors.avon, 0.6));
+        root.style.setProperty('--user-bubble-fill', hexToRgba(chatBubbleColors.user, 0.24));
+        root.style.setProperty('--user-bubble-fill-soft', hexToRgba(chatBubbleColors.user, 0.12));
+        root.style.setProperty('--user-bubble-border', hexToRgba(chatBubbleColors.user, 0.55));
+    }
+
+    [
+        ['novaBubbleColor', 'nova'],
+        ['avonBubbleColor', 'avon'],
+        ['userBubbleColor', 'user']
+    ].forEach(([id, key]) => {
+        const input = document.getElementById(id);
+        if (!input) return;
+        input.value = chatBubbleColors[key];
+        input.addEventListener('input', () => {
+            chatBubbleColors[key] = input.value;
+            localStorage.setItem('nova_chat_bubble_colors', JSON.stringify(chatBubbleColors));
+            applyChatBubbleColors();
+        });
+    });
+    applyChatBubbleColors();
+
     const speechResumeBtn = document.getElementById('speechResumeBtn');
     const speechPauseBtn = document.getElementById('speechPauseBtn');
     const speechStopBtn = document.getElementById('speechStopBtn');
@@ -42,8 +78,22 @@ function setupEventListeners() {
     mutedAssistant?.addEventListener('change', () => { mutedGroupAssistant = mutedAssistant.value; });
 
     const personalityAssistant = document.getElementById('personalityAssistant');
+    const personalityPreset = document.getElementById('assistantPersonalityPreset');
     const personalityText = document.getElementById('assistantPersonalityText');
     const savePersonality = document.getElementById('saveAssistantPersonality');
+    function loadAssistantPersonalitySettings() {
+        const assistant = personalityAssistant?.value || 'nova';
+        if (personalityPreset) personalityPreset.value = assistantPresetSelections[assistant] || '';
+        if (personalityText) personalityText.value = assistantPersonalities[assistant] || '';
+    }
+    personalityAssistant?.addEventListener('change', loadAssistantPersonalitySettings);
+    personalityPreset?.addEventListener('change', () => {
+        const assistant = personalityAssistant?.value || 'nova';
+        assistantPresetSelections[assistant] = personalityPreset.value;
+        localStorage.setItem('nova_assistant_preset_selections', JSON.stringify(assistantPresetSelections));
+        showNotification(`${assistant === 'nova' ? 'N.O.V.A' : 'A.V.O.N.'} is now using ${personalityPreset.selectedOptions[0]?.textContent || 'Normal'} personality.`, 2200);
+    });
+    loadAssistantPersonalitySettings();
     savePersonality?.addEventListener('click', () => {
         const assistant = personalityAssistant?.value || 'nova';
         const value = personalityText?.value.trim() || '';
@@ -1208,17 +1258,26 @@ console.log('🌐 Exporting functions to window object...');
 window.processUserMessage = processUserMessage;
 window.generateAIResponse = generateAIResponse;
 window.addMessage = addMessage;
-window.currentPersonality = currentPersonality;
-window.getRandomnovaStylePhrase = getRandomnovaStylePhrase;
-window.fetchOpenRouterModels = fetchOpenRouterModels;
-window.refreshModelSelectionUI = refreshModelSelectionUI;
+window.currentPersonality = window.currentPersonality || 'Nova';
+if (typeof getRandomnovaStylePhrase === 'function') {
+    window.getRandomnovaStylePhrase = getRandomnovaStylePhrase;
+}
+if (typeof fetchOpenRouterModels === 'function') {
+    window.fetchOpenRouterModels = fetchOpenRouterModels;
+}
+if (typeof refreshModelSelectionUI === 'function') {
+    window.refreshModelSelectionUI = refreshModelSelectionUI;
+}
 console.log('🌐 ✅ window.processUserMessage:', typeof window.processUserMessage);
 console.log('🌐 ✅ window.generateAIResponse:', typeof window.generateAIResponse);
 console.log('🌐 ✅ window.addMessage:', typeof window.addMessage);
 
 // Update global personality when it changes
 function updateGlobalPersonality() {
-    window.currentPersonality = currentPersonality;
+    const nextPersonality = typeof currentPersonality !== 'undefined' ? currentPersonality : window.currentPersonality;
+    if (nextPersonality) {
+        window.currentPersonality = nextPersonality;
+    }
 }
 
 // ========================================

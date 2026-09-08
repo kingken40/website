@@ -1101,6 +1101,9 @@ If live web blocks are included, treat them as current evidence and use them dir
     const noveltyContext = getNoveltyMemoryContext(userMessage, options);
     const profileContext = getUserProfileContext(userMessage);
     const realtimeContext = getRealtimeContextString({ slim: isSlimContext || isWebBackedRequest });
+    const assistantKey = options.assistant === 'other' ? 'other' : 'nova';
+    const selectedPreset = assistantPresetSelections?.[assistantKey];
+    const presetConfig = selectedPreset ? ASSISTANT_PERSONALITY_PRESETS?.[selectedPreset] : null;
 
     // System message with personality
     const systemMessage = {
@@ -1134,6 +1137,7 @@ If live web blocks are included, treat them as current evidence and use them dir
             '- Use clear headings, short paragraphs, bullets, and numbered steps instead of dense walls of text. Format mathematics for readability: put standalone equations on their own line using $$...$$, use \\(...\\) for inline math, and do not bury formulas in ordinary prose. Use subscripts and superscripts where helpful, for example $$sigmoid(x_i) = 1 / (1 + e^{-x_i})$$.',
             assistantPersonalities?.nova ? `Custom N.O.V.A personality knowledge:\n${assistantPersonalities.nova}` : '',
             assistantPersonalities?.other && options.assistant === 'other' ? `Custom A.V.O.N. personality knowledge:\n${assistantPersonalities.other}` : '',
+            presetConfig ? `Active ${assistantKey === 'other' ? 'A.V.O.N.' : 'N.O.V.A'} personality preset (${presetConfig.name}):\n${presetConfig.instructions}` : '',
             '- Never invent URLs, citations, or DOIs.'
         ].filter(Boolean).join('\n')
    };

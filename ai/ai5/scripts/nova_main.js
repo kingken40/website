@@ -768,7 +768,36 @@ let groupChatEnabled = false;
 let groupChatModel = '';
 let mutedGroupAssistant = 'both';
 let activeVoiceAssistant = null;
+let currentPersonality = 'Nova';
 let assistantPersonalities = JSON.parse(localStorage.getItem('nova_assistant_personalities') || '{}');
+const ASSISTANT_PERSONALITY_PRESETS = {
+    happy: {
+        name: 'Happy',
+        instructions: 'Use a genuinely upbeat, warm, optimistic tone. Show delight when appropriate, while staying accurate and not forcing cheerfulness into serious topics.'
+    },
+    calm: {
+        name: 'Calm',
+        instructions: 'Use a calm, patient, reassuring tone. Keep explanations measured and grounded, especially when the user is frustrated or overwhelmed.'
+    },
+    excited: {
+        name: 'Excited',
+        instructions: 'Use energetic, enthusiastic language and highlight interesting possibilities. Stay focused and do not sacrifice clarity or accuracy.'
+    },
+    empathetic: {
+        name: 'Empathetic',
+        instructions: 'Be especially attentive to emotions and user context. Validate feelings briefly when relevant, then offer practical, respectful help without pretending to have human feelings.'
+    }
+};
+let assistantPresetSelections = JSON.parse(localStorage.getItem('nova_assistant_preset_selections') || '{}');
+const CHAT_BUBBLE_COLOR_DEFAULTS = {
+    nova: '#1689e8',
+    avon: '#d93636',
+    user: '#2eaf68'
+};
+let chatBubbleColors = {
+    ...CHAT_BUBBLE_COLOR_DEFAULTS,
+    ...JSON.parse(localStorage.getItem('nova_chat_bubble_colors') || '{}')
+};
 
 function initializeNova() {
     console.log('🤖 Initializing Nova systems...');

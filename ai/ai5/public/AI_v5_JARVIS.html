@@ -385,10 +385,37 @@
                         </select>
                     </div>
                     <div class="setting-group">
+                        <label for="assistantPersonalityPreset">Ready-to-use personality</label>
+                        <select id="assistantPersonalityPreset">
+                            <option value="">Normal (default)</option>
+                            <option value="happy">Happy</option>
+                            <option value="calm">Calm</option>
+                            <option value="excited">Excited</option>
+                            <option value="empathetic">Empathetic</option>
+                        </select>
+                        <small style="color:rgba(255,255,255,0.55);font-size:0.78rem;">Choose Normal to return to the regular assistant voice.</small>
+                    </div>
+                    <div class="setting-group">
                         <label for="assistantPersonalityText">Personality / knowledge</label>
                         <textarea id="assistantPersonalityText" rows="4" placeholder="Describe how this assistant should think, teach, speak, and what it should remember..."></textarea>
                     </div>
                     <button type="button" id="saveAssistantPersonality" class="settings-action-btn">Add to assistant knowledge</button>
+                </div>
+                <div class="setting-section" style="margin-top: 1.5rem;">
+                    <h4 style="color:#FFD700; margin-bottom:1rem; border-bottom:1px solid rgba(255,215,0,0.3); padding-bottom:0.5rem;">🎨 Chat Bubble Colors</h4>
+                    <div class="setting-group">
+                        <label for="novaBubbleColor">N.O.V.A bubble</label>
+                        <input type="color" id="novaBubbleColor" value="#1689e8" aria-label="N.O.V.A bubble color">
+                    </div>
+                    <div class="setting-group">
+                        <label for="avonBubbleColor">A.V.O.N. bubble</label>
+                        <input type="color" id="avonBubbleColor" value="#d93636" aria-label="A.V.O.N. bubble color">
+                    </div>
+                    <div class="setting-group">
+                        <label for="userBubbleColor">Your bubble</label>
+                        <input type="color" id="userBubbleColor" value="#2eaf68" aria-label="Your chat bubble color">
+                    </div>
+                    <small style="color:rgba(255,255,255,0.55);font-size:0.78rem;">Colors apply immediately and are saved on this device.</small>
                 </div>
                 <div class="setting-group" style="flex-direction:column; align-items:stretch;">
                     <label style="min-width:unset;">Last response model</label>
