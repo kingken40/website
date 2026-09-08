@@ -134,6 +134,35 @@ Also include "Where to get more" with useful official pages, documentation, or f
 Never invent a URL or citation, and never claim you cannot browse.`;
 }
 
+function extractResponseText(choice) {
+    const message = choice?.message || choice;
+    let content = message?.content || message?.reasoning || message?.reasoning_content || choice?.text || '';
+    if (typeof content !== 'string') {
+        try {
+            content = JSON.stringify(content);
+        } catch (error) {
+            content = String(content);
+        }
+    }
+    return content.trim();
+}
+
+function needsResponseCompletion(reply, finishReason) {
+    if (!reply) return finishReason === 'length';
+    if (finishReason === 'length' || finishReason === 'max_tokens') return true;
+
+    const finalText = reply.trim();
+    if (/[,:;—-]$/.test(finalText)) return true;
+    if (/\b(and|but|or|because|with|to|the|a|an|of|for|in|on|at|from|that|which|who|when|where|while|if|then|than|as|real)$/i.test(finalText)) {
+        return true;
+    }
+    return /[\(\[\{]$/.test(finalText);
+}
+
+function buildResponseCompletionRequest(originalMessage, partialReply) {
+    return `Continue and finish your previous answer to the user's message below. Start exactly where the partial answer stopped; do not repeat its wording, add a greeting, mention this instruction, or describe the continuation.\n\nUser message:\n${originalMessage}\n\nPartial answer:\n${partialReply}`;
+}
+
 // Try the server-side /api/chat proxy (uses OPENROUTER_API_KEY or OPENAI_API_KEY env variable on Vercel)
 async function generateViaServerProxy(userMessage, personality, options = {}) {
     const webIntent = _resolveWebIntent(userMessage);
@@ -155,7 +184,7 @@ async function generateViaServerProxy(userMessage, personality, options = {}) {
     const requestPayload = {
         model: shouldUseWeb ? 'perplexity/sonar' : (options.modelOverride || currentModel),
         messages: messages,
-        max_tokens: 2048,
+        max_tokens: 4096,
         temperature: personality === 'brainstorm' ? 0.95 : 0.7,
         stream: false
     };
@@ -209,20 +238,31 @@ async function generateViaServerProxy(userMessage, personality, options = {}) {
     }
 
     const choiceObj = responseData.choices[0];
-    const msgObj = choiceObj.message || choiceObj;
-    let extractedText = '';
-    if (msgObj) {
-        extractedText = msgObj.content || msgObj.reasoning || msgObj.reasoning_content || choiceObj.text || '';
-        if (typeof extractedText !== 'string') {
-            try { extractedText = JSON.stringify(extractedText); } catch (e) { extractedText = String(extractedText); }
-        }
-    }
-    extractedText = extractedText.trim();
+    let extractedText = extractResponseText(choiceObj);
     if (!extractedText && !shouldUseWeb) {
         if (choiceObj.finish_reason === 'length') {
             extractedText = 'Response was cut off due to length limits. Please ask me to continue.';
         } else {
             throw new Error(`The selected model (${responseModel}) returned an empty response. Please select a different model or try Auto-select.`);
+        }
+    }
+
+    if (!options.completionAttempt && needsResponseCompletion(extractedText, choiceObj.finish_reason)) {
+        console.warn('✍️ Server response appears incomplete; requesting a seamless continuation.', {
+            model: responseModel,
+            finishReason: choiceObj.finish_reason
+        });
+        try {
+            const continuation = await generateViaServerProxy(
+                buildResponseCompletionRequest(userMessage, extractedText),
+                personality,
+                { ...options, completionAttempt: true, slimContext: true }
+            );
+            if (continuation.reply) {
+                extractedText = `${extractedText} ${continuation.reply}`.trim();
+            }
+        } catch (error) {
+            console.warn('✍️ Automatic continuation failed; preserving the original reply.', error);
         }
     }
 
@@ -460,20 +500,52 @@ If the user asked for downloadable resources, prioritize official download pages
         }
         
         const choiceObjDirect = responseData.choices[0];
-        const msgObjDirect = choiceObjDirect.message || choiceObjDirect;
-        let extractedTextDirect = '';
-        if (msgObjDirect) {
-            extractedTextDirect = msgObjDirect.content || msgObjDirect.reasoning || msgObjDirect.reasoning_content || choiceObjDirect.text || '';
-            if (typeof extractedTextDirect !== 'string') {
-                try { extractedTextDirect = JSON.stringify(extractedTextDirect); } catch (e) { extractedTextDirect = String(extractedTextDirect); }
-            }
-        }
-        extractedTextDirect = extractedTextDirect.trim();
+        let extractedTextDirect = extractResponseText(choiceObjDirect);
         if (!extractedTextDirect && !shouldUseWeb) {
             if (choiceObjDirect.finish_reason === 'length') {
                 extractedTextDirect = 'Response was cut off due to length limits. Please ask me to continue.';
             } else {
                 throw new Error(`The selected model (${responseModel}) returned an empty response. Please select a different model or try Auto-select.`);
+            }
+        }
+
+        if (!options.completionAttempt && needsResponseCompletion(extractedTextDirect, choiceObjDirect.finish_reason)) {
+            console.warn('✍️ Direct provider response appears incomplete; requesting a seamless continuation.', {
+                model: responseModel,
+                finishReason: choiceObjDirect.finish_reason
+            });
+            const completionPayload = {
+                ...requestPayload,
+                messages: prepareOpenAIMessages(
+                    buildResponseCompletionRequest(userMessage, extractedTextDirect),
+                    personality,
+                    { ...options, completionAttempt: true, slimContext: true }
+                ),
+                max_tokens: 2048
+            };
+            try {
+                const completionResponse = await fetch(provider.apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${provider.apiKey}`,
+                        ...(provider.extraHeaders || {})
+                    },
+                    body: JSON.stringify(completionPayload)
+                });
+                if (!completionResponse.ok) {
+                    throw new Error(`${currentProvider.toUpperCase()} continuation API error (${completionResponse.status})`);
+                }
+                const completionData = await completionResponse.json();
+                if (completionData.error) {
+                    throw new Error(`${currentProvider.toUpperCase()} continuation API error: ${completionData.error.message || JSON.stringify(completionData.error)}`);
+                }
+                const completionText = extractResponseText(completionData.choices?.[0]);
+                if (completionText) {
+                    extractedTextDirect = `${extractedTextDirect} ${completionText}`.trim();
+                }
+            } catch (error) {
+                console.warn('✍️ Automatic continuation failed; preserving the original reply.', error);
             }
         }
 
@@ -1127,6 +1199,7 @@ If live web blocks are included, treat them as current evidence and use them dir
             'If the user asks what mode you are on, answer with the current active mode above.',
             '',
             'Rules:',
+            '- Complete your thought before ending a response. Never end mid-sentence, after a trailing comma, or with an unfinished clause. If space is limited, give a concise complete answer instead of beginning extra content you cannot finish.',
             '- You have real-time web search capability. Proactively search when a question is factual, educational, research-oriented, current, uncertain, asks for a definition/explanation/comparison, or would benefit from reliable external evidence. Do not wait for the user to say "look it up"; do not search for simple greetings, casual conversation, or tasks fully grounded in the user-provided text/files.',
             '- NEVER say you cannot browse, cannot search the web, or do not have internet access. If a search fails, be transparent that live verification failed rather than presenting unverified current claims as certain.',
             '- If Knowledge Base blocks are included, treat them as highest-priority user context. This includes your identity information — use it to answer questions about who you are, your name, and your purpose.',
