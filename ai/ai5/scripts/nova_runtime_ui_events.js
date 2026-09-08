@@ -57,15 +57,26 @@ function setupEventListeners() {
             return;
         }
         const savedVoice = localStorage.getItem('nova_avon_voice_preference') || '';
+        const novaVoiceName = window.selectedVoice?.name || '';
+        const defaultAvonVoice = voices.find(voice => voice.name !== novaVoiceName) || voices[0];
+        const avonVoiceName = voices.some(voice => voice.name === savedVoice)
+            ? savedVoice
+            : defaultAvonVoice?.name || '';
+        if (avonVoiceName && avonVoiceName !== savedVoice) {
+            localStorage.setItem('nova_avon_voice_preference', avonVoiceName);
+        }
+        window.avonSelectedVoice = voices.find(voice => voice.name === avonVoiceName) || null;
         avonVoiceSelect.innerHTML = '<option value="">Default system voice</option>';
         voices.forEach(voice => {
             const option = new Option(`${voice.name} (${voice.lang})`, voice.name);
-            option.selected = voice.name === savedVoice;
+            option.selected = voice.name === avonVoiceName;
             avonVoiceSelect.appendChild(option);
         });
     }
     avonVoiceSelect?.addEventListener('change', () => {
         localStorage.setItem('nova_avon_voice_preference', avonVoiceSelect.value);
+        window.avonSelectedVoice = window.speechSynthesis?.getVoices()
+            .find(voice => voice.name === avonVoiceSelect.value) || null;
         showNotification(avonVoiceSelect.value ? `A.V.O.N. voice changed to ${avonVoiceSelect.value}` : 'A.V.O.N. will use the system voice.', 2200);
     });
     previewAvonVoiceBtn?.addEventListener('click', () => {

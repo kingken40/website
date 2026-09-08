@@ -1587,8 +1587,14 @@ function setupUtteranceAndSpeak(text, onEndCallback, assistant = 'nova') {
     const utterance = new SpeechSynthesisUtterance(text);
     
     // Apply current voice settings with validation
+    const voices = window.speechSynthesis?.getVoices() || [];
+    const storedAvonVoiceName = localStorage.getItem('nova_avon_voice_preference');
     const configuredAssistantVoice = assistant === 'other'
-        ? window.speechSynthesis?.getVoices().find(voice => voice.name === localStorage.getItem('nova_avon_voice_preference'))
+        ? window.avonSelectedVoice ||
+            voices.find(voice => voice.name === storedAvonVoiceName) ||
+            voices.find(voice => voice.lang.startsWith('en') && voice.name !== currentVoiceSettings.voice?.name) ||
+            voices.find(voice => voice.lang.startsWith('en')) ||
+            null
         : currentVoiceSettings.voice;
     if (isUsableSpeechVoice(configuredAssistantVoice)) {
         try {
@@ -1604,8 +1610,8 @@ function setupUtteranceAndSpeak(text, onEndCallback, assistant = 'nova') {
         console.log('🔊 Current voice setting:', currentVoiceSettings.voice);
     }
     
-    utterance.rate = currentVoiceSettings.rate;
-    utterance.pitch = currentVoiceSettings.pitch;
+    utterance.rate = assistant === 'other' ? 0.96 : currentVoiceSettings.rate;
+    utterance.pitch = assistant === 'other' ? 1.12 : currentVoiceSettings.pitch;
     utterance.volume = currentVoiceSettings.volume;
     
     console.log('🔊 Voice settings - Rate:', utterance.rate, 'Pitch:', utterance.pitch, 'Volume:', utterance.volume);
