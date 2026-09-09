@@ -1495,7 +1495,37 @@ function getNovaLikeVoices(voices) {
     return rankedVoices;
 }
 
-function speakText(text, onEndCallback = null, assistant = 'nova') {
+let assistantSpeechQueue = Promise.resolve();
+let assistantSpeechQueueToken = 0;
+let queuedAssistantSpeechActive = false;
+
+function enqueueAssistantSpeech(text, assistant = 'nova', onEndCallback = null) {
+    const queueToken = assistantSpeechQueueToken;
+    assistantSpeechQueue = assistantSpeechQueue
+        .catch(error => {
+            console.warn('🔊 Previous queued speech failed:', error);
+        })
+        .then(() => new Promise(resolve => {
+            const finish = () => {
+                queuedAssistantSpeechActive = false;
+                if (typeof onEndCallback === 'function') onEndCallback();
+                resolve();
+            };
+            if (queueToken !== assistantSpeechQueueToken) {
+                finish();
+                return;
+            }
+            queuedAssistantSpeechActive = true;
+            speakText(text, finish, assistant, queueToken);
+        }));
+
+    return assistantSpeechQueue;
+}
+
+function speakText(text, onEndCallback = null, assistant = 'nova', queueToken = null) {
+    if (!queuedAssistantSpeechActive) {
+        assistantSpeechQueueToken++;
+    }
     console.log('🔊 speakText called with:', text);
     console.log('🔊 synthesis available:', !!synthesis);
     console.log('🔊 isSpeaking:', isSpeaking);
@@ -1504,6 +1534,7 @@ function speakText(text, onEndCallback = null, assistant = 'nova') {
     
     if (!synthesis) {
         console.error('🔊 Speech synthesis not available');
+        if (typeof onEndCallback === 'function') onEndCallback();
         return;
     }
 
@@ -1556,10 +1587,14 @@ function speakText(text, onEndCallback = null, assistant = 'nova') {
 
     // CRITICAL: Stop recognition and wait before speaking to prevent feedback loop
     const startSpeaking = async () => {
+        if (queueToken !== null && queueToken !== assistantSpeechQueueToken) {
+            finalOnEndCallback();
+            return;
+        }
         if (isSpeaking) {
             console.log('🔊 Already speaking, canceling previous');
             synthesis.cancel();
-            setTimeout(() => speakText(speechText, finalOnEndCallback, assistant), 100);
+            setTimeout(() => speakText(speechText, finalOnEndCallback, assistant, queueToken), 100);
             return;
         }
 
@@ -1660,6 +1695,8 @@ function setupUtteranceAndSpeak(text, onEndCallback, assistant = 'nova') {
 }
 
 function stopSpeech() {
+    assistantSpeechQueueToken++;
+    queuedAssistantSpeechActive = false;
     if (currentBridgeAudio) {
         currentBridgeAudio.pause();
         currentBridgeAudio.currentTime = 0;
@@ -1716,6 +1753,7 @@ window.pauseSpeech = pauseSpeech;
 window.resumeSpeech = resumeSpeech;
 window.stopSpeech = stopSpeech;
 window.speakTextFrom = speakTextFrom;
+window.enqueueAssistantSpeech = enqueueAssistantSpeech;
 
 // Voice Sampling and Selection Functions
 function previewVoice(voice, sampleText = "Greetings, sir. This is how I sound. Do you approve of this voice selection?") {

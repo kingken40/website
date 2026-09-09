@@ -164,8 +164,14 @@ function buildResponseCompletionRequest(originalMessage, partialReply) {
 }
 
 function speakAssistantResponse(text, responseSender, onEndCallback = null) {
-    if (typeof window.speakText !== 'function') return;
-    window.speakText(text, onEndCallback, responseSender === 'Avon' ? 'other' : 'nova');
+    const assistant = responseSender === 'Avon' ? 'other' : 'nova';
+    if (typeof window.enqueueAssistantSpeech === 'function') {
+        window.enqueueAssistantSpeech(text, assistant, onEndCallback);
+        return;
+    }
+    if (typeof window.speakText === 'function') {
+        window.speakText(text, onEndCallback, assistant);
+    }
 }
 
 // Try the server-side /api/chat proxy (uses OPENROUTER_API_KEY or OPENAI_API_KEY env variable on Vercel)

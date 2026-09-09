@@ -354,9 +354,7 @@ function processUserMessage(userMessage) {
             const modeResponse = getModeQuestionResponse();
             console.log('🎭 Mode question detected - responding directly:', modeResponse);
 
-            if (window.speechSynthesis) {
-                window.speechSynthesis.cancel();
-            }
+            window.stopSpeech?.();
             if (activeResponseAbortController) {
                 try {
                     activeResponseAbortController.abort();
@@ -601,10 +599,8 @@ async function handleInterrupt(userMessage) {
     const interruptRunId = ++activeResponseRunId;
 
     // Stop speech synthesis immediately
-    if (window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-        console.log('🛑 Speech synthesis stopped (interrupt)');
-    }
+    window.stopSpeech?.();
+    console.log('🛑 Speech synthesis stopped (interrupt)');
 
     if (activeResponseAbortController) {
         try {
