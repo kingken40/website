@@ -7,6 +7,23 @@ function getModeChangeAssistant() {
     return 'nova';
 }
 
+function getExplicitGroupMessageTarget(message) {
+    if (!groupChatEnabled || mutedGroupAssistant !== 'both') return null;
+
+    const text = String(message || '').trim();
+    const novaName = '(?:nova|n\\.?\\s*o\\.?\\s*v\\.?\\s*a\\.?)';
+    const avonName = 'a\\.?\\s*v\\.?\\s*o\\.?\\s*n\\.?';
+    const addressSuffix = '(?=\\s|[,:;!?-]|$)';
+
+    if (new RegExp(`^(?:(?:hey|yo)\\s+)?${avonName}${addressSuffix}`, 'i').test(text)) {
+        return 'other';
+    }
+    if (new RegExp(`^(?:(?:hey|yo)\\s+)?${novaName}${addressSuffix}`, 'i').test(text)) {
+        return 'nova';
+    }
+    return null;
+}
+
 function getModeChangeGreeting(personalityType, personalityConfig, assistant) {
     if (assistant !== 'other') {
         return personalityType === 'Nova' ? getRandomNovaGreeting() : personalityConfig.greeting;
@@ -415,8 +432,10 @@ function processUserMessage(userMessage) {
         addMessage(userMessage, 'user');
         
         const voiceTarget = window.activeVoiceAssistant || null;
-        const novaAllowed = voiceTarget !== 'other' && mutedGroupAssistant !== 'other';
-        const avonAllowed = groupChatEnabled && voiceTarget !== 'nova' && mutedGroupAssistant !== 'nova';
+        const explicitTarget = getExplicitGroupMessageTarget(userMessage);
+        const responseTarget = explicitTarget || voiceTarget;
+        const novaAllowed = responseTarget !== 'other' && mutedGroupAssistant !== 'other';
+        const avonAllowed = groupChatEnabled && responseTarget !== 'nova' && mutedGroupAssistant !== 'nova';
         const soleResponder = novaAllowed && !avonAllowed
             ? 'nova'
             : avonAllowed && !novaAllowed
