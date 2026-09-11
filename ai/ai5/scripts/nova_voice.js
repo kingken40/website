@@ -47,6 +47,7 @@ let localVoiceBridgeEnabled = defaultBridgeEnabled === null ? true : defaultBrid
 let localVoiceBridgeUrl = localStorage.getItem('Nova_local_voice_bridge_url') || 'http://127.0.0.1:8765';
 let currentBridgeAudio = null;
 let lastBridgeFailureNoticeMs = 0;
+let speechOutputWatchdog = null;
 
 function isUsableSpeechVoice(voice) {
     return !!(voice && typeof voice.name === 'string' && typeof voice.lang === 'string');
@@ -93,6 +94,35 @@ function getBridgeVoiceName() {
         return window.selectedVoice.name;
     }
     return null;
+}
+
+function clearSpeechOutputState() {
+    if (speechOutputWatchdog) {
+        clearTimeout(speechOutputWatchdog);
+        speechOutputWatchdog = null;
+    }
+    isSpeaking = false;
+    window.isSpeaking = false;
+    isSpeechOutputActive = false;
+    window.isSpeechOutputActive = false;
+    clearSpeechInterruptState();
+    stopSpeechInterruptListening();
+    updateSpeakingUI(false);
+}
+
+function reconcileSpeechOutputState() {
+    const browserSpeechActive = window.speechSynthesis &&
+        (window.speechSynthesis.speaking || window.speechSynthesis.pending);
+    const bridgeAudioActive = currentBridgeAudio &&
+        !currentBridgeAudio.paused &&
+        !currentBridgeAudio.ended;
+
+    if ((isSpeaking || isSpeechOutputActive) && !browserSpeechActive && !bridgeAudioActive) {
+        console.warn('🔊 Clearing stale speech output state');
+        clearSpeechOutputState();
+        return false;
+    }
+    return !!(browserSpeechActive || bridgeAudioActive);
 }
 
 async function playViaLocalVoiceBridge(text, onEndCallback) {
@@ -168,6 +198,11 @@ async function playViaLocalVoiceBridge(text, onEndCallback) {
         await audio.play();
         return true;
     } catch (error) {
+        if (currentBridgeAudio) {
+            currentBridgeAudio.pause();
+            currentBridgeAudio = null;
+        }
+        clearSpeechOutputState();
         const now = Date.now();
         if (now - lastBridgeFailureNoticeMs > 6000) {
             lastBridgeFailureNoticeMs = now;
@@ -1656,6 +1691,13 @@ function speakText(text, onEndCallback = null, assistant = 'nova', queueToken = 
 
 function setupUtteranceAndSpeak(text, onEndCallback, assistant = 'nova') {
     const utterance = new SpeechSynthesisUtterance(text);
+    let speechFinished = false;
+    const completeSpeech = () => {
+        if (speechFinished) return;
+        speechFinished = true;
+        clearSpeechOutputState();
+        if (onEndCallback) onEndCallback();
+    };
     
     // Apply current voice settings with validation
     const voices = window.speechSynthesis?.getVoices() || [];
@@ -1696,34 +1738,26 @@ function setupUtteranceAndSpeak(text, onEndCallback, assistant = 'nova') {
         speechInterruptTriggered = false;
         updateSpeakingUI(true);
         console.log('🔊 N.O.V.A started speaking:', text);
+
+        const estimatedDurationMs = Math.min(
+            90000,
+            Math.max(12000, (text.trim().split(/\s+/).length * 400) + 8000)
+        );
+        speechOutputWatchdog = setTimeout(() => {
+            console.warn('🔊 Speech completion event timed out; clearing playback state');
+            if (synthesis) synthesis.cancel();
+            completeSpeech();
+        }, estimatedDurationMs);
     };
     
     utterance.onend = function() {
-        isSpeaking = false;
-        window.isSpeaking = false;
-        isSpeechOutputActive = false;
-        window.isSpeechOutputActive = false;
-        clearSpeechInterruptState();
-        stopSpeechInterruptListening();
-        updateSpeakingUI(false);
+        completeSpeech();
         console.log('🔊 Speech ended successfully');
-        
-        // Call the provided callback - let the callback handle wake listening restart
-        if (onEndCallback) {
-            onEndCallback();
-        }
     };
     
     utterance.onerror = function(event) {
         console.error('🔊 Speech synthesis error:', event.error);
-        isSpeaking = false;
-        window.isSpeaking = false;
-        isSpeechOutputActive = false;
-        window.isSpeechOutputActive = false;
-        clearSpeechInterruptState();
-        stopSpeechInterruptListening();
-        updateSpeakingUI(false);
-        if (onEndCallback) onEndCallback();
+        completeSpeech();
     };
     
     console.log('🔊 Starting speech synthesis...');
@@ -1744,13 +1778,8 @@ function stopSpeech() {
     if (synthesis) {
         synthesis.cancel();
     }
-    isSpeaking = false;
-    window.isSpeaking = false;
-    isSpeechOutputActive = false;
-    window.isSpeechOutputActive = false;
-    clearSpeechInterruptState();
+    clearSpeechOutputState();
     stopSpeechInterruptListening(true);
-    updateSpeakingUI(false);
 }
 
 function pauseSpeech() {
@@ -2172,6 +2201,7 @@ window.initializeVoice = initializeVoice;
 window.startVoiceRecognition = startVoiceRecognition;
 window.speakText = speakText;
 window.stopSpeech = stopSpeech;
+window.reconcileSpeechOutputState = reconcileSpeechOutputState;
 window.updateVoiceSettings = updateVoiceSettings;
 window.setVoiceVolume = setVoiceVolume;
 window.setVoiceSpeed = setVoiceSpeed;

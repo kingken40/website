@@ -108,6 +108,9 @@
         setInterval(function() {
             if (!mobileAlwaysListeningEnabled)                  { setCallState('disabled');   return; }
             if (muted)                                        { setCallState('muted');      return; }
+            if (typeof window.reconcileSpeechOutputState === 'function') {
+                window.reconcileSpeechOutputState();
+            }
             if (window.isSpeaking || window.isSpeechOutputActive) { setCallState('speaking');   return; }
             if (document.querySelector('.thinking-indicator'))    { setCallState('processing'); return; }
             setCallState('listening');
