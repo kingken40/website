@@ -1522,6 +1522,7 @@ function getNovaLikeVoices(voices) {
 let assistantSpeechQueue = Promise.resolve();
 let assistantSpeechQueueToken = 0;
 let queuedAssistantSpeechActive = false;
+let activeQueuedSpeechFinish = null;
 
 function enqueueAssistantSpeech(text, assistant = 'nova', onEndCallback = null) {
     const queueToken = assistantSpeechQueueToken;
@@ -1530,8 +1531,14 @@ function enqueueAssistantSpeech(text, assistant = 'nova', onEndCallback = null) 
             console.warn('🔊 Previous queued speech failed:', error);
         })
         .then(() => new Promise(resolve => {
+            let finished = false;
             const finish = () => {
+                if (finished) return;
+                finished = true;
                 queuedAssistantSpeechActive = false;
+                if (activeQueuedSpeechFinish === finish) {
+                    activeQueuedSpeechFinish = null;
+                }
                 if (typeof onEndCallback === 'function') onEndCallback();
                 resolve();
             };
@@ -1540,6 +1547,7 @@ function enqueueAssistantSpeech(text, assistant = 'nova', onEndCallback = null) 
                 return;
             }
             queuedAssistantSpeechActive = true;
+            activeQueuedSpeechFinish = finish;
             speakText(text, finish, assistant, queueToken);
         }));
 
@@ -1547,8 +1555,11 @@ function enqueueAssistantSpeech(text, assistant = 'nova', onEndCallback = null) 
 }
 
 function speakText(text, onEndCallback = null, assistant = 'nova', queueToken = null) {
-    if (!queuedAssistantSpeechActive) {
+    if (queueToken === null) {
         assistantSpeechQueueToken++;
+        if (activeQueuedSpeechFinish) {
+            activeQueuedSpeechFinish();
+        }
     }
     console.log('🔊 speakText called with:', text);
     console.log('🔊 synthesis available:', !!synthesis);
@@ -1556,6 +1567,7 @@ function speakText(text, onEndCallback = null, assistant = 'nova', queueToken = 
     console.log('🔊 currentVoiceSettings:', currentVoiceSettings);
     console.log('🔊 selectedVoiceMode:', selectedVoiceMode, 'selectedJarvisPackId:', selectedJarvisPackId);
     
+    synthesis = window.speechSynthesis || synthesis;
     if (!synthesis) {
         console.error('🔊 Speech synthesis not available');
         if (typeof onEndCallback === 'function') onEndCallback();
@@ -1715,12 +1727,15 @@ function setupUtteranceAndSpeak(text, onEndCallback, assistant = 'nova') {
     };
     
     console.log('🔊 Starting speech synthesis...');
-    synthesis.speak(utterance);
+    (window.speechSynthesis || synthesis).speak(utterance);
 }
 
 function stopSpeech() {
     assistantSpeechQueueToken++;
     queuedAssistantSpeechActive = false;
+    if (activeQueuedSpeechFinish) {
+        activeQueuedSpeechFinish();
+    }
     if (currentBridgeAudio) {
         currentBridgeAudio.pause();
         currentBridgeAudio.currentTime = 0;
