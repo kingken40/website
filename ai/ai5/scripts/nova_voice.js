@@ -715,7 +715,8 @@ function setupSpeechRecognition() {
                     }
                 }, 300);
             } else {
-                showVoiceNotification('Network issue - press R to try again', 2000);
+                showVoiceNotification('Reconnecting voice recognition...', 1500);
+                scheduleWakeListeningRecovery(1200);
             }
         } else if (recognitionError === 'aborted') {
             pendingTranscript = '';
@@ -888,6 +889,35 @@ function startWakeListening() {
             setTimeout(() => startWakeListening(), 2000);
         }
     }
+}
+
+function scheduleWakeListeningRecovery(delay = 500) {
+    if (!wakeWordEnabled || !hasVoicePermission || !isVoiceSupported ||
+        alwaysListeningHotkeyMode || hotkeyActive || restartPending) {
+        return;
+    }
+
+    isWakeListening = true;
+    window.isWakeListening = true;
+    restartPending = true;
+
+    setTimeout(function recoverWakeListening() {
+        restartPending = false;
+        if (!wakeWordEnabled || !hasVoicePermission || !isVoiceSupported ||
+            alwaysListeningHotkeyMode || hotkeyActive || isListening) {
+            return;
+        }
+
+        const speechActive = isSpeaking || isSpeechOutputActive ||
+            (window.speechSynthesis && (window.speechSynthesis.speaking || window.speechSynthesis.pending));
+        if (speechActive) {
+            scheduleWakeListeningRecovery(400);
+            return;
+        }
+
+        setupSpeechRecognition();
+        startWakeListening();
+    }, delay);
 }
 
 function stopWakeListening() {
@@ -1113,16 +1143,9 @@ function startCommandListening() {
         window.isListening = false;
         isWakeListening = false;
         
-        // Set a failsafe timeout - if wake listening hasn't restarted in 15 seconds, force restart
-        // This ensures we don't get stuck if something fails in the response chain
-        if (wakeWordEnabled) {
-            console.log('🎤 Setting failsafe timeout for wake listening restoration...');
-            setTimeout(() => {
-                if (wakeWordEnabled && !isWakeListening && !isListening) {
-                    console.warn('⚠️ FAILSAFE: Wake listening not restored after 15s - forcing restart');
-                    restoreWakeListeningAfterResponse();
-                }
-            }, 15000);
+        if (!commandTranscript && wakeWordEnabled) {
+            console.log('🎤 Command ended without a transcript - restoring wake listening');
+            scheduleWakeListeningRecovery();
         }
         
         console.log('🎤 Command recognition ended - waiting for response to complete');
@@ -1138,6 +1161,7 @@ function startCommandListening() {
         updateVoiceUI(false);
         isListening = false;
         window.isListening = false;
+        scheduleWakeListeningRecovery();
     }
 }
 
