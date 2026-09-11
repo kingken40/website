@@ -195,13 +195,13 @@ async function generateViaServerProxy(userMessage, personality, options = {}) {
     const requestPayload = {
         model: shouldUseWeb ? 'perplexity/sonar' : (options.modelOverride || currentModel),
         messages: messages,
-        max_tokens: 4096,
+        max_tokens: options.fastResponse ? 512 : 4096,
         temperature: personality === 'brainstorm' ? 0.95 : 0.7,
         stream: false
     };
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    const timeoutId = setTimeout(() => controller.abort(), options.fastResponse ? 15000 : 30000);
     activeResponseAbortController = controller;
 
     let response;
@@ -302,7 +302,6 @@ async function generateAIResponse(userMessage, personality, options = {}) {
     if (!hasUserKey) {
         console.log('🌐 No user API key configured — trying server proxy (/api/chat)...');
         try {
-            await new Promise(resolve => setTimeout(resolve, 400));
             const proxyResult = await generateViaServerProxy(userMessage, personality, options);
             const reply = proxyResult.reply;
             const responseModel = proxyResult.model || lastResponseModel || currentModel;
@@ -353,9 +352,6 @@ async function generateAIResponse(userMessage, personality, options = {}) {
     console.log('🚀 Sending request to', currentProvider.toUpperCase(), 'API (', provider.model, ')...');
     
     try {
-        // Add network delay for better UX
-        await new Promise(resolve => setTimeout(resolve, 800));
-
         // --- Web search / URL fetch ---
         let effectiveMessage = userMessage;
         let requestModel = options.modelOverride || provider.model;
@@ -394,7 +390,7 @@ If the user asked for downloadable resources, prioritize official download pages
         const requestPayload = {
             model: requestModel,
             messages: messages,
-            max_tokens: provider.maxTokens,
+            max_tokens: options.fastResponse ? 512 : provider.maxTokens,
             temperature: personality === 'brainstorm' ? 0.95 : 0.7,
             stream: false
         };
@@ -406,7 +402,7 @@ If the user asked for downloadable resources, prioritize official download pages
         
         // Add timeout to prevent hanging requests
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), options.fastResponse ? 15000 : 30000);
         activeResponseAbortController = controller;
         
         let response;

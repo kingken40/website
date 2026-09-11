@@ -24,6 +24,14 @@ function getExplicitGroupMessageTarget(message) {
     return null;
 }
 
+function isQuickConversationMessage(message) {
+    const text = String(message || '')
+        .toLowerCase()
+        .replace(/^(?:(?:hey|yo)\s+)?(?:n\.?\s*o\.?\s*v\.?\s*a\.?|a\.?\s*v\.?\s*o\.?\s*n\.?)[,:\s-]*/i, '')
+        .trim();
+    return /^(?:hi|hello|hey|yo|good\s+(?:morning|afternoon|evening)|how\s+are\s+you|what(?:'s|\s+is)\s+up|how(?:'s|\s+is)\s+it\s+going|are\s+you\s+(?:there|okay|alright))[\s!?.,]*$/i.test(text);
+}
+
 function getModeChangeGreeting(personalityType, personalityConfig, assistant) {
     if (assistant !== 'other') {
         return personalityType === 'Nova' ? getRandomNovaGreeting() : personalityConfig.greeting;
@@ -434,6 +442,7 @@ function processUserMessage(userMessage) {
         const voiceTarget = window.activeVoiceAssistant || null;
         const explicitTarget = getExplicitGroupMessageTarget(userMessage);
         const responseTarget = explicitTarget || voiceTarget;
+        const fastResponse = isQuickConversationMessage(userMessage);
         const novaAllowed = responseTarget !== 'other' && mutedGroupAssistant !== 'other';
         const avonAllowed = groupChatEnabled && responseTarget !== 'nova' && mutedGroupAssistant !== 'nova';
         const soleResponder = novaAllowed && !avonAllowed
@@ -459,7 +468,8 @@ function processUserMessage(userMessage) {
                     await generateAIResponse(userMessage, currentPersonality, {
                         assistant: 'nova',
                         groupChat: groupChatEnabled,
-                        individualChat: soleResponder === 'nova'
+                        individualChat: soleResponder === 'nova',
+                        fastResponse
                     });
                 }
                 if (avonAllowed && groupChatModel) {
@@ -468,7 +478,8 @@ function processUserMessage(userMessage) {
                         modelOverride: groupChatModel,
                         groupChat: true,
                         individualChat: soleResponder === 'other',
-                        skipUserHistory: true
+                        skipUserHistory: true,
+                        fastResponse
                     });
                 }
                 updateChatSuggestions(userMessage);
@@ -480,7 +491,7 @@ function processUserMessage(userMessage) {
                 }
 
             }
-        }, 1000);
+        }, 0);
     } catch (error) {
         console.error('❌ Error in processUserMessage:', error);
         isResponseInFlight = false;
