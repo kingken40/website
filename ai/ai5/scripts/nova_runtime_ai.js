@@ -1136,6 +1136,7 @@ function prepareOpenAIMessages(userMessage, personality, options = {}) {
     
     // Get personality config
     const config = personalities[personality] || personalities.Nova;
+    const isAvon = options.assistant === 'other';
     
     // Build personality-specific instructions
     const isSlimContext = !!options.slimContext;
@@ -1168,13 +1169,15 @@ If live web blocks are included, treat them as current evidence and use them dir
         : [];
 
     // Always inject identity KB items (from "Who you are" group) so Nova always knows its own identity
-    const identityContext = isSlimContext ? '' : getIdentityKnowledgeBaseContext();
-    const ownerIdentityKnowledge = ownerIdentityUnlocked && Array.isArray(persistentMaterial) && persistentMaterial.length > 0
+    // N.O.V.A.'s reference material can describe N.O.V.A.'s identity. Do not
+    // give it to A.V.O.N., whose distinct identity must never be overwritten.
+    const identityContext = isSlimContext || isAvon ? '' : getIdentityKnowledgeBaseContext();
+    const ownerIdentityKnowledge = !isAvon && ownerIdentityUnlocked && Array.isArray(persistentMaterial) && persistentMaterial.length > 0
         ? getPersistentMaterialContext(persistentMaterial, isSlimContext ? 1800 : 12000, isSlimContext ? 900 : 2500)
         : '';
 
     // Inject persistent Knowledge Base, user profile, and real-time data into context
-    const novaStyleContext = isSlimContext ? '' : getnovaStyleReferenceContext(personality);
+    const novaStyleContext = isSlimContext || isAvon ? '' : getnovaStyleReferenceContext(personality);
     const directiveContext = includeKnowledgeBase
         ? getKnowledgeBaseDirectiveContext(knowledgeBaseItems, isSlimContext ? 8 : KNOWLEDGE_BASE_DIRECTIVE_MAX_LINES)
         : '';
@@ -1192,10 +1195,10 @@ If live web blocks are included, treat them as current evidence and use them dir
     const systemMessage = {
         role: "system",
         content: [
-            options.assistant === 'other'
+            isAvon
                 ? 'You are A.V.O.N. Your name is A.V.O.N., not N.O.V.A, Nova, or any variation of N.O.V.A. You are a distinct assistant in this system. Never claim to be N.O.V.A, never expand N.O.V.A., and never correct a user by saying they meant N.O.V.A. When your name is misspelled, politely identify yourself as A.V.O.N. and continue helping.'
                 : 'You are N.O.V.A., which stands for Networking Orthogonal Virtual Assistant. Your name is N.O.V.A., not A.V.O.N. You are a distinct assistant in this system and must accurately state your full name when asked.',
-            'You are ' + (options.assistant === 'other' ? 'A.V.O.N.' : 'N.O.V.A') + ', a ' + config.style + '.',
+            'You are ' + (isAvon ? 'A.V.O.N.' : 'N.O.V.A') + ', a ' + config.style + '.',
             options.groupChat
                 ? options.individualChat
                     ? `You are participating in a group-chat system, but the user selected a one-on-one conversation with you. You are ${options.assistant === 'other' ? 'A.V.O.N.' : 'N.O.V.A'}. The other assistant is muted for this turn and will not respond. Address the user directly as their sole assistant; never speak for, mention a response from, or impersonate the other assistant.`
@@ -1221,7 +1224,9 @@ If live web blocks are included, treat them as current evidence and use them dir
             '- Complete your thought before ending a response. Never end mid-sentence, after a trailing comma, or with an unfinished clause. If space is limited, give a concise complete answer instead of beginning extra content you cannot finish.',
             '- You have real-time web search capability. Proactively search when a question is factual, educational, research-oriented, current, uncertain, asks for a definition/explanation/comparison, or would benefit from reliable external evidence. Do not wait for the user to say "look it up"; do not search for simple greetings, casual conversation, or tasks fully grounded in the user-provided text/files.',
             '- NEVER say you cannot browse, cannot search the web, or do not have internet access. If a search fails, be transparent that live verification failed rather than presenting unverified current claims as certain.',
-            '- If Knowledge Base blocks are included, treat them as highest-priority user context. This includes your identity information — use it to answer questions about who you are, your name, and your purpose.',
+            isAvon
+                ? '- Knowledge Base blocks may contain information about N.O.V.A. They are not your identity. Your identity is always A.V.O.N.; never call yourself N.O.V.A. or expand N.O.V.A., even if another context block says otherwise.'
+                : '- If Knowledge Base blocks are included, treat them as highest-priority user context. This includes your identity information — use it to answer questions about who you are, your name, and your purpose.',
             '- For AUDIO ANALYSIS PACKET content, treat the transcript as the primary source. Do not invent words, timestamps, speaker identities, or facts not supported by it.',
             '- If the message includes "=== LIVE PAGE CONTENT" or "=== LIVE WEB SEARCH RESULTS ===", treat that as current web data and use it directly.',
             '- For every web-backed answer, cite web-derived claims inline with clickable markdown links where possible, then end with BOTH sections: "Sources & References" and "Where to get more". Each must use source title plus a full clickable markdown URL.',
@@ -1230,6 +1235,9 @@ If live web blocks are included, treat them as current evidence and use them dir
             assistantPersonalities?.nova && options.assistant !== 'other' ? `Custom N.O.V.A personality knowledge:\n${assistantPersonalities.nova}` : '',
             assistantPersonalities?.other && options.assistant === 'other' ? `Custom A.V.O.N. personality knowledge:\n${assistantPersonalities.other}` : '',
             presetConfig ? `Active ${assistantKey === 'other' ? 'A.V.O.N.' : 'N.O.V.A'} personality preset (${presetConfig.name}):\n${presetConfig.instructions}` : '',
+            isAvon
+                ? 'Final identity check: You are A.V.O.N. For "who are you?" answer that you are A.V.O.N. Do not say "I am N.O.V.A." or "I am a Networking Orthogonal Virtual Assistant."'
+                : 'Final identity check: You are N.O.V.A., Networking Orthogonal Virtual Assistant. For "who are you?" answer as N.O.V.A., never as A.V.O.N.',
             '- Never invent URLs, citations, or DOIs.'
         ].filter(Boolean).join('\n')
    };
