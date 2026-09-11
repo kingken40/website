@@ -174,6 +174,23 @@ function speakAssistantResponse(text, responseSender, onEndCallback = null) {
     }
 }
 
+function getInstantConversationReply(userMessage, responseSender) {
+    const text = String(userMessage || '').toLowerCase();
+    const assistantName = responseSender === 'Avon' ? 'A.V.O.N.' : 'N.O.V.A.';
+
+    if (/\bhow\s+are\s+you\b|\bhow(?:'s|\s+is)\s+it\s+going\b|\bare\s+you\s+(?:there|okay|alright)\b/.test(text)) {
+        return responseSender === 'Avon'
+            ? 'I am doing well, thank you. A.V.O.N. is online and ready to help. How are you?'
+            : 'I am doing well, thank you. N.O.V.A. is online and ready to help. How are you?';
+    }
+    if (/\bgood\s+(?:morning|afternoon|evening)\b/.test(text)) {
+        return `Good day. ${assistantName} is ready to assist you.`;
+    }
+    return responseSender === 'Avon'
+        ? 'Hello. A.V.O.N. is here and ready to help. What would you like to discuss?'
+        : 'Hello. N.O.V.A. is here and ready to help. What would you like to discuss?';
+}
+
 // Try the server-side /api/chat proxy (uses OPENROUTER_API_KEY or OPENAI_API_KEY env variable on Vercel)
 async function generateViaServerProxy(userMessage, personality, options = {}) {
     const webIntent = _resolveWebIntent(userMessage);
@@ -293,6 +310,20 @@ async function generateViaServerProxy(userMessage, personality, options = {}) {
 async function generateAIResponse(userMessage, personality, options = {}) {
     console.log('🤖 Generating AI response for personality:', personality);
     const responseSender = options.assistant === 'other' ? 'Avon' : 'Nova';
+
+    if (options.fastResponse) {
+        const reply = getInstantConversationReply(userMessage, responseSender);
+        removeThinkingIndicator();
+        addMessage(reply, responseSender);
+        conversationHistory.push({ role: 'assistant', content: reply, personality, timestamp: new Date().toISOString() });
+        if (typeof window.speakText === 'function') {
+            const onEnd = window.isWakeWordSession && typeof window.restoreWakeListeningAfterResponse === 'function'
+                ? () => { window.restoreWakeListeningAfterResponse(); }
+                : () => {};
+            speakAssistantResponse(reply, responseSender, onEnd);
+        }
+        return;
+    }
     
     // Check if user has configured a provider API key
     const hasUserKey = (OPENROUTER_API_KEY && OPENROUTER_API_KEY.trim() !== '') ||
