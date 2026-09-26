@@ -191,6 +191,19 @@ function getInstantConversationReply(userMessage, responseSender) {
         : 'Hello. N.O.V.A. is here and ready to help. What would you like to discuss?';
 }
 
+function isCurrentTimeRequest(userMessage) {
+    return /\b(?:what(?:'s|\s+is)\s+the\s+)?time\b|\bcurrent\s+time\b|\btime\s+is\s+it\b/i.test(String(userMessage || '').trim());
+}
+
+function getCurrentTimeReply(responseSender) {
+    const time = new Date().toLocaleTimeString([], {
+        hour: 'numeric',
+        minute: '2-digit'
+    });
+    const assistantName = responseSender === 'Avon' ? 'A.V.O.N.' : 'N.O.V.A.';
+    return `It is ${time}. ${assistantName} is reporting the current local time.`;
+}
+
 // Try the server-side /api/chat proxy (uses OPENROUTER_API_KEY or OPENAI_API_KEY env variable on Vercel)
 async function generateViaServerProxy(userMessage, personality, options = {}) {
     const webIntent = _resolveWebIntent(userMessage);
@@ -311,8 +324,10 @@ async function generateAIResponse(userMessage, personality, options = {}) {
     console.log('🤖 Generating AI response for personality:', personality);
     const responseSender = options.assistant === 'other' ? 'Avon' : 'Nova';
 
-    if (options.fastResponse) {
-        const reply = getInstantConversationReply(userMessage, responseSender);
+    if (options.fastResponse || isCurrentTimeRequest(userMessage)) {
+        const reply = isCurrentTimeRequest(userMessage)
+            ? getCurrentTimeReply(responseSender)
+            : getInstantConversationReply(userMessage, responseSender);
         removeThinkingIndicator();
         addMessage(reply, responseSender);
         conversationHistory.push({ role: 'assistant', content: reply, personality, timestamp: new Date().toISOString() });

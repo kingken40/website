@@ -48,6 +48,7 @@ let localVoiceBridgeUrl = localStorage.getItem('Nova_local_voice_bridge_url') ||
 let currentBridgeAudio = null;
 let lastBridgeFailureNoticeMs = 0;
 let speechOutputWatchdog = null;
+let speechPlaybackGeneration = 0;
 
 function isUsableSpeechVoice(voice) {
     return !!(voice && typeof voice.name === 'string' && typeof voice.lang === 'string');
@@ -1689,8 +1690,37 @@ function speakText(text, onEndCallback = null, assistant = 'nova', queueToken = 
     setTimeout(startSpeaking, 600);
 }
 
+function splitSpeechIntoChunks(text, maxLength = 240) {
+    const normalizedText = String(text || '').trim();
+    if (normalizedText.length <= maxLength) return [normalizedText];
+
+    const chunks = [];
+    let remaining = normalizedText;
+    while (remaining.length > maxLength) {
+        const windowText = remaining.slice(0, maxLength + 1);
+        const boundary = Math.max(
+            windowText.lastIndexOf('. '),
+            windowText.lastIndexOf('! '),
+            windowText.lastIndexOf('? '),
+            windowText.lastIndexOf('; '),
+            windowText.lastIndexOf(', '),
+            windowText.lastIndexOf(' ')
+        );
+        const splitAt = boundary > Math.floor(maxLength * 0.55)
+            ? boundary + 1
+            : maxLength;
+        chunks.push(remaining.slice(0, splitAt).trim());
+        remaining = remaining.slice(splitAt).trim();
+    }
+    if (remaining) chunks.push(remaining);
+    return chunks.filter(Boolean);
+}
+
 function setupUtteranceAndSpeak(text, onEndCallback, assistant = 'nova') {
-    const utterance = new SpeechSynthesisUtterance(text);
+    const speechChunks = splitSpeechIntoChunks(text);
+    const playbackGeneration = speechPlaybackGeneration;
+    let chunkIndex = 0;
+    let chunkAttempts = 0;
     let speechFinished = false;
     const completeSpeech = () => {
         if (speechFinished) return;
@@ -1698,6 +1728,27 @@ function setupUtteranceAndSpeak(text, onEndCallback, assistant = 'nova') {
         clearSpeechOutputState();
         if (onEndCallback) onEndCallback();
     };
+
+    const speakNextChunk = () => {
+        if (speechFinished || playbackGeneration !== speechPlaybackGeneration || chunkIndex >= speechChunks.length) {
+            completeSpeech();
+            return;
+        }
+
+        const chunk = speechChunks[chunkIndex++];
+        const utterance = new SpeechSynthesisUtterance(chunk);
+        let chunkFinished = false;
+        const finishChunk = () => {
+            if (chunkFinished) return;
+            chunkFinished = true;
+            if (chunkIndex < speechChunks.length) {
+                // Keep the response active while moving between chunks.
+                chunkAttempts = 0;
+                setTimeout(speakNextChunk, 0);
+            } else {
+                completeSpeech();
+            }
+        };
     
     // Apply current voice settings with validation
     const voices = window.speechSynthesis?.getVoices() || [];
@@ -1730,6 +1781,10 @@ function setupUtteranceAndSpeak(text, onEndCallback, assistant = 'nova') {
     console.log('🔊 Voice settings - Rate:', utterance.rate, 'Pitch:', utterance.pitch, 'Volume:', utterance.volume);
     
     utterance.onstart = function() {
+        if (speechOutputWatchdog) {
+            clearTimeout(speechOutputWatchdog);
+            speechOutputWatchdog = null;
+        }
         isSpeaking = true;
         window.isSpeaking = true;
         isSpeechOutputActive = true;
@@ -1737,11 +1792,11 @@ function setupUtteranceAndSpeak(text, onEndCallback, assistant = 'nova') {
         activeSpeechOutputText = normalizeVoiceTranscript(text);
         speechInterruptTriggered = false;
         updateSpeakingUI(true);
-        console.log('🔊 N.O.V.A started speaking:', text);
+        console.log('🔊 N.O.V.A started speaking chunk:', chunk);
 
         const estimatedDurationMs = Math.min(
             90000,
-            Math.max(12000, (text.trim().split(/\s+/).length * 400) + 8000)
+            Math.max(12000, (chunk.trim().split(/\s+/).length * 400) + 8000)
         );
         speechOutputWatchdog = setTimeout(() => {
             console.warn('🔊 Speech completion event timed out; clearing playback state');
@@ -1751,20 +1806,34 @@ function setupUtteranceAndSpeak(text, onEndCallback, assistant = 'nova') {
     };
     
     utterance.onend = function() {
-        completeSpeech();
-        console.log('🔊 Speech ended successfully');
+        finishChunk();
+        console.log('🔊 Speech chunk ended successfully');
     };
     
     utterance.onerror = function(event) {
         console.error('🔊 Speech synthesis error:', event.error);
-        completeSpeech();
+        if (playbackGeneration !== speechPlaybackGeneration) {
+            completeSpeech();
+            return;
+        }
+        if (chunkAttempts < 2) {
+            chunkAttempts++;
+            chunkIndex--;
+            setTimeout(speakNextChunk, 100);
+            return;
+        }
+        finishChunk();
     };
     
     console.log('🔊 Starting speech synthesis...');
     (window.speechSynthesis || synthesis).speak(utterance);
+    };
+
+    speakNextChunk();
 }
 
 function stopSpeech() {
+    speechPlaybackGeneration++;
     assistantSpeechQueueToken++;
     queuedAssistantSpeechActive = false;
     if (activeQueuedSpeechFinish) {
