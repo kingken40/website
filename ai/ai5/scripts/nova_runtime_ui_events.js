@@ -40,6 +40,19 @@ function setupEventListeners() {
     });
     applyChatBubbleColors();
 
+    const shortResponseMode = document.getElementById('shortResponseMode');
+    if (shortResponseMode) {
+        shortResponseMode.checked = shortResponseModeEnabled;
+        shortResponseMode.addEventListener('change', () => {
+            shortResponseModeEnabled = shortResponseMode.checked;
+            localStorage.setItem(SHORT_RESPONSE_MODE_STORAGE_KEY, String(shortResponseModeEnabled));
+            showNotification(
+                shortResponseModeEnabled ? 'Shorter response mode enabled.' : 'Fuller response style restored.',
+                2200
+            );
+        });
+    }
+
     const speechResumeBtn = document.getElementById('speechResumeBtn');
     const speechPauseBtn = document.getElementById('speechPauseBtn');
     const speechStopBtn = document.getElementById('speechStopBtn');
@@ -634,7 +647,7 @@ window.voiceIntegrationFix = function() {
 window.makeSpeechFriendly = function(text) {
     const withoutSources = String(text || '')
         // Source/reference sections are useful visually but should never be spoken.
-        .replace(/\n\s*(?:---\s*\n\s*)?(?:\*\*?\s*)?(?:sources?\s*(?:&|and)\s*references?|references?|where\s+to\s+get\s+more|further\s+reading)(?:\s*\*\*?)?\s*:?\s*[\s\S]*$/i, '')
+        .replace(/(?:^|[\r\n]|<br\s*\/?>)\s*(?:[-*_]{3,}\s*)?(?:<(?:strong|b|h[1-6])[^>]*>\s*)?(?:#{1,6}\s*)?(?:[-*+]\s*)?(?:\*\*|__)?\s*(?:sources?(?:\s*(?:&|and)\s*references?)?|references?|bibliography|citations?|where\s+to\s+get\s+more|further\s+reading|additional\s+resources|learn\s+more)(?:\s*:\s*(?:\*\*|__)?\s*(?:<\/(?:strong|b|h[1-6])>)?\s*[\s\S]*$|\s*(?:\*\*|__)?\s*(?:<\/(?:strong|b|h[1-6])>)?\s*(?:<br\s*\/?>|[\r\n]|$)[\s\S]*$)/i, '')
         // Remove inline markdown links and raw URLs from the remaining answer.
         .replace(/\[([^\]]+)\]\((?:https?:\/\/|www\.)[^)]+\)/gi, '$1')
         .replace(/<?https?:\/\/[^\s)>]+>?/gi, '')

@@ -515,6 +515,15 @@ function setupSpeechRecognition() {
             pendingTranscript = '';
             lastInterimTranscript = '';
         }
+        if (hotkeyReleasePendingStart) {
+            hotkeyReleasePendingStart = false;
+            pttReleaseMode = true;
+            isListening = false;
+            window.isListening = false;
+            try { recognition.stop(); } catch (error) {
+                console.warn('Could not stop recognition after R was released:', error);
+            }
+        }
     };
     
     recognition.onend = function() {
@@ -538,6 +547,7 @@ function setupSpeechRecognition() {
         // PTT release: R was released, collect all results and process
         if (pttReleaseMode) {
             pttReleaseMode = false;
+            hotkeyReleasePendingStart = false;
             isListening = false;
             window.isListening = false;
             const transcript = [pendingTranscript.trim(), lastInterimTranscript.trim()]
@@ -651,6 +661,7 @@ function setupSpeechRecognition() {
         // If R was released and we're waiting for results, process whatever arrived
         if (pttReleaseMode) {
             pttReleaseMode = false;
+            hotkeyReleasePendingStart = false;
             const transcript = [pendingTranscript.trim(), lastInterimTranscript.trim()]
                 .filter(Boolean).join(' ').trim();
             pendingTranscript = '';
@@ -1591,6 +1602,8 @@ function enqueueAssistantSpeech(text, assistant = 'nova', onEndCallback = null) 
 }
 
 function speakText(text, onEndCallback = null, assistant = 'nova', queueToken = null) {
+    speechPlaybackGeneration++;
+    const speechRequestGeneration = speechPlaybackGeneration;
     if (queueToken === null) {
         assistantSpeechQueueToken++;
         if (activeQueuedSpeechFinish) {
@@ -1659,6 +1672,10 @@ function speakText(text, onEndCallback = null, assistant = 'nova', queueToken = 
 
     // CRITICAL: Stop recognition and wait before speaking to prevent feedback loop
     const startSpeaking = async () => {
+        if (speechRequestGeneration !== speechPlaybackGeneration) {
+            if (queueToken !== null) finalOnEndCallback();
+            return;
+        }
         if (queueToken !== null && queueToken !== assistantSpeechQueueToken) {
             finalOnEndCallback();
             return;
@@ -1690,7 +1707,7 @@ function speakText(text, onEndCallback = null, assistant = 'nova', queueToken = 
     setTimeout(startSpeaking, 600);
 }
 
-function splitSpeechIntoChunks(text, maxLength = 240) {
+function splitSpeechIntoChunks(text, maxLength = 180) {
     const normalizedText = String(text || '').trim();
     if (normalizedText.length <= maxLength) return [normalizedText];
 
@@ -1721,6 +1738,9 @@ function setupUtteranceAndSpeak(text, onEndCallback, assistant = 'nova') {
     const playbackGeneration = speechPlaybackGeneration;
     let chunkIndex = 0;
     let chunkAttempts = 0;
+    let useDefaultVoice = false;
+    let utteranceAttemptId = 0;
+    let playbackFailureNotified = false;
     let speechFinished = false;
     const completeSpeech = () => {
         if (speechFinished) return;
@@ -1737,14 +1757,61 @@ function setupUtteranceAndSpeak(text, onEndCallback, assistant = 'nova') {
 
         const chunk = speechChunks[chunkIndex++];
         const utterance = new SpeechSynthesisUtterance(chunk);
+        const attemptId = ++utteranceAttemptId;
         let chunkFinished = false;
+        let utteranceStartedAt = 0;
+        let spokenWordBoundaryCount = 0;
+        const retryChunk = reason => {
+            if (attemptId !== utteranceAttemptId) return;
+            if (playbackGeneration !== speechPlaybackGeneration) {
+                completeSpeech();
+                return;
+            }
+
+            clearChunkWatchdog();
+
+            chunkAttempts += 1;
+            if (chunkAttempts === 3 && !useDefaultVoice) {
+                useDefaultVoice = true;
+                chunkAttempts = 0;
+                console.warn('🔊 Retrying speech chunk with the browser default voice');
+            } else if (chunkAttempts > 3) {
+                console.error('🔊 Speech chunk is still incomplete; keeping it queued for retry:', reason);
+                chunkAttempts = 0;
+                if (!playbackFailureNotified) {
+                    playbackFailureNotified = true;
+                    showVoiceNotification('Speech was interrupted. AI5 is retrying the unfinished part.', 5000);
+                }
+            }
+
+            utteranceAttemptId += 1;
+            chunkIndex -= 1;
+            if (synthesis) synthesis.cancel();
+            setTimeout(speakNextChunk, playbackFailureNotified ? 3000 : Math.max(250, 250 * chunkAttempts));
+        };
+        const clearChunkWatchdog = () => {
+            if (!speechOutputWatchdog) return;
+            clearTimeout(speechOutputWatchdog);
+            speechOutputWatchdog = null;
+        };
+        const armChunkWatchdog = (timeoutMs, reason) => {
+            speechOutputWatchdog = setTimeout(() => {
+                if (synthesis?.paused) {
+                    armChunkWatchdog(5000, reason);
+                    return;
+                }
+                console.warn(`🔊 ${reason}; retrying the current speech chunk`);
+                retryChunk(reason);
+            }, timeoutMs);
+        };
         const finishChunk = () => {
             if (chunkFinished) return;
             chunkFinished = true;
             if (chunkIndex < speechChunks.length) {
                 // Keep the response active while moving between chunks.
                 chunkAttempts = 0;
-                setTimeout(speakNextChunk, 0);
+                useDefaultVoice = false;
+                setTimeout(speakNextChunk, 150);
             } else {
                 completeSpeech();
             }
@@ -1760,7 +1827,7 @@ function setupUtteranceAndSpeak(text, onEndCallback, assistant = 'nova') {
             voices.find(voice => voice.lang.startsWith('en')) ||
             null
         : currentVoiceSettings.voice;
-    if (isUsableSpeechVoice(configuredAssistantVoice)) {
+    if (!useDefaultVoice && isUsableSpeechVoice(configuredAssistantVoice)) {
         try {
             utterance.voice = configuredAssistantVoice;
             console.log('🔊 Using voice:', configuredAssistantVoice.name);
@@ -1781,10 +1848,8 @@ function setupUtteranceAndSpeak(text, onEndCallback, assistant = 'nova') {
     console.log('🔊 Voice settings - Rate:', utterance.rate, 'Pitch:', utterance.pitch, 'Volume:', utterance.volume);
     
     utterance.onstart = function() {
-        if (speechOutputWatchdog) {
-            clearTimeout(speechOutputWatchdog);
-            speechOutputWatchdog = null;
-        }
+        if (attemptId !== utteranceAttemptId) return;
+        clearChunkWatchdog();
         isSpeaking = true;
         window.isSpeaking = true;
         isSpeechOutputActive = true;
@@ -1792,41 +1857,62 @@ function setupUtteranceAndSpeak(text, onEndCallback, assistant = 'nova') {
         activeSpeechOutputText = normalizeVoiceTranscript(text);
         speechInterruptTriggered = false;
         updateSpeakingUI(true);
-        console.log('🔊 N.O.V.A started speaking chunk:', chunk);
+        utteranceStartedAt = Date.now();
+        console.log(`🔊 ${assistant === 'other' ? 'A.V.O.N.' : 'N.O.V.A.'} started speaking chunk:`, chunk);
 
         const estimatedDurationMs = Math.min(
-            90000,
-            Math.max(12000, (chunk.trim().split(/\s+/).length * 400) + 8000)
+            60000,
+            Math.max(18000, (chunk.trim().split(/\s+/).length * 600) + 12000)
         );
-        speechOutputWatchdog = setTimeout(() => {
-            console.warn('🔊 Speech completion event timed out; clearing playback state');
-            if (synthesis) synthesis.cancel();
-            completeSpeech();
-        }, estimatedDurationMs);
+        armChunkWatchdog(estimatedDurationMs, 'speech chunk timed out');
     };
     
     utterance.onend = function() {
+        if (attemptId !== utteranceAttemptId) return;
+        clearChunkWatchdog();
+        const expectedWordCount = chunk.trim().split(/\s+/).length;
+        const minimumBoundaryCount = Math.ceil(expectedWordCount * 0.65);
+        const minimumDurationMs = Math.min(1800, Math.max(500, expectedWordCount * 85));
+        const endedTooEarly = expectedWordCount >= 4 &&
+            ((spokenWordBoundaryCount > 0 && spokenWordBoundaryCount < minimumBoundaryCount) ||
+                (utteranceStartedAt > 0 && Date.now() - utteranceStartedAt < minimumDurationMs));
+        if (endedTooEarly) {
+            retryChunk('utterance ended before the response chunk was fully spoken');
+            return;
+        }
         finishChunk();
-        console.log('🔊 Speech chunk ended successfully');
+        console.log(`🔊 Speech chunk ${chunkIndex} of ${speechChunks.length} ended successfully`);
     };
-    
+
+    utterance.onboundary = function(event) {
+        if (attemptId === utteranceAttemptId && event.name === 'word') {
+            spokenWordBoundaryCount += 1;
+        }
+    };
+
     utterance.onerror = function(event) {
+        if (attemptId !== utteranceAttemptId) return;
         console.error('🔊 Speech synthesis error:', event.error);
         if (playbackGeneration !== speechPlaybackGeneration) {
             completeSpeech();
             return;
         }
-        if (chunkAttempts < 2) {
-            chunkAttempts++;
-            chunkIndex--;
-            setTimeout(speakNextChunk, 100);
-            return;
-        }
-        finishChunk();
+        retryChunk(event.error || 'synthesis error');
     };
     
+    const estimatedDurationMs = Math.min(
+        60000,
+        Math.max(18000, (chunk.trim().split(/\s+/).length * 600) + 12000)
+    );
+    armChunkWatchdog(estimatedDurationMs, 'speech chunk did not start in time');
+
     console.log('🔊 Starting speech synthesis...');
-    (window.speechSynthesis || synthesis).speak(utterance);
+    try {
+        (window.speechSynthesis || synthesis).speak(utterance);
+    } catch (error) {
+        console.error('🔊 Could not queue speech chunk:', error);
+        retryChunk(error.message || 'could not queue speech');
+    }
     };
 
     speakNextChunk();
@@ -2854,6 +2940,42 @@ let hotkeyTPressed = false;
 let hotkeyComboHandled = false;
 let hotkeyInterruptPending = false;
 let hotkeyStartTimer = null;
+let hotkeyEditableSnapshot = null;
+let hotkeyReleasePendingStart = false;
+
+function rememberHotkeyEditableText(target) {
+    if (!target || hotkeyEditableSnapshot) return;
+    if (typeof target.value === 'string') {
+        hotkeyEditableSnapshot = {
+            target,
+            value: target.value,
+            start: target.selectionStart,
+            end: target.selectionEnd
+        };
+    } else if (target.isContentEditable) {
+        hotkeyEditableSnapshot = {
+            target,
+            value: target.textContent || '',
+            start: null,
+            end: null
+        };
+    }
+}
+
+function restoreHotkeyEditableText() {
+    const snapshot = hotkeyEditableSnapshot;
+    hotkeyEditableSnapshot = null;
+    if (!snapshot || !snapshot.target.isConnected) return;
+
+    if (typeof snapshot.target.value === 'string') {
+        snapshot.target.value = snapshot.value;
+        if (Number.isInteger(snapshot.start) && Number.isInteger(snapshot.end)) {
+            snapshot.target.setSelectionRange(snapshot.start, snapshot.end);
+        }
+    } else if (snapshot.target.isContentEditable) {
+        snapshot.target.textContent = snapshot.value;
+    }
+}
 
 function getDefaultReadyStatus() {
     return alwaysListeningHotkeyMode
@@ -2872,6 +2994,24 @@ function clearHotkeyRecordingUI() {
     }
 }
 
+function cancelPushToTalkForHotkeyCombo() {
+    if (!hotkeyActive && !hotkeyListening) return;
+
+    hotkeyActive = false;
+    hotkeyListening = false;
+    pttReleaseMode = false;
+    hotkeyReleasePendingStart = false;
+    clearHotkeyRecordingUI();
+
+    if (recognition) {
+        isListening = false;
+        window.isListening = false;
+        try { recognition.abort(); } catch (error) {
+            console.warn('Could not cancel push-to-talk before R+T toggle:', error);
+        }
+    }
+}
+
 function hasUsableVoiceRecognition() {
     const speechRecognitionAvailable = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
     if (recognition && speechRecognitionAvailable) {
@@ -2884,10 +3024,13 @@ function hasUsableVoiceRecognition() {
 function startPushToTalkFromHotkey() {
     hotkeyStartTimer = null;
     if (!hotkeyRPressed || hotkeyTPressed || alwaysListeningHotkeyMode || hotkeyActive) {
+        if (!hotkeyRPressed) hotkeyEditableSnapshot = null;
         return;
     }
 
+    restoreHotkeyEditableText();
     hotkeyActive = true;
+    hotkeyReleasePendingStart = false;
     console.log('⌨️ Hotkey R pressed - starting voice recognition...');
 
     if (!hasUsableVoiceRecognition()) {
@@ -3050,30 +3193,38 @@ function setupPushToTalkHotkey() {
             target.isContentEditable
         );
 
-        // Preserve normal typing in message boxes - the R/T hotkeys must never
-        // hijack keystrokes while the user is typing into an input/textarea.
-        if (isTextEditableTarget && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        const isUnmodifiedHotkey = !e.metaKey && !e.ctrlKey && !e.altKey;
+        if (isTextEditableTarget && !isUnmodifiedHotkey) {
             return;
         }
 
-        if (key === 'r') hotkeyRPressed = true;
-        if (key === 't') hotkeyTPressed = true;
+        if (isTextEditableTarget && key !== 'r' && key !== 't') {
+            return;
+        }
+
+        if (key === 'r' && !hotkeyRPressed) {
+            rememberHotkeyEditableText(isTextEditableTarget ? target : null);
+            hotkeyRPressed = true;
+        }
+        if (key === 't' && !hotkeyTPressed) {
+            if (hotkeyRPressed && isTextEditableTarget) {
+                e.preventDefault();
+            } else {
+                rememberHotkeyEditableText(isTextEditableTarget ? target : null);
+            }
+            hotkeyTPressed = true;
+        }
 
         if (hotkeyRPressed && hotkeyTPressed && !hotkeyComboHandled) {
             e.preventDefault();
+            restoreHotkeyEditableText();
             if (hotkeyStartTimer) {
                 clearTimeout(hotkeyStartTimer);
                 hotkeyStartTimer = null;
             }
+            cancelPushToTalkForHotkeyCombo();
             hotkeyComboHandled = true;
             await toggleAlwaysListeningMode();
-            return;
-        }
-
-        if (key === 'r' && (isSpeechOutputActive || isSpeaking || (window.speechSynthesis && (window.speechSynthesis.speaking || window.speechSynthesis.pending)))) {
-            e.preventDefault();
-            console.log('🛑 R pressed during speech - interrupting now');
-            startHotkeyListeningDuringSpeech();
             return;
         }
 
@@ -3086,13 +3237,32 @@ function setupPushToTalkHotkey() {
             return;
         }
         
-        // Briefly defer push-to-talk so R+T can be recognized as a chord instead
-        // of starting and immediately cancelling a recording.
+        // Preserve normal R typing in editors while starting the global hotkey immediately.
         if (key === 'r' && !hotkeyActive) {
-            e.preventDefault();
-            if (!hotkeyStartTimer) {
-                hotkeyStartTimer = setTimeout(startPushToTalkFromHotkey, 80);
+            if (isTextEditableTarget) {
+                if (!hotkeyStartTimer) {
+                    hotkeyStartTimer = setTimeout(() => {
+                        const speechActive = isSpeechOutputActive || isSpeaking ||
+                            (window.speechSynthesis && (window.speechSynthesis.speaking || window.speechSynthesis.pending));
+                        if (speechActive) {
+                            restoreHotkeyEditableText();
+                            console.log('🛑 R held during speech - interrupting now');
+                            startHotkeyListeningDuringSpeech();
+                            return;
+                        }
+                        startPushToTalkFromHotkey();
+                    }, 180);
+                }
+                return;
             }
+            if (isSpeechOutputActive || isSpeaking || (window.speechSynthesis && (window.speechSynthesis.speaking || window.speechSynthesis.pending))) {
+                e.preventDefault();
+                console.log('🛑 R pressed during speech - interrupting now');
+                startHotkeyListeningDuringSpeech();
+                return;
+            }
+            e.preventDefault();
+            startPushToTalkFromHotkey();
         }
     }, true);
     
@@ -3100,6 +3270,9 @@ function setupPushToTalkHotkey() {
         const key = e.key.toLowerCase();
         if (key === 'r') hotkeyRPressed = false;
         if (key === 't') hotkeyTPressed = false;
+        if ((key === 'r' || key === 't') && hotkeyEditableSnapshot && !hotkeyActive && !hotkeyComboHandled) {
+            hotkeyEditableSnapshot = null;
+        }
         if (key === 'r' && hotkeyStartTimer) {
             clearTimeout(hotkeyStartTimer);
             hotkeyStartTimer = null;
@@ -3162,12 +3335,18 @@ function setupPushToTalkHotkey() {
                 hotkeyListening = false;
                 if (groqRecordingActive) {
                     stopGroqRecordingAndTranscribe();
-                } else if (recognition && isListening) {
+                } else if (recognition) {
                     updateVoiceStatus('Processing...');
                     pttReleaseMode = true;
-                    isListening = false;
-                    window.isListening = false;
-                    try { recognition.stop(); } catch(e) {}
+                    if (isListening) {
+                        isListening = false;
+                        window.isListening = false;
+                        try { recognition.stop(); } catch(error) {
+                            console.warn('Could not stop voice recognition after R was released:', error);
+                        }
+                    } else {
+                        hotkeyReleasePendingStart = true;
+                    }
                 }
             }
         }

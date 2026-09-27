@@ -369,6 +369,13 @@
                         <option value="auto">Auto-Select</option>
                     </select>
                 </div>
+                <div class="setting-group" style="align-items:center; justify-content:space-between;">
+                    <div style="display:flex; flex-direction:column; gap:0.25rem;">
+                        <label for="shortResponseMode" style="margin:0;">Shorter responses</label>
+                        <small style="color:rgba(255,255,255,0.6);">When on, answers are concise by default; simple questions get a direct answer. When off, responses use the fuller explanation style.</small>
+                    </div>
+                    <input type="checkbox" id="shortResponseMode" role="switch" aria-label="Enable shorter responses">
+                </div>
                 <div class="setting-group group-chat-settings">
                     <label for="groupChatEnabled">Group chat with N.O.V.A + A.V.O.N.</label>
                     <input type="checkbox" id="groupChatEnabled">
@@ -783,6 +790,7 @@
     <!-- Scripts -->
     <script src="../scripts/nova_kb_store.js"></script>
     <script src="../scripts/nova_conversation_flow.js"></script>
+    <script src="../scripts/nova_runtime_artifacts.js"></script>
     <script src="../scripts/nova_runtime_ai.js"></script>
     <script src="../scripts/nova_runtime_ui_voice.js"></script>
     <script src="../scripts/nova_runtime_ui_events.js"></script>

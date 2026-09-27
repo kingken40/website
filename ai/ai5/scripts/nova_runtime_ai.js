@@ -123,14 +123,18 @@ window.handleInterrupt = handleInterrupt;
 
 function buildWebTaskMessage(userMessage, webContext = '') {
     const liveContext = webContext ? `\n\n${webContext}` : '';
-    return `${userMessage}${liveContext}
+    const futureEventGuidance = /\b(next|upcoming|coming up|this coming)\b/i.test(userMessage)
+        ? `\n\nRelative-date check: The current local date is ${new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(new Date())}. Interpret "next" and "upcoming" relative to this date. Use an official schedule or event source, verify the event date is strictly in the future, and discard results for past editions.`
+        : '';
+    const responseLengthGuidance = shortResponseModeEnabled
+        ? 'Keep the answer concise by default. For a simple factual lookup, answer in one sentence and include a compact inline citation with the source title and clickable URL. Avoid unnecessary headings and omit a separate "Where to get more" section unless the user asks for detailed research.'
+        : 'Every internet-derived factual claim must have an inline clickable markdown citation when possible.\nAlways finish with "Sources & References" containing the source title and full clickable markdown URL for every source used.\nAlso include "Where to get more" with useful official pages, documentation, or further reading.';
+    return `${userMessage}${futureEventGuidance}${liveContext}
 
 WEB SEARCH TASK:
 Use the live web context to answer accurately and naturally.
 Prefer primary and official sources, and distinguish facts from interpretation.
-Every internet-derived factual claim must have an inline clickable markdown citation when possible.
-Always finish with "Sources & References" containing the source title and full clickable markdown URL for every source used.
-Also include "Where to get more" with useful official pages, documentation, or further reading.
+${responseLengthGuidance}
 Never invent a URL or citation, and never claim you cannot browse.`;
 }
 
@@ -204,6 +208,10 @@ function getCurrentTimeReply(responseSender) {
     return `It is ${time}. ${assistantName} is reporting the current local time.`;
 }
 
+function isAvonIdentityRequest(userMessage) {
+    return /\b(?:who\s+are\s+you|who\s+is\s+avon|what\s+(?:is|'s)\s+avon|what\s+does\s+avon\s+(?:mean|stand\s+for)|(?:are|is)\s+avon\s+(?:and\s+a\.?\s*v\.?\s*o\.?\s*n\.?\s+)?(?:the\s+same|different)|is\s+avon\s+(?:short\s+for|another\s+name\s+for))\b/i.test(String(userMessage || ''));
+}
+
 // Try the server-side /api/chat proxy (uses OPENROUTER_API_KEY or OPENAI_API_KEY env variable on Vercel)
 async function generateViaServerProxy(userMessage, personality, options = {}) {
     const webIntent = _resolveWebIntent(userMessage);
@@ -223,7 +231,7 @@ async function generateViaServerProxy(userMessage, personality, options = {}) {
 
     const messages = prepareOpenAIMessages(proxyMessage, personality, options);
     const requestPayload = {
-        model: shouldUseWeb ? 'perplexity/sonar' : (options.modelOverride || currentModel),
+        model: options.modelOverride || currentModel,
         messages: messages,
         max_tokens: options.fastResponse ? 512 : 4096,
         temperature: personality === 'brainstorm' ? 0.95 : 0.7,
@@ -323,13 +331,17 @@ async function generateViaServerProxy(userMessage, personality, options = {}) {
 async function generateAIResponse(userMessage, personality, options = {}) {
     console.log('🤖 Generating AI response for personality:', personality);
     const responseSender = options.assistant === 'other' ? 'Avon' : 'Nova';
+    const avonIdentityRequest = responseSender === 'Avon' && isAvonIdentityRequest(userMessage);
 
-    if (options.fastResponse || isCurrentTimeRequest(userMessage)) {
-        const reply = isCurrentTimeRequest(userMessage)
-            ? getCurrentTimeReply(responseSender)
-            : getInstantConversationReply(userMessage, responseSender);
+    if (options.fastResponse || isCurrentTimeRequest(userMessage) || avonIdentityRequest) {
+        const reply = avonIdentityRequest
+            ? 'I am A.V.O.N. Avon is simply the shorter spoken name for me; it is not a different assistant.'
+            : isCurrentTimeRequest(userMessage)
+                ? getCurrentTimeReply(responseSender)
+                : getInstantConversationReply(userMessage, responseSender);
         removeThinkingIndicator();
         addMessage(reply, responseSender);
+        window.maybeCreateRequestedArtifact?.(userMessage, reply);
         conversationHistory.push({ role: 'assistant', content: reply, personality, timestamp: new Date().toISOString() });
         if (typeof window.speakText === 'function') {
             const onEnd = window.isWakeWordSession && typeof window.restoreWakeListeningAfterResponse === 'function'
@@ -358,6 +370,7 @@ async function generateAIResponse(userMessage, personality, options = {}) {
             }
             removeThinkingIndicator();
             addMessage(reply, responseSender, null, responseModel);
+            window.maybeCreateRequestedArtifact?.(userMessage, reply);
             conversationHistory.push({ role: 'assistant', content: reply, personality, timestamp: new Date().toISOString(), model: responseModel });
             recordNoveltyResponse(userMessage, reply, responseModel);
             if (typeof window.speakText === 'function') {
@@ -409,24 +422,14 @@ async function generateAIResponse(userMessage, personality, options = {}) {
             const thinkingEl = document.querySelector('.thinking-indicator .thinking-text');
             if (thinkingEl) thinkingEl.textContent = _webLoadingText(webIntent);
 
-            if (currentProvider === 'openrouter') {
-                // Use a model with built-in web search so this works even when
-                // browser-side fetch is blocked by CORS/network.
-                requestModel = 'perplexity/sonar';
-                effectiveMessage = `${buildWebTaskMessage(userMessage)}
-For every internet-derived claim, include a source title and clickable markdown URL.
-If the user asked for downloadable resources, prioritize official download pages and direct file links when available.`;
-                console.log('🌐 Web intent detected — routing via online model:', requestModel);
+            const webBundle = await getWebSearchContext(userMessage);
+            if (webBundle && webBundle.context) {
+                effectiveMessage = buildWebTaskMessage(userMessage, webBundle.context);
+                collectedWebSources = Array.isArray(webBundle.sources) ? webBundle.sources : [];
+                console.log('🌐 Web context injected, length:', webBundle.context.length, 'sources:', collectedWebSources.length);
             } else {
-                // Fallback path for non-OpenRouter providers.
-                const webBundle = await getWebSearchContext(userMessage);
-                if (webBundle && webBundle.context) {
-                    effectiveMessage = `${userMessage}\n\n${webBundle.context}`;
-                    collectedWebSources = Array.isArray(webBundle.sources) ? webBundle.sources : [];
-                    console.log('🌐 Web context injected, length:', webBundle.context.length, 'sources:', collectedWebSources.length);
-                } else {
-                    console.warn('🌐 Web search returned no usable content');
-                }
+                effectiveMessage = buildWebTaskMessage(userMessage);
+                console.warn('🌐 Web search returned no usable content; continuing with the selected model');
             }
         }
         
@@ -522,6 +525,7 @@ If the user asked for downloadable resources, prioritize official download pages
                     setLastResponseModel(fallbackModel);
                     removeThinkingIndicator();
                     addMessage(jinaResult, responseSender, null, fallbackModel);
+                    window.maybeCreateRequestedArtifact?.(userMessage, jinaResult);
                     conversationHistory.push({ role: 'assistant', content: jinaResult, personality, timestamp: new Date().toISOString(), model: fallbackModel });
                     recordNoveltyResponse(userMessage, jinaResult, fallbackModel);
                     speakAssistantResponse(jinaResult, responseSender);
@@ -543,6 +547,7 @@ If the user asked for downloadable resources, prioritize official download pages
                 if (jinaResult) {
                     removeThinkingIndicator();
                     addMessage(jinaResult, responseSender, null, responseModel);
+                    window.maybeCreateRequestedArtifact?.(userMessage, jinaResult);
                     conversationHistory.push({ role: 'assistant', content: jinaResult, personality, timestamp: new Date().toISOString(), model: responseModel });
                     recordNoveltyResponse(userMessage, jinaResult, responseModel);
                     speakAssistantResponse(jinaResult, responseSender);
@@ -608,6 +613,7 @@ If the user asked for downloadable resources, prioritize official download pages
             console.log('Jina fallback in direct path');
             removeThinkingIndicator();
             addMessage(jinaOverrideDirect, responseSender, null, responseModel);
+            window.maybeCreateRequestedArtifact?.(userMessage, jinaOverrideDirect);
             conversationHistory.push({ role: 'assistant', content: jinaOverrideDirect, personality, timestamp: new Date().toISOString(), model: responseModel });
             recordNoveltyResponse(userMessage, jinaOverrideDirect, responseModel);
             speakAssistantResponse(jinaOverrideDirect, responseSender);
@@ -630,6 +636,7 @@ If the user asked for downloadable resources, prioritize official download pages
         
         // Add response to chat
         addMessage(reply, responseSender, null, responseModel);
+        window.maybeCreateRequestedArtifact?.(userMessage, reply);
         
         // Save to conversation history
         conversationHistory.push({
@@ -814,6 +821,7 @@ const _FACT_LOOKUP_RE = /\b(what\s+is|who\s+is|where\s+is|when\s+is|why\s+is|how
 const _EDUCATIONAL_LOOKUP_RE = /\b(explain|teach\s+me|help\s+me\s+learn|learn\s+about|how\s+does|why\s+does|why\s+do|meaning\s+of|definition\s+of|difference\s+between|pros\s+and\s+cons|advantages?\s+and\s+disadvantages?|is\s+.+\s+(?:good|safe|accurate|worth)|understand)\b/i;
 const _LOCAL_TASK_RE = /\b(this\s+(?:chat|conversation|file|project|repo|code|snippet)|from\s+my\s+(?:notes|knowledge\s+base)|summari[sz]e\s+(?:this|above)|rewrite|rephrase|translate|fix\s+my\s+code|debug\s+this|remember\s+that)\b/i;
 const _CASUAL_CHAT_RE = /\b(hi|hello|hey|how are you|thanks|thank you|good morning|good night|tell me a joke|who are you)\b/i;
+const _RELATIVE_FUTURE_EVENT_RE = /\b(next|upcoming|coming up|this coming)\b/i;
 const _STOPWORD_SET = new Set([
     'the','and','for','with','that','this','from','have','what','when','where','which','about','your','please','could','would','there','their','they','them','into','just','some','more','than','then','also','does','dont','cant','want','need','help','find','give','show','tell','make'
 ]);
@@ -828,7 +836,7 @@ async function _retryWithJinaFallback(rawReply, userMessage) {
     if (rawReply && !_CANT_BROWSE_RE.test(rawReply)) return null;
     console.warn('🌐 Web refusal detected — overriding with direct Jina search...');
     try {
-        const jinaResult = await _jinaSearch(userMessage);
+        const jinaResult = await _jinaSearch(_buildWebSearchQuery(userMessage));
         if (!jinaResult) return null;
         const sources = _extractSourcesFromText(jinaResult);
         const lines = jinaResult.split('\n').filter(l => {
@@ -909,6 +917,14 @@ function _resolveWebIntent(message) {
     return { type: 'auto', query: text };
 }
 
+function _buildWebSearchQuery(query) {
+    const text = String(query || '').trim();
+    if (!_RELATIVE_FUTURE_EVENT_RE.test(text)) return text;
+
+    const currentDate = new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(new Date());
+    return `${text} official date or schedule after ${currentDate}`;
+}
+
 function _webLoadingText(intent) {
     return intent.type === 'url'
         ? `🌐 Fetching page content...`
@@ -917,7 +933,7 @@ function _webLoadingText(intent) {
             : `🔍 Searching the web...`;
 }
 
-const _IDENTITY_QUESTION_RE = /\b(who\s+are\s+you|what\s+(?:is|are)\s+(?:your\s+name|you|nova|n\.?o\.?v\.?a\.?)|what\s+does\s+n\.?o\.?v\.?a\.?\s+stand|tell\s+me\s+about\s+yourself|your\s+(?:name|identity|purpose|full\s+name)|introduce\s+yourself|what(?:'s|\s+is)\s+your\s+name|do\s+you\s+know\s+your\s+name|are\s+you\s+nova)\b/i;
+const _IDENTITY_QUESTION_RE = /\b(who\s+are\s+you|who\s+is\s+(?:avon|a\.?\s*v\.?\s*o\.?\s*n\.?)|what\s+(?:is|are)\s+(?:your\s+name|you|nova|n\.?o\.?v\.?a\.?|avon|a\.?\s*v\.?\s*o\.?\s*n\.?)|what\s+does\s+(?:n\.?o\.?v\.?a\.?|avon|a\.?\s*v\.?\s*o\.?\s*n\.?)\s+stand|tell\s+me\s+about\s+yourself|your\s+(?:name|identity|purpose|full\s+name)|introduce\s+yourself|what(?:'s|\s+is)\s+your\s+name|do\s+you\s+know\s+your\s+name|are\s+you\s+(?:nova|avon|a\.?\s*v\.?\s*o\.?\s*n\.?))\b/i;
 
 function getIdentityKnowledgeBaseItems() {
     if (!Array.isArray(persistentMaterial) || persistentMaterial.length === 0) return [];
@@ -1093,6 +1109,12 @@ function _ensureWebSourcesInReply(reply, sources, webWasUsed) {
     const hasWhereToGetMoreHeader = /where\s+to\s+get\s+more|learn\s+more|further\s+reading|additional\s+resources|official\s+links/i.test(text);
 
     const mergedSources = _mergeSourceLists(sources, _extractSourcesFromText(text));
+    if (shortResponseModeEnabled) {
+        if (hasMarkdownLinks || mergedSources.length === 0) return text;
+        const source = mergedSources[0];
+        return `${text}\n\nSource: [${source.title}](${source.url})`;
+    }
+
     const sourceLines = [
         '',
         '---',
@@ -1158,7 +1180,7 @@ async function getWebSearchContext(userMessage) {
     }
 
     // Search
-    const query = intent.query || userMessage;
+    const query = _buildWebSearchQuery(intent.query || userMessage);
     const result = await _jinaSearch(query);
     if (!result) return null;
     const sources = _extractSourcesFromText(result);
@@ -1238,7 +1260,7 @@ If live web blocks are included, treat them as current evidence and use them dir
         role: "system",
         content: [
             isAvon
-                ? 'You are A.V.O.N. Your name is A.V.O.N., not N.O.V.A, Nova, or any variation of N.O.V.A. You are a distinct assistant in this system. Never claim to be N.O.V.A, never expand N.O.V.A., and never correct a user by saying they meant N.O.V.A. When your name is misspelled, politely identify yourself as A.V.O.N. and continue helping.'
+                ? 'You are A.V.O.N. "Avon" is the accepted short name and spoken form of A.V.O.N.; Avon and A.V.O.N. are the same assistant, not different entities. Respond naturally when the user calls you Avon and never correct them for using it. If asked, explain that your full name is A.V.O.N. and Avon is the shorter way to say it. You are a distinct assistant, not N.O.V.A., Nova, or any variation of N.O.V.A. Never claim to be N.O.V.A., expand N.O.V.A., or say the user meant N.O.V.A.'
                 : 'You are N.O.V.A., which stands for Networking Orthogonal Virtual Assistant. Your name is N.O.V.A., not A.V.O.N. You are a distinct assistant in this system and must accurately state your full name when asked.',
             'You are ' + (isAvon ? 'A.V.O.N.' : 'N.O.V.A') + ', a ' + config.style + '.',
             options.groupChat
@@ -1264,21 +1286,27 @@ If live web blocks are included, treat them as current evidence and use them dir
             '',
             'Rules:',
             '- Complete your thought before ending a response. Never end mid-sentence, after a trailing comma, or with an unfinished clause. If space is limited, give a concise complete answer instead of beginning extra content you cannot finish.',
+            shortResponseModeEnabled
+                ? '- Shorter response mode is enabled: keep replies concise by default, typically a few sentences. Lead with the answer and avoid unnecessary introductions, headings, repetition, examples, or background. For a simple factual question or direct lookup, answer in one short sentence with only the requested fact. Expand when the user asks for detail or accuracy requires a brief qualification.'
+                : '- Shorter response mode is disabled: use the fuller, more explanatory response style. Give helpful context, examples, and organized detail when useful, while still answering the question directly and avoiding filler.',
+            '- Treat the current date/time in REAL-TIME CONTEXT as authoritative. Interpret "next" and "upcoming" relative to that date; never describe a past event or expired date as the next occurrence. For schedules and future events, verify the year and date against an official source, and say when a future date cannot be confirmed.',
             '- You have real-time web search capability. Proactively search when a question is factual, educational, research-oriented, current, uncertain, asks for a definition/explanation/comparison, or would benefit from reliable external evidence. Do not wait for the user to say "look it up"; do not search for simple greetings, casual conversation, or tasks fully grounded in the user-provided text/files.',
             '- NEVER say you cannot browse, cannot search the web, or do not have internet access. If a search fails, be transparent that live verification failed rather than presenting unverified current claims as certain.',
             isAvon
-                ? '- Knowledge Base blocks may contain information about N.O.V.A. They are not your identity. Your identity is always A.V.O.N.; never call yourself N.O.V.A. or expand N.O.V.A., even if another context block says otherwise.'
+                ? '- Your identity is A.V.O.N.; "Avon" is your accepted short name and means the same assistant. A user addressing you as Avon is addressing you correctly. Knowledge Base blocks about N.O.V.A. do not change your identity; never call yourself N.O.V.A. or expand N.O.V.A.'
                 : '- If Knowledge Base blocks are included, treat them as highest-priority user context. This includes your identity information — use it to answer questions about who you are, your name, and your purpose.',
             '- For AUDIO ANALYSIS PACKET content, treat the transcript as the primary source. Do not invent words, timestamps, speaker identities, or facts not supported by it.',
             '- If the message includes "=== LIVE PAGE CONTENT" or "=== LIVE WEB SEARCH RESULTS ===", treat that as current web data and use it directly.',
-            '- For every web-backed answer, cite web-derived claims inline with clickable markdown links where possible, then end with BOTH sections: "Sources & References" and "Where to get more". Each must use source title plus a full clickable markdown URL.',
+            shortResponseModeEnabled
+                ? '- For web-backed answers in shorter response mode, cite key factual claims inline and keep source links compact. Omit separate source sections for simple lookups; include further-reading sections only when the user requests detailed research.'
+                : '- For every web-backed answer, cite web-derived claims inline with clickable markdown links where possible, then end with BOTH sections: "Sources & References" and "Where to get more". Each must use source title plus a full clickable markdown URL.',
             '- Prefer official documentation, primary research, government sources, and first-party announcements for factual claims. Do not cite a search engine or Jina as the authority when the underlying source is available.',
             '- Use clear headings, short paragraphs, bullets, and numbered steps instead of dense walls of text. Format mathematics for readability: put standalone equations on their own line using $$...$$, use \\(...\\) for inline math, and do not bury formulas in ordinary prose. Use subscripts and superscripts where helpful, for example $$sigmoid(x_i) = 1 / (1 + e^{-x_i})$$.',
             assistantPersonalities?.nova && options.assistant !== 'other' ? `Custom N.O.V.A personality knowledge:\n${assistantPersonalities.nova}` : '',
             assistantPersonalities?.other && options.assistant === 'other' ? `Custom A.V.O.N. personality knowledge:\n${assistantPersonalities.other}` : '',
             presetConfig ? `Active ${assistantKey === 'other' ? 'A.V.O.N.' : 'N.O.V.A'} personality preset (${presetConfig.name}):\n${presetConfig.instructions}` : '',
             isAvon
-                ? 'Final identity check: You are A.V.O.N. For "who are you?" answer that you are A.V.O.N. Do not say "I am N.O.V.A." or "I am a Networking Orthogonal Virtual Assistant."'
+                ? 'Final identity check: You are A.V.O.N., also called Avon. If asked who you are, say you are A.V.O.N. (Avon for short). If asked whether Avon and A.V.O.N. are different, explain they are the same assistant and Avon is the shorter spoken name. Never say you are N.O.V.A. or a Networking Orthogonal Virtual Assistant.'
                 : 'Final identity check: You are N.O.V.A., Networking Orthogonal Virtual Assistant. For "who are you?" answer as N.O.V.A., never as A.V.O.N.',
             '- Never invent URLs, citations, or DOIs.'
         ].filter(Boolean).join('\n')

@@ -29,6 +29,7 @@ const MODEL_CACHE_STORAGE_KEY = 'nova_openrouter_model_cache';
 const LAST_RESPONSE_MODEL_STORAGE_KEY = 'nova_last_response_model';
 const NOVELTY_MEMORY_STORAGE_KEY = 'nova_novelty_memory';
 const NOVELTY_MEMORY_LIMIT = 40;
+const SHORT_RESPONSE_MODE_STORAGE_KEY = 'nova_short_response_mode';
 
 function loadStoredText(keyName, defaultValue = '') {
     try {
@@ -55,6 +56,7 @@ let currentProvider = 'openrouter'; // Primary: OpenRouter, Fallback: openai
 let currentModel = 'openai/gpt-4o-mini'; // Default OpenRouter model
 let manualModelOverride = loadStoredText(MODEL_PREFERENCE_STORAGE_KEY, 'auto') || 'auto';
 let lastResponseModel = loadStoredText(LAST_RESPONSE_MODEL_STORAGE_KEY, '');
+let shortResponseModeEnabled = loadStoredText(SHORT_RESPONSE_MODE_STORAGE_KEY, 'false') === 'true';
 let openRouterModelCatalog = [];
 
 const providerConfig = {
@@ -302,7 +304,7 @@ function getModelGroupLabel(model) {
     if (/(claude|sonnet|opus|gpt-4o|gpt-4\.1|o1|o3|reason|deepseek-r1|gemini-2\.5-pro|qwen3|mistral-large|llama-4)/.test(text)) {
         return 'Best for reasoning';
     }
-    if (/(flash|haiku|mini|turbo|small|nano|lite|fast)/.test(text)) {
+    if (/(flash|haiku|mini|small|nano|lite|turbo|fast)/.test(text)) {
         return 'For speed';
     }
     if (/(write|creative|story|grok|instruct)/.test(text)) {

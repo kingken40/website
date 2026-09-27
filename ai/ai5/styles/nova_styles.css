@@ -2218,6 +2218,73 @@ body.no-animations * {
     margin-right: auto;
 }
 
+.artifact-message {
+    width: min(520px, 80%);
+    max-width: 100%;
+    border-color: rgba(105, 220, 255, 0.48);
+}
+
+.artifact-heading {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    color: #78ddff;
+}
+
+.artifact-status {
+    margin-top: 0.4rem;
+    color: rgba(255, 255, 255, 0.72);
+    overflow-wrap: anywhere;
+}
+
+.artifact-download-list {
+    display: grid;
+    gap: 0.85rem;
+    margin-top: 0.8rem;
+}
+
+.artifact-download-item {
+    padding: 0.7rem;
+    border: 1px solid rgba(105, 220, 255, 0.22);
+    border-radius: 9px;
+    background: rgba(0, 10, 25, 0.36);
+}
+
+.artifact-image-preview {
+    display: block;
+    width: min(100%, 320px);
+    max-height: 320px;
+    object-fit: contain;
+    margin: 0 auto 0.65rem;
+    border-radius: 6px;
+}
+
+.artifact-download-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin-top: 0.55rem;
+    padding: 0.55rem 0.8rem;
+    border: 1px solid rgba(105, 220, 255, 0.5);
+    border-radius: 7px;
+    color: #a4eaff;
+    text-decoration: none;
+    font-weight: 650;
+}
+
+.artifact-download-link:hover,
+.artifact-download-link:focus-visible {
+    background: rgba(0, 170, 255, 0.16);
+    border-color: #69dcff;
+    outline: none;
+}
+
+.artifact-error {
+    margin-top: 0.75rem;
+    color: #ffb4a9;
+    overflow-wrap: anywhere;
+}
+
 .message-content {
     color: #ffffff;
     line-height: 1.5;
