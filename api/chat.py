@@ -2,6 +2,7 @@
 import os
 import re
 import requests
+from datetime import date
 from http.server import BaseHTTPRequestHandler
 from urllib.parse import quote
 
@@ -66,20 +67,43 @@ def _extract_web_query(message_text):
     return text.split('WEB SEARCH TASK:', 1)[0].strip()
 
 
+def _normalize_event_query(query):
+    text = str(query or '').strip()
+    if (
+        re.search(r'\bsuper\s*bowl\b', text, re.IGNORECASE)
+        and re.search(r'\b(when|date|current|next|upcoming|this\s+year|schedule)\b', text, re.IGNORECASE)
+    ):
+        today = date.today()
+        event_year = today.year + 1 if today.month >= 3 else today.year
+        return (
+            f'Super Bowl {event_year} date official NFL schedule '
+            f'(current date {today.isoformat()}; exclude past Super Bowls)'
+        )
+    return text
+
+
 def _extract_urls(text):
     return re.findall(r'https?://[^\s<>"{}|\\^`\[\]]+', str(text or ''))
 
 
 def _fetch_jina_markdown(url):
-    response = requests.get(f'{JINA_FETCH_PREFIX}{url}', headers=JINA_HEADERS, timeout=20)
+    response = requests.get(f'{JINA_FETCH_PREFIX}{url}', headers=JINA_HEADERS, timeout=8)
     response.raise_for_status()
     return response.text[:9000]
 
 
 def _search_jina_markdown(query):
-    response = requests.get(f'{JINA_SEARCH_PREFIX}{quote(query)}', headers=JINA_HEADERS, timeout=20)
+    response = requests.get(f'{JINA_SEARCH_PREFIX}{quote(query)}', headers=JINA_HEADERS, timeout=8)
     response.raise_for_status()
     return response.text[:9000]
+
+
+def _official_super_bowl_dates_url():
+    today = date.today()
+    event_year = today.year + 1 if today.month >= 3 else today.year
+    season_year = event_year - 1
+    next_year = str(event_year)[-2:]
+    return f'https://www.nfl.com/news/{season_year}-{next_year}-national-football-league-important-dates'
 
 
 def _build_server_web_context(message_text):
@@ -101,6 +125,18 @@ def _build_server_web_context(message_text):
             return f'{text}\n\n' + '\n\n'.join(blocks), sources
 
         query = _extract_web_query(text)
+        if (
+            re.search(r'\bsuper\s*bowl\b', query, re.IGNORECASE)
+            and re.search(r'\b(when|date|current|next|upcoming|this\s+year|schedule)\b', query, re.IGNORECASE)
+        ):
+            official_url = _official_super_bowl_dates_url()
+            content = _fetch_jina_markdown(official_url)
+            return (
+                f'{text}\n\n=== LIVE PAGE CONTENT: {official_url} ===\n{content}\n=== END PAGE CONTENT ===',
+                [{'title': 'NFL important dates', 'url': official_url}]
+            )
+
+        query = _normalize_event_query(query)
         if not query:
             return text, []
 
