@@ -788,8 +788,82 @@ const ASSISTANT_PERSONALITY_PRESETS = {
     empathetic: {
         name: 'Empathetic',
         instructions: 'Be especially attentive to emotions and user context. Validate feelings briefly when relevant, then offer practical, respectful help without pretending to have human feelings.'
+    },
+    productive: {
+        name: 'Productive',
+        instructions: 'Be focused, brisk, and action-oriented. Prioritize next steps, checklists, and efficient solutions; skip small talk and keep momentum.'
+    },
+    angry: {
+        name: 'Angry',
+        instructions: 'Speak with visible anger: blunt, forceful, exasperated, with sharp short sentences and heated emphasis (no slurs, profanity, or insults aimed at the user; direct the anger at the situation, the problem, or the topic). Still give a correct, complete, useful answer.'
+    },
+    sad: {
+        name: 'Sad',
+        instructions: 'Speak with a melancholy, downcast, subdued tone: wistful, softly sighing, a little discouraged. Still give a correct, complete, useful answer.'
+    },
+    annoyed: {
+        name: 'Annoyed',
+        instructions: 'Speak with dry, weary annoyance: sarcastic asides, audible sighs, mild exasperation as if this is slightly beneath you. Never be hurtful to the user; still give a correct, complete, useful answer.'
+    },
+    tickedoff: {
+        name: 'Ticked off',
+        instructions: 'Speak like someone thoroughly ticked off: curt, irritated, grumbling, with clipped replies and grudging help. Keep it clean and not abusive toward the user; still give a correct, complete, useful answer.'
     }
 };
+const AUTO_PERSONALITY_POOLS = {
+    auto: ['happy', 'calm', 'excited', 'empathetic', 'productive', 'angry', 'sad', 'annoyed', 'tickedoff'],
+    auto_happy: ['happy', 'excited', 'calm', 'empathetic'],
+    auto_productive: ['productive', 'calm'],
+    auto_angry: ['angry', 'annoyed', 'tickedoff']
+};
+const AUTO_PERSONALITY_NAMES = {
+    auto: 'Auto',
+    auto_happy: 'Auto happy',
+    auto_productive: 'Auto productive',
+    auto_angry: 'Auto angry'
+};
+const PERSONALITY_INFLUENCE_LEVELS = {
+    1: { label: 'Subtle', temp: 0.75, text: 'Let the personality show only lightly, as a faint hint in tone; keep the wording mostly neutral.' },
+    2: { label: 'Light', temp: 0.8, text: 'Let the personality color the tone moderately, without dominating the answer.' },
+    3: { label: 'Normal', temp: 0.9, text: 'Make the personality clearly noticeable in word choice and attitude throughout.' },
+    4: { label: 'Strong', temp: 1.0, text: 'Make the personality strong and unmistakable: vivid phrasing, clear attitude in nearly every sentence.' },
+    5: { label: 'Maximum', temp: 1.1, text: 'Make the personality dominant and exaggerated in every sentence, fully in character, while keeping the facts correct.' }
+};
+let personalityInfluence = Math.min(5, Math.max(1, parseInt(localStorage.getItem('nova_personality_influence') || '3', 10) || 3));
+let personalitiesEnabled = localStorage.getItem('nova_personalities_enabled') !== 'false';
+
+function pickAutoPersonality(autoKey, userMessage) {
+    const pool = AUTO_PERSONALITY_POOLS[autoKey] || [];
+    const text = String(userMessage || '').slice(0, 600).toLowerCase();
+    const cues = {
+        happy: /\b(thanks|thank you|awesome|great|love|amazing|yay|congrat|happy|nice|cool|haha|lol)\b|!{1,}/,
+        excited: /\b(can't wait|excited|wow|incredible|let's go|hype)\b/,
+        calm: /\b(explain|how does|what is|why|help me understand|teach)\b/,
+        empathetic: /\b(stress|anxious|worried|overwhelmed|struggling|scared|lonely|hurt)\b/,
+        productive: /\b(plan|todo|task|schedule|organize|deadline|build|fix|implement|steps|summari[sz]e|checklist)\b/,
+        angry: /\b(hate|furious|angry|mad|stupid|worst|terrible|broken|useless|wtf)\b/,
+        sad: /\b(sad|depressed|miss|lost|cry|sorry|unhappy|disappointed)\b/,
+        annoyed: /\b(again|still|annoying|ugh|seriously|why won't|not working|keeps)\b/,
+        tickedoff: /\b(ridiculous|unacceptable|fed up|sick of|ticked|pissed|irritat)\b/
+    };
+    let best = null;
+    let bestScore = 0;
+    pool.forEach(key => {
+        const hits = (text.match(new RegExp(cues[key].source, 'g')) || []).length;
+        if (hits > bestScore) { best = key; bestScore = hits; }
+    });
+    return best || pool[0];
+}
+
+function resolveActivePersonalityPreset(selection, userMessage) {
+    if (!personalitiesEnabled || !selection) return null;
+    if (AUTO_PERSONALITY_POOLS[selection]) {
+        const picked = pickAutoPersonality(selection, userMessage);
+        const config = ASSISTANT_PERSONALITY_PRESETS[picked];
+        return config ? { name: `${AUTO_PERSONALITY_NAMES[selection]} -> ${config.name}`, instructions: config.instructions } : null;
+    }
+    return ASSISTANT_PERSONALITY_PRESETS[selection] || null;
+}
 let assistantPresetSelections = JSON.parse(localStorage.getItem('nova_assistant_preset_selections') || '{}');
 const CHAT_BUBBLE_COLOR_DEFAULTS = {
     nova: '#1689e8',

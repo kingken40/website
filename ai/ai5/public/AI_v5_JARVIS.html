@@ -400,6 +400,15 @@
                             <option value="other">A.V.O.N.</option>
                         </select>
                     </div>
+                    <div class="setting-group" style="align-items:center; justify-content:space-between;">
+                        <label for="personalitiesEnabled" style="margin:0;">Use personalities</label>
+                        <input type="checkbox" id="personalitiesEnabled" role="switch" aria-label="Enable personalities" checked>
+                    </div>
+                    <div class="setting-group">
+                        <label for="personalityInfluence">Personality influence: <span id="personalityInfluenceLabel">Normal</span></label>
+                        <input type="range" id="personalityInfluence" min="1" max="5" step="1" value="3" aria-label="Personality influence">
+                        <small style="color:rgba(255,255,255,0.55);font-size:0.78rem;">Subtle to Maximum. Higher means the personality shapes replies more. 3 is Normal.</small>
+                    </div>
                     <div class="setting-group">
                         <label for="assistantPersonalityPreset">Ready-to-use personality</label>
                         <select id="assistantPersonalityPreset">
@@ -408,6 +417,15 @@
                             <option value="calm">Calm</option>
                             <option value="excited">Excited</option>
                             <option value="empathetic">Empathetic</option>
+                            <option value="productive">Productive</option>
+                            <option value="angry">Angry</option>
+                            <option value="sad">Sad</option>
+                            <option value="annoyed">Annoyed</option>
+                            <option value="tickedoff">Ticked off</option>
+                            <option value="auto">Auto (best fit for each message)</option>
+                            <option value="auto_happy">Auto: happy</option>
+                            <option value="auto_productive">Auto: productive</option>
+                            <option value="auto_angry">Auto: angry</option>
                         </select>
                         <small style="color:rgba(255,255,255,0.55);font-size:0.78rem;">Choose Normal to return to the regular assistant voice.</small>
                     </div>

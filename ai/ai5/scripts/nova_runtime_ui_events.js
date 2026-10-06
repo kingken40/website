@@ -144,6 +144,47 @@ function setupEventListeners() {
         showNotification(`${assistant === 'nova' ? 'N.O.V.A' : 'A.V.O.N.'} is now using ${personalityPreset.selectedOptions[0]?.textContent || 'Normal'} personality.`, 2200);
     });
     loadAssistantPersonalitySettings();
+    const personalitiesToggle = document.getElementById('personalitiesEnabled');
+    if (personalitiesToggle) {
+        personalitiesToggle.checked = personalitiesEnabled;
+        if (personalityPreset) personalityPreset.disabled = !personalitiesEnabled;
+        personalitiesToggle.addEventListener('change', () => {
+            personalitiesEnabled = personalitiesToggle.checked;
+            localStorage.setItem('nova_personalities_enabled', String(personalitiesEnabled));
+            if (personalityPreset) personalityPreset.disabled = !personalitiesEnabled;
+            showNotification(personalitiesEnabled ? 'Personalities enabled.' : 'Personalities off; using the normal voice.', 2200);
+        });
+    }
+
+    const influenceSlider = document.getElementById('personalityInfluence');
+    const influenceLabel = document.getElementById('personalityInfluenceLabel');
+    if (influenceSlider) {
+        const showInfluence = () => { if (influenceLabel) influenceLabel.textContent = PERSONALITY_INFLUENCE_LEVELS[personalityInfluence].label; };
+        influenceSlider.value = String(personalityInfluence);
+        showInfluence();
+        influenceSlider.addEventListener('input', () => {
+            personalityInfluence = parseInt(influenceSlider.value, 10) || 3;
+            localStorage.setItem('nova_personality_influence', String(personalityInfluence));
+            showInfluence();
+        });
+    }
+
+    // C+N / C+A: Continue with N.O.V.A. / A.V.O.N.
+    const heldContinueKeys = new Set();
+    window.addEventListener('keyup', e => heldContinueKeys.delete(e.key.toLowerCase()));
+    window.addEventListener('blur', () => heldContinueKeys.clear());
+    window.addEventListener('keydown', e => {
+        const key = e.key.toLowerCase();
+        const target = e.target;
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable)) return;
+        if (key === 'c') { heldContinueKeys.add('c'); return; }
+        if ((key === 'n' || key === 'a') && heldContinueKeys.has('c') && !e.repeat) {
+            e.preventDefault();
+            document.getElementById('continueAssistantModal')?.classList.remove('active');
+            continueConversation(key === 'n' ? 'nova' : 'other');
+        }
+    });
     savePersonality?.addEventListener('click', () => {
         const assistant = personalityAssistant?.value || 'nova';
         const value = personalityText?.value.trim() || '';

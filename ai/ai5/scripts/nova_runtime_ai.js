@@ -282,7 +282,7 @@ async function generateViaServerProxy(userMessage, personality, options = {}) {
         model: options.modelOverride || currentModel,
         messages: messages,
         max_tokens: options.fastResponse ? 512 : 4096,
-        temperature: personality === 'brainstorm' ? 0.95 : 0.7,
+        temperature: personality === 'brainstorm' ? 0.95 : (resolveActivePersonalityPreset(assistantPresetSelections?.[options.assistant === 'other' ? 'other' : 'nova'], userMessage) ? PERSONALITY_INFLUENCE_LEVELS[personalityInfluence].temp : 0.7),
         stream: false
     };
 
@@ -494,7 +494,7 @@ async function generateAIResponse(userMessage, personality, options = {}) {
             model: requestModel,
             messages: messages,
             max_tokens: options.fastResponse ? 512 : provider.maxTokens,
-            temperature: personality === 'brainstorm' ? 0.95 : 0.7,
+            temperature: personality === 'brainstorm' ? 0.95 : (resolveActivePersonalityPreset(assistantPresetSelections?.[options.assistant === 'other' ? 'other' : 'nova'], userMessage) ? PERSONALITY_INFLUENCE_LEVELS[personalityInfluence].temp : 0.7),
             stream: false
         };
         
@@ -1357,7 +1357,7 @@ If live web blocks are included, treat them as current evidence and use them dir
     const realtimeContext = getRealtimeContextString({ slim: isSlimContext || isWebBackedRequest });
     const assistantKey = options.assistant === 'other' ? 'other' : 'nova';
     const selectedPreset = assistantPresetSelections?.[assistantKey];
-    const presetConfig = selectedPreset ? ASSISTANT_PERSONALITY_PRESETS?.[selectedPreset] : null;
+    const presetConfig = resolveActivePersonalityPreset(selectedPreset, userMessage);
 
     // System message with personality
     const systemMessage = {
@@ -1408,7 +1408,6 @@ If live web blocks are included, treat them as current evidence and use them dir
             '- Use clear headings, short paragraphs, bullets, and numbered steps instead of dense walls of text. Format mathematics for readability: put standalone equations on their own line using $$...$$, use \\(...\\) for inline math, and do not bury formulas in ordinary prose. Use subscripts and superscripts where helpful, for example $$sigmoid(x_i) = 1 / (1 + e^{-x_i})$$.',
             assistantPersonalities?.nova && options.assistant !== 'other' ? `Custom N.O.V.A personality knowledge:\n${assistantPersonalities.nova}` : '',
             assistantPersonalities?.other && options.assistant === 'other' ? `Custom A.V.O.N. personality knowledge:\n${assistantPersonalities.other}` : '',
-            presetConfig ? `Active ${assistantKey === 'other' ? 'A.V.O.N.' : 'N.O.V.A'} personality preset (${presetConfig.name}):\n${presetConfig.instructions}` : '',
             isAvon
                 ? `A.V.O.N. core persona (always preserve this voice, including in web research, tutoring, analysis, and group chat):
 - Sound composed, perceptive, capable, and naturally conversational: a trusted personal assistant with quiet confidence and dry, understated wit.
@@ -1424,7 +1423,8 @@ If live web blocks are included, treat them as current evidence and use them dir
             isAvon
                 ? 'Final identity check: You are A.V.O.N., also called Avon. If asked who you are, say you are A.V.O.N. (Avon for short). If asked whether Avon and A.V.O.N. are different, explain they are the same assistant and Avon is the shorter spoken name. Never say you are N.O.V.A. or a Networking Orthogonal Virtual Assistant.'
                 : 'Final identity check: You are N.O.V.A., Networking Orthogonal Virtual Assistant. For "who are you?" answer as N.O.V.A., never as A.V.O.N.',
-            '- Never invent URLs, citations, or DOIs.'
+            '- Never invent URLs, citations, or DOIs.',
+            presetConfig ? `ACTIVE PERSONALITY (${presetConfig.name}) - MANDATORY: ${presetConfig.instructions}\n${PERSONALITY_INFLUENCE_LEVELS[personalityInfluence].text} Apply this to every reply, even factual, web-backed, or tutoring answers, and ignore the tone of earlier assistant messages in the history. Accuracy and any required citations stay intact. Obey the shorter/fuller response-length rule above while doing so.` : ''
         ].filter(Boolean).join('\n')
    };
     
@@ -1450,10 +1450,16 @@ If live web blocks are included, treat them as current evidence and use them dir
         historyCharsUsed += summarizedContent.length;
     }
     
+    // Restate voice/length rules next to the user's turn; models obey the last turn most reliably.
+    const personaLabel = isAvon ? 'A.V.O.N.' : 'N.O.V.A.';
+    const styleReminder = presetConfig
+        ? `[Voice requirement for this reply: answer as ${personaLabel} in a clearly "${presetConfig.name}" personality - ${presetConfig.instructions} ${PERSONALITY_INFLUENCE_LEVELS[personalityInfluence].text} Regardless of how earlier replies sounded. ${shortResponseModeEnabled ? 'Keep it short.' : 'Give a full, detailed answer.'}]`
+        : `[Voice requirement for this reply: answer as ${personaLabel} in your own distinct core persona, not a generic assistant voice. ${shortResponseModeEnabled ? 'Keep it short.' : 'Give a full, detailed answer.'}]`;
+
     // Add current user message
     messages.push({
         role: "user",
-        content: userMessage
+        content: `${userMessage}\n\n${styleReminder}`
     });
     
     // Save user message to history
