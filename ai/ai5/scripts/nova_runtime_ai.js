@@ -1,4 +1,4 @@
-﻿// Runtime AI + web context module
+// Runtime AI + web context module
 // Extracted from nova_runtime_features.js.
 
 function sendMessageWithAttachment() {
@@ -112,7 +112,7 @@ function clearFileChip() {
 function clearFileAttachment() {
     currentFileAttachment = null;
     clearFileChip();
-    console.log('📎 File attachment cleared');
+    console.log('?? File attachment cleared');
 }
 
 // Make clearFileAttachment globally available for onclick handler
@@ -169,7 +169,7 @@ function needsResponseCompletion(reply, finishReason) {
     if (finishReason === 'length' || finishReason === 'max_tokens') return true;
 
     const finalText = reply.trim();
-    if (/[,:;—-]$/.test(finalText)) return true;
+    if (/[,:;�-]$/.test(finalText)) return true;
     if (/\b(and|but|or|because|with|to|the|a|an|of|for|in|on|at|from|that|which|who|when|where|while|if|then|than|as|real)$/i.test(finalText)) {
         return true;
     }
@@ -227,7 +227,23 @@ function getInstantConversationReply(userMessage, responseSender) {
 }
 
 function isCurrentTimeRequest(userMessage) {
-    return /\b(?:what(?:'s|\s+is)\s+the\s+)?time\b|\bcurrent\s+time\b|\btime\s+is\s+it\b/i.test(String(userMessage || '').trim());
+    const text = String(userMessage || '').trim();
+    if (isUploadedFileMessage(text) || text.length > 80) return false;
+    return /\bwhat(?:'s|\s+is)\s+the\s+(?:current\s+)?time\b|\bcurrent\s+time\b|\btime\s+is\s+it\b|^time\??$/i.test(text);
+}
+
+function isUploadedFileMessage(userMessage) {
+    return /^I've uploaded (?:a|an) /i.test(String(userMessage || '').trim());
+}
+
+function isPrivateServerRequest(userMessage) {
+    const text = String(userMessage || '');
+    if (isUploadedFileMessage(text)) return false;
+    const asksToKeepOrStore = /\b(?:keep|store|save|host|run|leave|move|put|ensure)\b|\bmake\s+sure\b/i.test(text);
+    const privacyIntent = /\b(?:private|personal|confidential|between\s+us|only\s+me|just\s+me|my\s+own|self[-\s]?hosted)\b/i.test(text);
+    const serverOrLocal = /\b(?:server|locally|on[-\s]?prem(?:ises)?|self[-\s]?hosted)\b/i.test(text);
+    const explicitPrivacyRequest = /\b(?:private|confidential|between\s+us|only\s+me|just\s+me)\b/i.test(text);
+    return asksToKeepOrStore && (explicitPrivacyRequest || (privacyIntent && serverOrLocal));
 }
 
 function getCurrentTimeReply(responseSender) {
@@ -240,6 +256,7 @@ function getCurrentTimeReply(responseSender) {
 }
 
 function isAvonIdentityRequest(userMessage) {
+    if (isUploadedFileMessage(userMessage)) return false;
     return /\b(?:who\s+are\s+you|who\s+is\s+avon|what\s+(?:is|'s)\s+avon|what\s+does\s+avon\s+(?:mean|stand\s+for)|(?:are|is)\s+avon\s+(?:and\s+a\.?\s*v\.?\s*o\.?\s*n\.?\s+)?(?:the\s+same|different)|is\s+avon\s+(?:short\s+for|another\s+name\s+for))\b/i.test(String(userMessage || ''));
 }
 
@@ -300,9 +317,9 @@ async function generateViaServerProxy(userMessage, personality, options = {}) {
     // OpenRouter returns errors in the body with HTTP 200 for some failures
     if (responseData.error) {
         const errMsg = (responseData.error.message || JSON.stringify(responseData.error)).substring(0, 300);
-        console.error('🔧 Server proxy response body error:', responseData.error);
+        console.error('?? Server proxy response body error:', responseData.error);
         if (shouldUseWeb) {
-            console.warn('🌐 Web model errored via proxy — falling back to Jina...');
+            console.warn('?? Web model errored via proxy � falling back to Jina...');
             const jinaResult = await _retryWithJinaFallback('', userMessage);
             if (jinaResult) return { reply: jinaResult, webUsed: true, model: responseModel };
         }
@@ -328,7 +345,7 @@ async function generateViaServerProxy(userMessage, personality, options = {}) {
     }
 
     if (!options.completionAttempt && needsResponseCompletion(extractedText, choiceObj.finish_reason)) {
-        console.warn('✍️ Server response appears incomplete; requesting a seamless continuation.', {
+        console.warn('?? Server response appears incomplete; requesting a seamless continuation.', {
             model: responseModel,
             finishReason: choiceObj.finish_reason
         });
@@ -342,7 +359,7 @@ async function generateViaServerProxy(userMessage, personality, options = {}) {
                 extractedText = `${extractedText} ${continuation.reply}`.trim();
             }
         } catch (error) {
-            console.warn('✍️ Automatic continuation failed; preserving the original reply.', error);
+            console.warn('?? Automatic continuation failed; preserving the original reply.', error);
         }
     }
 
@@ -363,13 +380,16 @@ async function generateViaServerProxy(userMessage, personality, options = {}) {
 
 // Enhanced AI integration with multi-provider support and improved error handling
 async function generateAIResponse(userMessage, personality, options = {}) {
-    console.log('🤖 Generating AI response for personality:', personality);
+    console.log('?? Generating AI response for personality:', personality);
     const responseSender = options.assistant === 'other' ? 'Avon' : 'Nova';
     const avonIdentityRequest = responseSender === 'Avon' && isAvonIdentityRequest(userMessage);
+    const privateServerRequest = isPrivateServerRequest(userMessage);
 
-    if (options.fastResponse || isCurrentTimeRequest(userMessage) || avonIdentityRequest) {
+    if (options.fastResponse || isCurrentTimeRequest(userMessage) || avonIdentityRequest || privateServerRequest) {
         const reply = avonIdentityRequest
             ? 'I am A.V.O.N. Avon is simply the shorter spoken name for me; it is not a different assistant.'
+            : privateServerRequest
+                ? 'Working on a secret project, are we, sir?'
             : isCurrentTimeRequest(userMessage)
                 ? getCurrentTimeReply(responseSender)
                 : getInstantConversationReply(userMessage, responseSender);
@@ -392,13 +412,13 @@ async function generateAIResponse(userMessage, personality, options = {}) {
 
     // Try server-side proxy first when no user key is configured
     if (!hasUserKey) {
-        console.log('🌐 No user API key configured — trying server proxy (/api/chat)...');
+        console.log('?? No user API key configured � trying server proxy (/api/chat)...');
         try {
             const proxyResult = await generateViaServerProxy(userMessage, personality, options);
             const reply = proxyResult.reply;
             const responseModel = proxyResult.model || lastResponseModel || currentModel;
             if (!options.noveltyRetry && isNoveltyReplyDuplicate(userMessage, reply)) {
-                console.log('🧠 Novelty reply duplicated prior memory - retrying with stronger instruction');
+                console.log('?? Novelty reply duplicated prior memory - retrying with stronger instruction');
                 await generateAIResponse(userMessage, personality, { ...options, noveltyRetry: true, skipUserHistory: true });
                 return;
             }
@@ -417,24 +437,24 @@ async function generateAIResponse(userMessage, personality, options = {}) {
             return;
         } catch (proxyErr) {
             if (window.voiceInterruptInProgress && proxyErr && proxyErr.name === 'AbortError') {
-                console.log('🛑 Server proxy request aborted due to user interrupt');
+                console.log('?? Server proxy request aborted due to user interrupt');
                 return;
             }
             if (isPromptLimitErrorMessage(proxyErr.message) && !options.slimContext) {
-                console.warn('🌐 Server proxy prompt too large — retrying with slim context');
+                console.warn('?? Server proxy prompt too large � retrying with slim context');
                 await generateAIResponse(userMessage, personality, { ...options, slimContext: true });
                 return;
             }
-            console.warn('🌐 Server proxy unavailable:', proxyErr.message);
-            // Server proxy failed — fall through to show the most useful message we can
+            console.warn('?? Server proxy unavailable:', proxyErr.message);
+            // Server proxy failed � fall through to show the most useful message we can
             removeThinkingIndicator();
             if (/503|No AI API key configured on server/i.test(proxyErr.message)) {
                 addMessage(
-                    '⚙️ N.O.V.A requires an AI API key to respond. Please click the ⚙️ Settings button and enter your OpenRouter API key (get one free at <a href="https://openrouter.ai/keys" target="_blank" style="color:#FFD700">openrouter.ai/keys</a>).',
+                    '?? N.O.V.A requires an AI API key to respond. Please click the ?? Settings button and enter your OpenRouter API key (get one free at <a href="https://openrouter.ai/keys" target="_blank" style="color:#FFD700">openrouter.ai/keys</a>).',
                     'Nova'
                 );
             } else {
-                addMessage(`❌ AI Error: ${proxyErr.message}`, 'Nova');
+                addMessage(`? AI Error: ${proxyErr.message}`, 'Nova');
             }
             return;
         }
@@ -442,7 +462,7 @@ async function generateAIResponse(userMessage, personality, options = {}) {
 
     // Get current provider configuration
     const provider = providerConfig[currentProvider];
-    console.log('🚀 Sending request to', currentProvider.toUpperCase(), 'API (', provider.model, ')...');
+    console.log('?? Sending request to', currentProvider.toUpperCase(), 'API (', provider.model, ')...');
     
     try {
         // --- Web search / URL fetch ---
@@ -460,10 +480,10 @@ async function generateAIResponse(userMessage, personality, options = {}) {
             if (webBundle && webBundle.context) {
                 effectiveMessage = buildWebTaskMessage(userMessage, webBundle.context);
                 collectedWebSources = Array.isArray(webBundle.sources) ? webBundle.sources : [];
-                console.log('🌐 Web context injected, length:', webBundle.context.length, 'sources:', collectedWebSources.length);
+                console.log('?? Web context injected, length:', webBundle.context.length, 'sources:', collectedWebSources.length);
             } else {
                 effectiveMessage = buildWebTaskMessage(userMessage);
-                console.warn('🌐 Web search returned no usable content; continuing with the selected model');
+                console.warn('?? Web search returned no usable content; continuing with the selected model');
             }
         }
         
@@ -478,10 +498,10 @@ async function generateAIResponse(userMessage, personality, options = {}) {
             stream: false
         };
         
-        console.log('🤖', currentProvider.toUpperCase(), 'Request:');
-        console.log('🔑 Using API Key:', provider.apiKey ? (provider.apiKey.substring(0, 10) + '...' + provider.apiKey.slice(-4)) : 'NONE');
-        console.log('📤 Messages array:', messages);
-        console.log('📤 Full payload:', requestPayload);
+        console.log('??', currentProvider.toUpperCase(), 'Request:');
+        console.log('?? Using API Key:', provider.apiKey ? (provider.apiKey.substring(0, 10) + '...' + provider.apiKey.slice(-4)) : 'NONE');
+        console.log('?? Messages array:', messages);
+        console.log('?? Full payload:', requestPayload);
         
         // Add timeout to prevent hanging requests
         const controller = new AbortController();
@@ -507,7 +527,7 @@ async function generateAIResponse(userMessage, personality, options = {}) {
             }
         }
         
-        console.log('📡 Response received - Status:', response.status, response.statusText);
+        console.log('?? Response received - Status:', response.status, response.statusText);
         
         if (!response.ok) {
             let errorText = 'Unknown error';
@@ -515,26 +535,26 @@ async function generateAIResponse(userMessage, personality, options = {}) {
             
             try {
                 errorText = await response.text();
-                console.error('🔧 DEBUG - Raw error response:', errorText);
+                console.error('?? DEBUG - Raw error response:', errorText);
                 
                 // Try to parse as JSON for more details
                 try {
                     errorDetails = JSON.parse(errorText);
-                    console.error('🔧 DEBUG - Parsed error JSON:', errorDetails);
+                    console.error('?? DEBUG - Parsed error JSON:', errorDetails);
                     
                     // Extract specific OpenAI error message
                     if (errorDetails.error && errorDetails.error.message) {
                         errorText = errorDetails.error.message;
                     }
                 } catch (e) {
-                    console.error('🔧 DEBUG - Error response is not valid JSON');
+                    console.error('?? DEBUG - Error response is not valid JSON');
                 }
             } catch (e) {
-                console.error('🔧 DEBUG - Could not read error response:', e);
+                console.error('?? DEBUG - Could not read error response:', e);
             }
             
             // Log request details for debugging
-            console.error('🔧 DEBUG - Request details:');
+            console.error('?? DEBUG - Request details:');
             console.error('  - Provider:', currentProvider.toUpperCase());
             console.error('  - URL:', provider.apiUrl);
             console.error('  - Status:', response.status);
@@ -544,15 +564,15 @@ async function generateAIResponse(userMessage, personality, options = {}) {
         }
         
         const responseData = await response.json();
-        console.log('📦', currentProvider.toUpperCase(), 'Response:', responseData);
+        console.log('??', currentProvider.toUpperCase(), 'Response:', responseData);
 
         // OpenRouter (and some providers) return errors in the body with HTTP 200
         if (responseData.error) {
             const errMsg = (responseData.error.message || JSON.stringify(responseData.error)).substring(0, 300);
-            console.error('🔧 API returned error in response body:', responseData.error);
+            console.error('?? API returned error in response body:', responseData.error);
             // If this was a web request, try Jina directly before giving up
             if (shouldUseWeb) {
-                console.warn('🌐 Web model errored — falling back to direct Jina search...');
+                console.warn('?? Web model errored � falling back to direct Jina search...');
                 const jinaResult = await _retryWithJinaFallback('', userMessage);
                 if (jinaResult) {
                     const fallbackModel = provider.model || currentModel;
@@ -576,7 +596,7 @@ async function generateAIResponse(userMessage, personality, options = {}) {
         if (!responseData.choices || !responseData.choices[0]) {
             // If this was a web query, attempt Jina rather than surfacing a cryptic error
             if (shouldUseWeb) {
-                console.warn('🌐 Web model returned unexpected format — falling back to Jina...');
+                console.warn('?? Web model returned unexpected format � falling back to Jina...');
                 const jinaResult = await _retryWithJinaFallback('', userMessage);
                 if (jinaResult) {
                     removeThinkingIndicator();
@@ -602,7 +622,7 @@ async function generateAIResponse(userMessage, personality, options = {}) {
         }
 
         if (!options.completionAttempt && needsResponseCompletion(extractedTextDirect, choiceObjDirect.finish_reason)) {
-            console.warn('✍️ Direct provider response appears incomplete; requesting a seamless continuation.', {
+            console.warn('?? Direct provider response appears incomplete; requesting a seamless continuation.', {
                 model: responseModel,
                 finishReason: choiceObjDirect.finish_reason
             });
@@ -637,7 +657,7 @@ async function generateAIResponse(userMessage, personality, options = {}) {
                     extractedTextDirect = `${extractedTextDirect} ${completionText}`.trim();
                 }
             } catch (error) {
-                console.warn('✍️ Automatic continuation failed; preserving the original reply.', error);
+                console.warn('?? Automatic continuation failed; preserving the original reply.', error);
             }
         }
 
@@ -659,11 +679,11 @@ async function generateAIResponse(userMessage, personality, options = {}) {
             _ensureWebSourcesInReply(rawReply, mergedSources, shouldUseWeb),
             userMessage
         );
-        console.log('✅', currentProvider.toUpperCase(), 'Response Success - Length:', reply.length, 'characters');
-        console.log('🎭 Personality:', personality);
+        console.log('?', currentProvider.toUpperCase(), 'Response Success - Length:', reply.length, 'characters');
+        console.log('?? Personality:', personality);
 
         if (!options.noveltyRetry && isNoveltyReplyDuplicate(userMessage, reply)) {
-            console.log('🧠 Novelty reply duplicated prior memory - retrying with stronger instruction');
+            console.log('?? Novelty reply duplicated prior memory - retrying with stronger instruction');
             await generateAIResponse(userMessage, personality, { ...options, noveltyRetry: true, skipUserHistory: true });
             return;
         }
@@ -687,40 +707,40 @@ async function generateAIResponse(userMessage, personality, options = {}) {
         
         // Speak response if voice is enabled (with proper voice coordination)
         if (typeof window.speakText === 'function') {
-            console.log('🔊 AI Response: Starting voice output with coordination...');
-            console.log('🔊 AI Response: isWakeWordSession =', window.isWakeWordSession);
+            console.log('?? AI Response: Starting voice output with coordination...');
+            console.log('?? AI Response: isWakeWordSession =', window.isWakeWordSession);
             
             // Only add restoration callback if this is a wake word session
             if (window.isWakeWordSession && typeof window.restoreWakeListeningAfterResponse === 'function') {
                 speakAssistantResponse(reply, responseSender, () => {
-                    console.log('🔊 AI Response: Voice output completed');
-                    console.log('🔊 AI Response complete - restoring wake listening');
+                    console.log('?? AI Response: Voice output completed');
+                    console.log('?? AI Response complete - restoring wake listening');
                     window.restoreWakeListeningAfterResponse();
                 });
             } else {
                 speakAssistantResponse(reply, responseSender, () => {
-                    console.log('🔊 AI Response: Voice output completed (push-to-talk mode)');
+                    console.log('?? AI Response: Voice output completed (push-to-talk mode)');
                 });
             }
         }
         
     } catch (error) {
-        console.error('🔧 DEBUG - Full error object:', error);
-        console.error('🔧 DEBUG - Error message:', error.message);
-        console.error('🔧 DEBUG - Error stack:', error.stack);
+        console.error('?? DEBUG - Full error object:', error);
+        console.error('?? DEBUG - Error message:', error.message);
+        console.error('?? DEBUG - Error stack:', error.stack);
 
         if (window.voiceInterruptInProgress && error && error.name === 'AbortError') {
-            console.log('🛑 AI request aborted due to user interrupt');
+            console.log('?? AI request aborted due to user interrupt');
             return;
         }
 
         if (isPromptLimitErrorMessage(error.message) && !options.slimContext) {
-            console.warn('🔄 Prompt too large — retrying with slim context');
+            console.warn('?? Prompt too large � retrying with slim context');
             try {
                 await generateAIResponse(userMessage, personality, { ...options, slimContext: true });
                 return;
             } catch (retryError) {
-                console.error('🔧 Slim-context retry failed:', retryError);
+                console.error('?? Slim-context retry failed:', retryError);
             }
         }
         
@@ -732,9 +752,9 @@ async function generateAIResponse(userMessage, personality, options = {}) {
                                    error.message.includes('403');
 
         if (isOpenRouterProvider && hasOpenAIKey && isAuthOrQuotaError && !error.isRetry) {
-            console.log('🔄 OpenRouter failed — auto-switching to OpenAI fallback...');
-            showNotification('⚠️ OpenRouter unavailable. Switching to OpenAI...', 3000);
-            addMessage('🔄 OpenRouter unavailable. Retrying with OpenAI...', 'Nova');
+            console.log('?? OpenRouter failed � auto-switching to OpenAI fallback...');
+            showNotification('?? OpenRouter unavailable. Switching to OpenAI...', 3000);
+            addMessage('?? OpenRouter unavailable. Retrying with OpenAI...', 'Nova');
             addThinkingIndicator();
             try {
                 const savedProvider = currentProvider;
@@ -743,9 +763,9 @@ async function generateAIResponse(userMessage, personality, options = {}) {
                 currentProvider = savedProvider;
                 return;
             } catch (openaiErr) {
-                console.error('🔧 OpenAI fallback also failed:', openaiErr);
+                console.error('?? OpenAI fallback also failed:', openaiErr);
                 removeThinkingIndicator();
-                addMessage('❌ Both OpenRouter and OpenAI are unavailable. Please check your API keys in Settings.', 'Nova');
+                addMessage('? Both OpenRouter and OpenAI are unavailable. Please check your API keys in Settings.', 'Nova');
                 return;
             }
         }
@@ -760,21 +780,21 @@ async function generateAIResponse(userMessage, personality, options = {}) {
         let errorMsg;
         
         if (error.name === 'AbortError') {
-            errorMsg = '⏱️ Request timed out - The AI response is taking too long. Please try again.';
+            errorMsg = '?? Request timed out - The AI response is taking too long. Please try again.';
         } else if (error.message.includes('insufficient_quota') || error.message.includes('billing')) {
-            errorMsg = '💳 API quota exhausted. Please check your OpenRouter or OpenAI account billing.';
+            errorMsg = '?? API quota exhausted. Please check your OpenRouter or OpenAI account billing.';
         } else if (error.message.includes('401') || error.message.includes('Unauthorized')) {
-            errorMsg = '🔑 Invalid API key. Please open Settings and update your OpenRouter or OpenAI key.';
+            errorMsg = '?? Invalid API key. Please open Settings and update your OpenRouter or OpenAI key.';
         } else if (error.message.includes('500') || error.message.includes('502') || error.message.includes('503')) {
-            errorMsg = '🔧 Server error - The service is temporarily unavailable. Please try again in a moment.';
+            errorMsg = '?? Server error - The service is temporarily unavailable. Please try again in a moment.';
         } else if (error.message.includes('fetch') || error.message.includes('Failed to fetch')) {
-            console.error('🔧 Network/Fetch Error Details:', error);
-            errorMsg = '🌐 Network error - Check your connection and try again. (Check console for details)';
+            console.error('?? Network/Fetch Error Details:', error);
+            errorMsg = '?? Network error - Check your connection and try again. (Check console for details)';
         } else if (!navigator.onLine) {
-            errorMsg = '🌐 No internet connection - Please check your network and try again.';
+            errorMsg = '?? No internet connection - Please check your network and try again.';
         } else {
-            errorMsg = `❌ AI Error: ${error.message}`;
-            console.error('🔧 Full error for debugging:', error);
+            errorMsg = `? AI Error: ${error.message}`;
+            console.error('?? Full error for debugging:', error);
         }
         
         // Ensure error message is always added to chat
@@ -789,45 +809,45 @@ async function generateAIResponse(userMessage, personality, options = {}) {
         function restartListeningAfterError() {
             try {
                 if (window.isWakeWordSession && typeof window.restoreWakeListeningAfterResponse === 'function') {
-                    console.log('🔊 AI Error: Restoring wake listening after error...');
+                    console.log('?? AI Error: Restoring wake listening after error...');
                     window.restoreWakeListeningAfterResponse();
                     return;
                 }
 
                 if (typeof window.startWakeListening === 'function') {
-                    console.log('🔊 AI Error: Calling startWakeListening() after error...');
+                    console.log('?? AI Error: Calling startWakeListening() after error...');
                     window.isWakeListening = true;
                     window.startWakeListening();
                     return;
                 }
 
                 if (typeof window.startListeningDirect === 'function') {
-                    console.log('🔊 AI Error: Calling startListeningDirect() after error...');
+                    console.log('?? AI Error: Calling startListeningDirect() after error...');
                     window.startListeningDirect();
                     return;
                 }
 
-                console.warn('🔊 AI Error: No listening restart method available');
+                console.warn('?? AI Error: No listening restart method available');
             } catch (e) {
-                console.error('🔧 AI Error: Failed to restart listening after error:', e);
+                console.error('?? AI Error: Failed to restart listening after error:', e);
             }
         }
 
         // Speak error message if voice is enabled (for voice command flow)
         if (typeof window.speakText === 'function') {
-            console.log('🔊 AI Error: Speaking error message with coordination...');
-            console.log('🔊 AI Error: isWakeWordSession =', window.isWakeWordSession);
+            console.log('?? AI Error: Speaking error message with coordination...');
+            console.log('?? AI Error: isWakeWordSession =', window.isWakeWordSession);
 
             // Only add restoration callback if this is a wake word session
             if (window.isWakeWordSession && typeof window.restoreWakeListeningAfterResponse === 'function') {
                 window.speakText(errorMsg, () => {
-                    console.log('🔊 AI Error: Error message voice output completed');
-                    console.log('🔊 AI Error complete - restoring wake listening');
+                    console.log('?? AI Error: Error message voice output completed');
+                    console.log('?? AI Error complete - restoring wake listening');
                     restartListeningAfterError();
                 });
             } else {
                 window.speakText(errorMsg, () => {
-                    console.log('🔊 AI Error: Error message voice output completed (push-to-talk mode)');
+                    console.log('?? AI Error: Error message voice output completed (push-to-talk mode)');
                     restartListeningAfterError();
                 });
             }
@@ -845,9 +865,9 @@ async function generateAIResponse(userMessage, personality, options = {}) {
 
 
 // ============================================================
-// WEB SEARCH MODULE — Jina AI (free, no API key required)
-//   r.jina.ai/{url}    — fetch any webpage as clean markdown
-//   s.jina.ai/{query}  — search the web, returns top results
+// WEB SEARCH MODULE � Jina AI (free, no API key required)
+//   r.jina.ai/{url}    � fetch any webpage as clean markdown
+//   s.jina.ai/{query}  � search the web, returns top results
 // ============================================================
 
 const _WEB_URL_RE = /https?:\/\/[^\s<>"{}|\\^`[\]]+/g;
@@ -871,7 +891,7 @@ const _CANT_BROWSE_RE = /\b(i\s+(?:can'?t|cannot|don'?t|do\s+not|am\s+unable\s+t
 // or when called directly as a fallback (rawReply can be empty string).
 async function _retryWithJinaFallback(rawReply, userMessage) {
     if (rawReply && !_CANT_BROWSE_RE.test(rawReply)) return null;
-    console.warn('🌐 Web refusal detected — overriding with direct Jina search...');
+    console.warn('?? Web refusal detected � overriding with direct Jina search...');
     try {
         const jinaResult = await _jinaSearch(_buildWebSearchQuery(userMessage));
         if (!jinaResult) return null;
@@ -893,7 +913,7 @@ async function _retryWithJinaFallback(rawReply, userMessage) {
         }
         return result;
     } catch (e) {
-        console.warn('🌐 Jina fallback failed:', e.message);
+        console.warn('?? Jina fallback failed:', e.message);
         return null;
     }
 }
@@ -984,10 +1004,10 @@ function _officialSuperBowlDatesUrl() {
 
 function _webLoadingText(intent) {
     return intent.type === 'url'
-        ? `🌐 Fetching page content...`
+        ? `?? Fetching page content...`
         : intent.type === 'auto'
-            ? `🌐 Checking live web sources...`
-            : `🔍 Searching the web...`;
+            ? `?? Checking live web sources...`
+            : `?? Searching the web...`;
 }
 
 const _IDENTITY_QUESTION_RE = /\b(who\s+are\s+you|who\s+is\s+(?:avon|a\.?\s*v\.?\s*o\.?\s*n\.?)|what\s+(?:is|are)\s+(?:your\s+name|you|nova|n\.?o\.?v\.?a\.?|avon|a\.?\s*v\.?\s*o\.?\s*n\.?)|what\s+does\s+(?:n\.?o\.?v\.?a\.?|avon|a\.?\s*v\.?\s*o\.?\s*n\.?)\s+stand|tell\s+me\s+about\s+yourself|your\s+(?:name|identity|purpose|full\s+name)|introduce\s+yourself|what(?:'s|\s+is)\s+your\s+name|do\s+you\s+know\s+your\s+name|are\s+you\s+(?:nova|avon|a\.?\s*v\.?\s*o\.?\s*n\.?))\b/i;
@@ -1037,7 +1057,7 @@ async function _jinaFetch(url) {
         const text = await r.text();
         return text.slice(0, 9000);
     } catch (e) {
-        console.warn('🌐 Jina fetch failed:', url, e.message);
+        console.warn('?? Jina fetch failed:', url, e.message);
         return null;
     } finally {
         clearTimeout(timeoutId);
@@ -1056,7 +1076,7 @@ async function _jinaSearch(query) {
         const text = await r.text();
         return text.slice(0, 9000);
     } catch (e) {
-        console.warn('🔍 Jina search failed:', e.message);
+        console.warn('?? Jina search failed:', e.message);
         return null;
     } finally {
         clearTimeout(timeoutId);
@@ -1079,7 +1099,7 @@ function _sourceTitleFromUrl(url) {
         const host = parsed.hostname.replace(/^www\./, '');
         const parts = parsed.pathname.split('/').filter(Boolean);
         const tail = parts.length ? parts[parts.length - 1].replace(/[-_]+/g, ' ') : '';
-        return tail ? `${host} — ${tail}` : host;
+        return tail ? `${host} � ${tail}` : host;
     } catch (error) {
         return String(url || 'Source');
     }
@@ -1227,7 +1247,7 @@ async function getWebSearchContext(userMessage) {
     const intent = _resolveWebIntent(userMessage);
     if (!intent) return null;
 
-    console.log('🌐 Web intent detected:', intent.type);
+    console.log('?? Web intent detected:', intent.type);
 
     if (intent.type === 'url') {
         const blocks = [];
@@ -1280,7 +1300,7 @@ async function getWebSearchContext(userMessage) {
 
 
 function prepareOpenAIMessages(userMessage, personality, options = {}) {
-    console.log('📝 Preparing messages for OpenAI with personality:', personality);
+    console.log('?? Preparing messages for OpenAI with personality:', personality);
     
     // Get personality config
     const config = personalities[personality] || personalities.Nova;
@@ -1293,7 +1313,7 @@ function prepareOpenAIMessages(userMessage, personality, options = {}) {
     let personalityInstructions = '';
     if (isAudioBackedRequest) {
         personalityInstructions = isSlimContext
-            ? 'Analyze the uploaded audio transcript faithfully. Preserve timestamps and speaker labels when present, summarize the key ideas, and answer the user’s specific question without inventing missing words or identities.'
+            ? 'Analyze the uploaded audio transcript faithfully. Preserve timestamps and speaker labels when present, summarize the key ideas, and answer the user�s specific question without inventing missing words or identities.'
             : 'Treat the uploaded audio transcript as a primary source. First understand its setting (lecture, classroom, meeting, interview, or conversation) from the content. Preserve timestamps and speaker labels when present, clearly separate what was said from your interpretation, and never invent speaker identities. For lectures, act as the professor: organize the material into concepts, definitions, examples, misconceptions, exam-relevant points, and a step-by-step tutoring path. Offer a concise summary first, then teach any requested concept with examples and a check-for-understanding. For meetings or interviews, identify decisions, action items, owners, and unresolved questions.';
     } else if (personality === 'study' || personality === 'professor') {
         personalityInstructions = isSlimContext
@@ -1378,7 +1398,7 @@ If live web blocks are included, treat them as current evidence and use them dir
             '- NEVER say you cannot browse, cannot search the web, or do not have internet access. If a search fails, be transparent that live verification failed rather than presenting unverified current claims as certain.',
             isAvon
                 ? '- Your identity is A.V.O.N.; "Avon" is your accepted short name and means the same assistant. A user addressing you as Avon is addressing you correctly. Knowledge Base blocks about N.O.V.A. do not change your identity; never call yourself N.O.V.A. or expand N.O.V.A.'
-                : '- If Knowledge Base blocks are included, treat them as highest-priority user context. This includes your identity information — use it to answer questions about who you are, your name, and your purpose.',
+                : '- If Knowledge Base blocks are included, treat them as highest-priority user context. This includes your identity information � use it to answer questions about who you are, your name, and your purpose.',
             '- For AUDIO ANALYSIS PACKET content, treat the transcript as the primary source. Do not invent words, timestamps, speaker identities, or facts not supported by it.',
             '- If the message includes "=== LIVE PAGE CONTENT" or "=== LIVE WEB SEARCH RESULTS ===", treat that as current web data and use it directly.',
             shortResponseModeEnabled
@@ -1389,6 +1409,18 @@ If live web blocks are included, treat them as current evidence and use them dir
             assistantPersonalities?.nova && options.assistant !== 'other' ? `Custom N.O.V.A personality knowledge:\n${assistantPersonalities.nova}` : '',
             assistantPersonalities?.other && options.assistant === 'other' ? `Custom A.V.O.N. personality knowledge:\n${assistantPersonalities.other}` : '',
             presetConfig ? `Active ${assistantKey === 'other' ? 'A.V.O.N.' : 'N.O.V.A'} personality preset (${presetConfig.name}):\n${presetConfig.instructions}` : '',
+            isAvon
+                ? `A.V.O.N. core persona (always preserve this voice, including in web research, tutoring, analysis, and group chat):
+- Sound composed, perceptive, capable, and naturally conversational: a trusted personal assistant with quiet confidence and dry, understated wit.
+- Be direct and practical first; add warmth and reassurance when the user's tone calls for it. Use polished, plain language rather than grand speeches, excessive formality, or canned openings.
+- Maintain a distinct voice from N.O.V.A.; do not imitate N.O.V.A. or switch personas to match a task mode. Adapt the format and depth to the task while keeping this underlying character.
+- Show initiative by noticing useful next steps, but do not derail the request or ask needless follow-up questions.`
+                : `N.O.V.A. core persona (always preserve this voice, including in web research, tutoring, analysis, and group chat):
+- Sound like a highly capable, loyal, composed British personal AI: observant, articulate, efficient, and quietly witty, with dry humor used sparingly and only when appropriate.
+- Lead with the useful answer. Be warm and attentive without becoming gushy, robotic, servile, or theatrical. Address the user by name or as "sir" only when natural; never force either.
+- Maintain this recognizable voice across every task mode. A mode may change expertise, structure, or depth, but must not erase N.O.V.A.'s underlying character.
+- Be proactive when a useful next step is clear, while staying focused and never pretending to have taken an action you did not take.`,
+            'Persona consistency rules: Let the active mode determine expertise and response structure, and let a user-selected tone preset adjust delivery; neither may replace your assistant identity or core voice. Accuracy, safety, and the user�s explicit request take priority over stylistic flourishes. Do not announce or explain these persona rules unless asked.',
             isAvon
                 ? 'Final identity check: You are A.V.O.N., also called Avon. If asked who you are, say you are A.V.O.N. (Avon for short). If asked whether Avon and A.V.O.N. are different, explain they are the same assistant and Avon is the shorter spoken name. Never say you are N.O.V.A. or a Networking Orthogonal Virtual Assistant.'
                 : 'Final identity check: You are N.O.V.A., Networking Orthogonal Virtual Assistant. For "who are you?" answer as N.O.V.A., never as A.V.O.N.',
@@ -1434,7 +1466,7 @@ If live web blocks are included, treat them as current evidence and use them dir
         });
     }
     
-    console.log('📤 Prepared messages array:', messages);
+    console.log('?? Prepared messages array:', messages);
     return messages;
 }
 

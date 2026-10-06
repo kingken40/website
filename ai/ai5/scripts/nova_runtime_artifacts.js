@@ -3,7 +3,8 @@
 const startedArtifactRequests = new Set();
 
 function detectRequestedArtifactFormats(userMessage) {
-    const request = String(userMessage || '').trim();
+    let request = String(userMessage || '').trim();
+    if (/^I've uploaded (?:a|an) /i.test(request)) request = request.split(/\r?\n\r?\n/).pop();
     const asksToCreate = /\b(create|make|generate|draw|design|produce|prepare|export|convert|turn|save|download|attach|provide|give|write|build|render)\b/i.test(request);
     const mentionsOutput = /\b(downloadable|download|file|document|pdf|docx?|word document|spreadsheet|csv|json|markdown|image|picture|illustration|poster|photo|artwork|diagram|flowchart|infographic|graphic|chart|png|jpe?g|svg)\b/i.test(request);
     if (!asksToCreate || !mentionsOutput) return [];
