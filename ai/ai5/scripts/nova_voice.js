@@ -240,12 +240,14 @@ function isAssistantEchoTranscript(text) {
     if (!normalized || !recentSpokenText) return false;
     const speakingNow = isSpeechOutputActive || isSpeaking ||
         !!(window.speechSynthesis && (window.speechSynthesis.speaking || window.speechSynthesis.pending));
-    if (!speakingNow && Date.now() - lastSpeechEndedAt > 2500) return false;
-    if (recentSpokenText.includes(normalized)) return true;
+    if (!speakingNow && Date.now() - lastSpeechEndedAt > 1500) return false;
     const words = normalized.split(' ').filter(Boolean);
+    // Short phrases ("yes", "stop", "tell me more") are too likely to be the user
+    if (words.length < 4) return false;
+    if (recentSpokenText.includes(normalized)) return true;
     const spokenWords = new Set(recentSpokenText.split(' ').filter(Boolean));
     const overlap = words.filter(word => spokenWords.has(word)).length;
-    return words.length >= 2 && overlap / words.length >= 0.6;
+    return overlap / words.length >= 0.85;
 }
 
 function normalizeVoiceTranscript(text) {
