@@ -232,7 +232,7 @@ function setupEventListeners() {
         if (!value) return showNotification('Add personality or knowledge first.', 2500);
         assistantPersonalities[assistant] = value;
         localStorage.setItem('nova_assistant_personalities', JSON.stringify(assistantPersonalities));
-        showNotification(`${assistant === 'nova' ? 'N.O.V.A' : 'A.V.O.N.'} personality added to knowledge.`, 2500);
+        showNotification(`${assistant === 'nova' ? 'N.O.V.A' : 'A.V.O.N.'} personality saved.`, 2500);
     });
     setTimeout(() => {
         if (!groupModel) return;
