@@ -221,6 +221,9 @@
                 <span class="chat-status">Ready</span>
             </div>
             <div class="chat-controls">
+                <button class="control-btn" id="autoPilotBtn" type="button" title="Auto-Pilot: let N.O.V.A and A.V.O.N. chat with each other" aria-pressed="false">
+                    <i class="fas fa-robot"></i>
+                </button>
                 <button class="control-btn" id="newChatBtn" type="button" title="New Chat">
                     <i class="fas fa-plus"></i>
                 </button>
@@ -406,8 +409,13 @@
                     </div>
                     <div class="setting-group">
                         <label for="personalityInfluence">Personality influence: <span id="personalityInfluenceLabel">Normal</span></label>
-                        <input type="range" id="personalityInfluence" min="1" max="5" step="1" value="3" aria-label="Personality influence">
-                        <small style="color:rgba(255,255,255,0.55);font-size:0.78rem;">Subtle to Maximum. Higher means the personality shapes replies more. 3 is Normal.</small>
+                        <div style="display:flex; align-items:center; gap:0.5rem;">
+                            <span style="color:rgba(255,255,255,0.6);font-size:0.8rem;">1</span>
+                            <input type="range" id="personalityInfluence" min="1" max="5" step="1" value="3" aria-label="Personality influence" style="flex:1;">
+                            <span style="color:rgba(255,255,255,0.6);font-size:0.8rem;">5</span>
+                            <input type="number" id="personalityInfluenceValue" min="1" max="5" step="1" value="3" aria-label="Personality influence level (1 to 5)" style="width:3.5rem;">
+                        </div>
+                        <small style="color:rgba(255,255,255,0.55);font-size:0.78rem;">Min 1 (Subtle) to max 5 (Maximum); 3 is Normal. Type a level or drag the slider. Saved separately for each assistant.</small>
                     </div>
                     <div class="setting-group">
                         <label for="assistantPersonalityPreset">Ready-to-use personality</label>
@@ -434,6 +442,11 @@
                         <textarea id="assistantPersonalityText" rows="4" placeholder="Describe how this assistant should think, teach, speak, and what it should remember..."></textarea>
                     </div>
                     <button type="button" id="saveAssistantPersonality" class="settings-action-btn">Add to assistant knowledge</button>
+                    <div class="setting-group" style="align-items:center; justify-content:space-between; margin-top:1rem;">
+                        <label for="autoPersonalityEnabled" style="margin:0;">Auto personality selection</label>
+                        <input type="checkbox" id="autoPersonalityEnabled" role="switch" aria-label="Automatically choose a personality for each prompt">
+                    </div>
+                    <small style="color:rgba(255,255,255,0.55);font-size:0.78rem;">When on, the personality changes automatically to fit each prompt. Turn off to use your selected personality.</small>
                 </div>
                 <div class="setting-section" style="margin-top: 1.5rem;">
                     <h4 style="color:#FFD700; margin-bottom:1rem; border-bottom:1px solid rgba(255,215,0,0.3); padding-bottom:0.5rem;">🎨 Chat Bubble Colors</h4>

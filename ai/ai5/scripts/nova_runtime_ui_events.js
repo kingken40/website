@@ -157,16 +157,44 @@ function setupEventListeners() {
     }
 
     const influenceSlider = document.getElementById('personalityInfluence');
+    const autoPersonalityToggle = document.getElementById('autoPersonalityEnabled');
+    if (autoPersonalityToggle) {
+        autoPersonalityToggle.checked = autoPersonalityEnabled;
+        autoPersonalityToggle.addEventListener('change', () => {
+            autoPersonalityEnabled = autoPersonalityToggle.checked;
+            localStorage.setItem('nova_auto_personality_enabled', String(autoPersonalityEnabled));
+            showNotification(autoPersonalityEnabled ? 'Auto personality on; it will adapt to each prompt.' : 'Auto personality off.', 2200);
+        });
+    }
+    const influenceNumber = document.getElementById('personalityInfluenceValue');
     const influenceLabel = document.getElementById('personalityInfluenceLabel');
     if (influenceSlider) {
-        const showInfluence = () => { if (influenceLabel) influenceLabel.textContent = PERSONALITY_INFLUENCE_LEVELS[personalityInfluence].label; };
-        influenceSlider.value = String(personalityInfluence);
-        showInfluence();
-        influenceSlider.addEventListener('input', () => {
-            personalityInfluence = parseInt(influenceSlider.value, 10) || 3;
-            localStorage.setItem('nova_personality_influence', String(personalityInfluence));
+        const currentAssistantKey = () => personalityAssistant?.value === 'other' ? 'other' : 'nova';
+        const showInfluence = () => {
+            const level = getPersonalityInfluence(currentAssistantKey());
+            influenceSlider.value = String(level);
+            if (influenceNumber && document.activeElement !== influenceNumber) influenceNumber.value = String(level);
+            if (influenceLabel) influenceLabel.textContent = PERSONALITY_INFLUENCE_LEVELS[level].label;
+        };
+        const saveInfluence = raw => {
+            const parsed = Math.round(Number(raw));
+            if (!Number.isFinite(parsed)) return;
+            personalityInfluences[currentAssistantKey()] = Math.min(5, Math.max(1, parsed));
+            localStorage.setItem('nova_personality_influences', JSON.stringify(personalityInfluences));
             showInfluence();
+        };
+        influenceSlider.addEventListener('input', () => {
+            if (influenceNumber) influenceNumber.value = influenceSlider.value;
+            saveInfluence(influenceSlider.value);
         });
+        influenceNumber?.addEventListener('input', () => {
+            if (influenceNumber.value !== '') saveInfluence(influenceNumber.value);
+        });
+        influenceNumber?.addEventListener('blur', () => {
+            influenceNumber.value = String(getPersonalityInfluence(currentAssistantKey()));
+        });
+        personalityAssistant?.addEventListener('change', showInfluence);
+        showInfluence();
     }
 
     // C+N / C+A: Continue with N.O.V.A. / A.V.O.N.

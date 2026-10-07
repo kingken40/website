@@ -829,8 +829,20 @@ const PERSONALITY_INFLUENCE_LEVELS = {
     4: { label: 'Strong', temp: 1.0, text: 'Make the personality strong and unmistakable: vivid phrasing, clear attitude in nearly every sentence.' },
     5: { label: 'Maximum', temp: 1.1, text: 'Make the personality dominant and exaggerated in every sentence, fully in character, while keeping the facts correct.' }
 };
-let personalityInfluence = Math.min(5, Math.max(1, parseInt(localStorage.getItem('nova_personality_influence') || '3', 10) || 3));
-let personalitiesEnabled = localStorage.getItem('nova_personalities_enabled') !== 'false';
+let personalityInfluences = (() => {
+    try {
+        const saved = JSON.parse(localStorage.getItem('nova_personality_influences') || '{}');
+        return { nova: Number(saved.nova) || 3, other: Number(saved.other) || 3 };
+    } catch (e) {
+        return { nova: 3, other: 3 };
+    }
+})();
+function getPersonalityInfluence(assistantKey) {
+    const value = Math.round(Number(personalityInfluences[assistantKey === 'other' ? 'other' : 'nova']) || 3);
+    return Math.min(5, Math.max(1, value));
+}
+let personalitiesEnabled =  localStorage.getItem('nova_personalities_enabled') !== 'false';
+let autoPersonalityEnabled = localStorage.getItem('nova_auto_personality_enabled') === 'true';
 
 function pickAutoPersonality(autoKey, userMessage) {
     const pool = AUTO_PERSONALITY_POOLS[autoKey] || [];
@@ -856,7 +868,9 @@ function pickAutoPersonality(autoKey, userMessage) {
 }
 
 function resolveActivePersonalityPreset(selection, userMessage) {
-    if (!personalitiesEnabled || !selection) return null;
+    if (!personalitiesEnabled) return null;
+    if (autoPersonalityEnabled) selection = 'auto';
+    if (!selection) return null;
     if (AUTO_PERSONALITY_POOLS[selection]) {
         const picked = pickAutoPersonality(selection, userMessage);
         const config = ASSISTANT_PERSONALITY_PRESETS[picked];

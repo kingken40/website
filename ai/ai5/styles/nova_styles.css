@@ -615,6 +615,13 @@ body {
     box-shadow: 0 0 10px rgba(0, 170, 255, 0.3);
 }
 
+.control-btn.active {
+    background: rgba(0, 255, 136, 0.25);
+    border-color: #00ff88;
+    color: #00ff88;
+    box-shadow: 0 0 12px rgba(0, 255, 136, 0.5);
+}
+
 .chat-messages {
     height: 400px;
     overflow-y: auto;

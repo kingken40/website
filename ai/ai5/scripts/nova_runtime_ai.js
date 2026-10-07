@@ -282,7 +282,7 @@ async function generateViaServerProxy(userMessage, personality, options = {}) {
         model: options.modelOverride || currentModel,
         messages: messages,
         max_tokens: options.fastResponse ? 512 : 4096,
-        temperature: personality === 'brainstorm' ? 0.95 : (resolveActivePersonalityPreset(assistantPresetSelections?.[options.assistant === 'other' ? 'other' : 'nova'], userMessage) ? PERSONALITY_INFLUENCE_LEVELS[personalityInfluence].temp : 0.7),
+        temperature: personality === 'brainstorm' ? 0.95 : (resolveActivePersonalityPreset(assistantPresetSelections?.[options.assistant === 'other' ? 'other' : 'nova'], userMessage) ? PERSONALITY_INFLUENCE_LEVELS[getPersonalityInfluence(options.assistant === 'other' ? 'other' : 'nova')].temp : 0.7),
         stream: false
     };
 
@@ -494,7 +494,7 @@ async function generateAIResponse(userMessage, personality, options = {}) {
             model: requestModel,
             messages: messages,
             max_tokens: options.fastResponse ? 512 : provider.maxTokens,
-            temperature: personality === 'brainstorm' ? 0.95 : (resolveActivePersonalityPreset(assistantPresetSelections?.[options.assistant === 'other' ? 'other' : 'nova'], userMessage) ? PERSONALITY_INFLUENCE_LEVELS[personalityInfluence].temp : 0.7),
+            temperature: personality === 'brainstorm' ? 0.95 : (resolveActivePersonalityPreset(assistantPresetSelections?.[options.assistant === 'other' ? 'other' : 'nova'], userMessage) ? PERSONALITY_INFLUENCE_LEVELS[getPersonalityInfluence(options.assistant === 'other' ? 'other' : 'nova')].temp : 0.7),
             stream: false
         };
         
@@ -1424,7 +1424,7 @@ If live web blocks are included, treat them as current evidence and use them dir
                 ? 'Final identity check: You are A.V.O.N., also called Avon. If asked who you are, say you are A.V.O.N. (Avon for short). If asked whether Avon and A.V.O.N. are different, explain they are the same assistant and Avon is the shorter spoken name. Never say you are N.O.V.A. or a Networking Orthogonal Virtual Assistant.'
                 : 'Final identity check: You are N.O.V.A., Networking Orthogonal Virtual Assistant. For "who are you?" answer as N.O.V.A., never as A.V.O.N.',
             '- Never invent URLs, citations, or DOIs.',
-            presetConfig ? `ACTIVE PERSONALITY (${presetConfig.name}) - MANDATORY: ${presetConfig.instructions}\n${PERSONALITY_INFLUENCE_LEVELS[personalityInfluence].text} Apply this to every reply, even factual, web-backed, or tutoring answers, and ignore the tone of earlier assistant messages in the history. Accuracy and any required citations stay intact. Obey the shorter/fuller response-length rule above while doing so.` : ''
+            presetConfig ? `ACTIVE PERSONALITY (${presetConfig.name}) - MANDATORY: ${presetConfig.instructions}\n${PERSONALITY_INFLUENCE_LEVELS[getPersonalityInfluence(assistantKey)].text} Apply this to every reply, even factual, web-backed, or tutoring answers, and ignore the tone of earlier assistant messages in the history. Accuracy and any required citations stay intact. Obey the shorter/fuller response-length rule above while doing so.` : ''
         ].filter(Boolean).join('\n')
    };
     
@@ -1453,7 +1453,7 @@ If live web blocks are included, treat them as current evidence and use them dir
     // Restate voice/length rules next to the user's turn; models obey the last turn most reliably.
     const personaLabel = isAvon ? 'A.V.O.N.' : 'N.O.V.A.';
     const styleReminder = presetConfig
-        ? `[Voice requirement for this reply: answer as ${personaLabel} in a clearly "${presetConfig.name}" personality - ${presetConfig.instructions} ${PERSONALITY_INFLUENCE_LEVELS[personalityInfluence].text} Regardless of how earlier replies sounded. ${shortResponseModeEnabled ? 'Keep it short.' : 'Give a full, detailed answer.'}]`
+        ? `[Voice requirement for this reply: answer as ${personaLabel} in a clearly "${presetConfig.name}" personality - ${presetConfig.instructions} ${PERSONALITY_INFLUENCE_LEVELS[getPersonalityInfluence(assistantKey)].text} Regardless of how earlier replies sounded. ${shortResponseModeEnabled ? 'Keep it short.' : 'Give a full, detailed answer.'}]`
         : `[Voice requirement for this reply: answer as ${personaLabel} in your own distinct core persona, not a generic assistant voice. ${shortResponseModeEnabled ? 'Keep it short.' : 'Give a full, detailed answer.'}]`;
 
     // Add current user message

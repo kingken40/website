@@ -624,6 +624,69 @@ ${lastAssistantMessage.text}`;
     }
 }
 
+// Auto-Pilot: N.O.V.A and A.V.O.N. reply to each other, one message at a time, until toggled off.
+let autoPilotActive = false;
+
+function setAutoPilotUi(active) {
+    const btn = document.getElementById('autoPilotBtn');
+    if (!btn) return;
+    btn.classList.toggle('active', active);
+    btn.setAttribute('aria-pressed', String(active));
+}
+
+function stopAutoPilot(message) {
+    if (!autoPilotActive) return;
+    autoPilotActive = false;
+    setAutoPilotUi(false);
+    if (message) showNotification(message, 2200);
+}
+
+async function runAutoPilotLoop() {
+    const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+    while (autoPilotActive) {
+        if (isResponseInFlight || window.speechSynthesis?.speaking) {
+            await sleep(500);
+            continue;
+        }
+        const last = getLastAssistantMessage();
+        if (!last) return stopAutoPilot('Auto-Pilot needs a first response to start from. Send a message first.');
+        const countBefore = document.querySelectorAll('#chatMessages .message').length;
+        await continueConversation(last.sender === 'Avon' ? 'nova' : 'other');
+        if (!autoPilotActive) break;
+        if (document.querySelectorAll('#chatMessages .message').length <= countBefore) {
+            return stopAutoPilot('Auto-Pilot stopped: no new reply was produced.');
+        }
+        await sleep(1200);
+    }
+}
+
+function toggleAutoPilot() {
+    if (autoPilotActive) return stopAutoPilot('Auto-Pilot off.');
+    if (!getLastAssistantMessage()) {
+        showNotification('Send a message first so the assistants have something to talk about.', 2500);
+        return;
+    }
+    const groupToggle = document.getElementById('groupChatEnabled');
+    if (!groupChatEnabled && groupToggle) {
+        groupToggle.checked = true;
+        groupToggle.dispatchEvent(new Event('change'));
+    }
+    const muteSelect = document.getElementById('mutedGroupAssistant');
+    if (muteSelect && muteSelect.value !== 'both') {
+        muteSelect.value = 'both';
+        muteSelect.dispatchEvent(new Event('change'));
+    }
+    autoPilotActive = true;
+    setAutoPilotUi(true);
+    showNotification('Auto-Pilot on: N.O.V.A and A.V.O.N. are now chatting.', 2500);
+    runAutoPilotLoop();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('autoPilotBtn')?.addEventListener('click', toggleAutoPilot);
+    document.getElementById('clearChat')?.addEventListener('click', () => stopAutoPilot());
+});
+
 // Handle interrupt when user speaks during Nova's response (topic change)
 async function handleInterrupt(userMessage) {
     const interruptRunId = ++activeResponseRunId;
