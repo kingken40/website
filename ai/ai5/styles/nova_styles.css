@@ -2680,6 +2680,43 @@ body.no-animations * {
     padding: 0.25rem 0.9rem 0.75rem;
     -webkit-overflow-scrolling: touch;
     font-size: 0.88rem;
+    overflow-x: hidden;
+}
+
+/* Keep message text, links, code and media inside their bubbles */
+.message,
+.mobile-transcript-messages .message {
+    max-width: 100%;
+    box-sizing: border-box;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.message-content {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.message-content pre,
+.message-content table,
+.message-content .math-display {
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+.message-content img,
+.message-content video,
+.message-content iframe {
+    max-width: 100%;
+    height: auto;
+}
+
+.message-content code {
+    white-space: pre-wrap;
+    word-break: break-all;
 }
 
 .mobile-transcript-messages::-webkit-scrollbar { width: 3px; }

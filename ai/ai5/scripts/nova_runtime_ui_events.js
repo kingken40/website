@@ -245,6 +245,41 @@ function setupEventListeners() {
         });
     }, 1500);
 
+    // Gray out and disable settings that depend on a switched-off toggle.
+    const settingDependencies = {
+        groupChatEnabled: ['groupChatModel', 'mutedGroupAssistant'],
+        voiceEnabled: ['wakePhraseEnabled'],
+        voiceResponse: ['voiceVolume', 'voiceSpeed', 'voiceSelection', 'previewVoiceBtn', 'avonVoiceSelection', 'previewAvonVoiceBtn', 'localVoiceBridgeEnabled', 'localVoiceBridgeUrl'],
+        localVoiceBridgeEnabled: ['localVoiceBridgeUrl'],
+        personalitiesEnabled: ['assistantPersonalityPreset', 'personalityInfluence', 'personalityInfluenceValue', 'autoPersonalityEnabled']
+    };
+    function applySettingDependencies() {
+        const off = new Set();
+        const isOn = id => {
+            const el = document.getElementById(id);
+            return !el || (el.checked && !off.has(id));
+        };
+        Object.entries(settingDependencies).forEach(([toggleId, ids]) => {
+            const active = isOn(toggleId);
+            if (!active) ids.forEach(id => off.add(id));
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.disabled = !active;
+                const group = el.closest('.setting-group') || el;
+                const toggleEl = document.getElementById(toggleId);
+                group.classList.toggle('setting-dimmed', !active && !group.contains(toggleEl));
+            });
+        });
+        const muteBox = document.getElementById('groupMuteSettings');
+        if (muteBox) muteBox.hidden = false;
+    }
+    document.addEventListener('change', event => {
+        if (event.target?.id in settingDependencies) setTimeout(applySettingDependencies, 0);
+    });
+    setTimeout(applySettingDependencies, 300);
+    setTimeout(applySettingDependencies, 1800);
+
     let speechTouchStart = null;
     const speakFromPoint = (messageContent, point) => {
         if (!messageContent || !point) return;
