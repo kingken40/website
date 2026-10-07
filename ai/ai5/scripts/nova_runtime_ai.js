@@ -396,7 +396,7 @@ async function generateAIResponse(userMessage, personality, options = {}) {
         removeThinkingIndicator();
         addMessage(reply, responseSender);
         window.maybeCreateRequestedArtifact?.(userMessage, reply);
-        conversationHistory.push({ role: 'assistant', content: reply, personality, timestamp: new Date().toISOString() });
+        conversationHistory.push({ role: 'assistant', speaker: responseSender, content: reply, personality, timestamp: new Date().toISOString() });
         if (typeof window.speakText === 'function') {
             const onEnd = window.isWakeWordSession && typeof window.restoreWakeListeningAfterResponse === 'function'
                 ? () => { window.restoreWakeListeningAfterResponse(); }
@@ -425,7 +425,7 @@ async function generateAIResponse(userMessage, personality, options = {}) {
             removeThinkingIndicator();
             addMessage(reply, responseSender, null, responseModel);
             window.maybeCreateRequestedArtifact?.(userMessage, reply);
-            conversationHistory.push({ role: 'assistant', content: reply, personality, timestamp: new Date().toISOString(), model: responseModel });
+            conversationHistory.push({ role: 'assistant', speaker: responseSender, content: reply, personality, timestamp: new Date().toISOString(), model: responseModel });
             recordNoveltyResponse(userMessage, reply, responseModel);
             if (typeof window.speakText === 'function') {
                 if (window.isWakeWordSession && typeof window.restoreWakeListeningAfterResponse === 'function') {
@@ -580,7 +580,7 @@ async function generateAIResponse(userMessage, personality, options = {}) {
                     removeThinkingIndicator();
                     addMessage(jinaResult, responseSender, null, fallbackModel);
                     window.maybeCreateRequestedArtifact?.(userMessage, jinaResult);
-                    conversationHistory.push({ role: 'assistant', content: jinaResult, personality, timestamp: new Date().toISOString(), model: fallbackModel });
+                    conversationHistory.push({ role: 'assistant', speaker: responseSender, content: jinaResult, personality, timestamp: new Date().toISOString(), model: fallbackModel });
                     recordNoveltyResponse(userMessage, jinaResult, fallbackModel);
                     speakAssistantResponse(jinaResult, responseSender);
                     return;
@@ -602,7 +602,7 @@ async function generateAIResponse(userMessage, personality, options = {}) {
                     removeThinkingIndicator();
                     addMessage(jinaResult, responseSender, null, responseModel);
                     window.maybeCreateRequestedArtifact?.(userMessage, jinaResult);
-                    conversationHistory.push({ role: 'assistant', content: jinaResult, personality, timestamp: new Date().toISOString(), model: responseModel });
+                    conversationHistory.push({ role: 'assistant', speaker: responseSender, content: jinaResult, personality, timestamp: new Date().toISOString(), model: responseModel });
                     recordNoveltyResponse(userMessage, jinaResult, responseModel);
                     speakAssistantResponse(jinaResult, responseSender);
                     return;
@@ -668,7 +668,7 @@ async function generateAIResponse(userMessage, personality, options = {}) {
             removeThinkingIndicator();
             addMessage(jinaOverrideDirect, responseSender, null, responseModel);
             window.maybeCreateRequestedArtifact?.(userMessage, jinaOverrideDirect);
-            conversationHistory.push({ role: 'assistant', content: jinaOverrideDirect, personality, timestamp: new Date().toISOString(), model: responseModel });
+            conversationHistory.push({ role: 'assistant', speaker: responseSender, content: jinaOverrideDirect, personality, timestamp: new Date().toISOString(), model: responseModel });
             recordNoveltyResponse(userMessage, jinaOverrideDirect, responseModel);
             speakAssistantResponse(jinaOverrideDirect, responseSender);
             return;
@@ -698,6 +698,7 @@ async function generateAIResponse(userMessage, personality, options = {}) {
         // Save to conversation history
         conversationHistory.push({
             role: 'assistant',
+            speaker: responseSender,
             content: reply,
             personality: personality,
             timestamp: new Date().toISOString(),
@@ -1375,6 +1376,7 @@ If live web blocks are included, treat them as current evidence and use them dir
             options.conversationPartner
                 ? `For this continuation, you are responding directly to ${options.conversationPartner}'s message. Address ${options.conversationPartner} as your fellow assistant, preserve the topic and context, and do not claim to be them.`
                 : '',
+            'In the conversation history, lines tagged "[You (...) said at TIME]" are your own earlier messages, and lines tagged "[<name>, the other assistant, said at TIME]" or "[User said at TIME]" came from someone else. Use the times to understand when things were said. Never write these bracketed tags in your own reply.',
             personalityInstructions,
             novaStyleContext,
             identityContext,
@@ -1390,8 +1392,10 @@ If live web blocks are included, treat them as current evidence and use them dir
             '',
             'Rules:',
             '- Complete your thought before ending a response. Never end mid-sentence, after a trailing comma, or with an unfinished clause. If space is limited, give a concise complete answer instead of beginning extra content you cannot finish.',
-            shortResponseModeEnabled
-                ? '- Shorter response mode is enabled: keep replies concise by default, typically a few sentences. Lead with the answer and avoid unnecessary introductions, headings, repetition, examples, or background. For a simple factual question or direct lookup, answer in one short sentence with only the requested fact. Expand when the user asks for detail or accuracy requires a brief qualification.'
+            ultraShortResponseModeEnabled
+                ? '- Even-shorter response mode is enabled and overrides every other length instruction: reply with a single very short sentence (about 10 words or fewer; a few words or just the answer is ideal). No introductions, lists, headings, examples, caveats, pleasantries, or follow-up offers, unless the user explicitly asks for more detail.'
+                : shortResponseModeEnabled
+                ? '- Shorter response mode is enabled and overrides other length preferences: reply in one or two short sentences maximum, giving only exactly what was asked. No introductions, lists, headings, examples, caveats, or follow-up offers, unless the user explicitly asks for more detail.'
                 : '- Shorter response mode is disabled: use the fuller, more explanatory response style. Give helpful context, examples, and organized detail when useful, while still answering the question directly and avoiding filler.',
             '- Treat the current date/time in REAL-TIME CONTEXT as authoritative. Interpret "next" and "upcoming" relative to that date; never describe a past event or expired date as the next occurrence. For schedules and future events, verify the year and date against an official source, and say when a future date cannot be confirmed.',
             '- You have real-time web search capability. Proactively search when a question is factual, educational, research-oriented, current, uncertain, asks for a definition/explanation/comparison, or would benefit from reliable external evidence. Do not wait for the user to say "look it up"; do not search for simple greetings, casual conversation, or tasks fully grounded in the user-provided text/files.',
@@ -1437,29 +1441,54 @@ If live web blocks are included, treat them as current evidence and use them dir
     const historyTotalCharLimit = isSlimContext ? CONTEXT_HISTORY_TOTAL_CHARS_SLIM : (isWebBackedRequest ? 2200 : CONTEXT_HISTORY_TOTAL_CHARS);
     const recentHistory = conversationHistory.slice(-historyLimit);
     let historyCharsUsed = 0;
+    const speakerName = key => key === 'Avon' ? 'A.V.O.N.' : 'N.O.V.A.';
+    const myName = speakerName(isAvon ? 'Avon' : 'Nova');
+    const formatClock = iso => {
+        const d = new Date(iso);
+        return isNaN(d) ? '' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    };
     for (const msg of recentHistory) {
         const summarizedContent = summarizeMessageForContext(msg.content, historyCharLimit);
         if (!summarizedContent) continue;
         if (historyCharsUsed + summarizedContent.length > historyTotalCharLimit) {
             break;
         }
-        messages.push({
-            role: msg.role,
-            content: summarizedContent
-        });
+        const clock = formatClock(msg.timestamp);
+        const at = clock ? ` at ${clock}` : '';
+        let role = msg.role;
+        let content = summarizedContent;
+        if (msg.role === 'assistant' && msg.speaker) {
+            const author = speakerName(msg.speaker);
+            if (author === myName) {
+                content = `[You (${myName}) said${at}]: ${summarizedContent}`;
+            } else {
+                // The other assistant's words are presented as incoming messages, not as the model's own.
+                role = 'user';
+                content = `[${author}, the other assistant, said${at}]: ${summarizedContent}`;
+            }
+        } else if (msg.role === 'user' && clock) {
+            content = `[User said${at}]: ${summarizedContent}`;
+        }
+        messages.push({ role, content });
         historyCharsUsed += summarizedContent.length;
     }
     
     // Restate voice/length rules next to the user's turn; models obey the last turn most reliably.
     const personaLabel = isAvon ? 'A.V.O.N.' : 'N.O.V.A.';
     const styleReminder = presetConfig
-        ? `[Voice requirement for this reply: answer as ${personaLabel} in a clearly "${presetConfig.name}" personality - ${presetConfig.instructions} ${PERSONALITY_INFLUENCE_LEVELS[getPersonalityInfluence(assistantKey)].text} Regardless of how earlier replies sounded. ${shortResponseModeEnabled ? 'Keep it short.' : 'Give a full, detailed answer.'}]`
-        : `[Voice requirement for this reply: answer as ${personaLabel} in your own distinct core persona, not a generic assistant voice. ${shortResponseModeEnabled ? 'Keep it short.' : 'Give a full, detailed answer.'}]`;
+        ? `[Voice requirement for this reply: answer as ${personaLabel} in a clearly "${presetConfig.name}" personality - ${presetConfig.instructions} ${PERSONALITY_INFLUENCE_LEVELS[getPersonalityInfluence(assistantKey)].text} Regardless of how earlier replies sounded.                 ${ultraShortResponseModeEnabled ? 'Reply with one very short sentence (about 10 words or fewer), only the answer.' : shortResponseModeEnabled ? 'Answer in one or two short sentences maximum, only what was asked.' : 'Give a full, detailed answer.'}]`
+                        : `[Voice requirement for this reply: answer as ${personaLabel} in your own distinct core persona, not a generic assistant voice. ${ultraShortResponseModeEnabled ? 'Reply with one very short sentence (about 10 words or fewer), only the answer.' : shortResponseModeEnabled ? 'Answer in one or two short sentences maximum, only what was asked.' : 'Give a full, detailed answer.'}]`;
 
     // Add current user message
+    const screenFrame = window.getScreenShareFrame?.();
     messages.push({
         role: "user",
-        content: `${userMessage}\n\n${styleReminder}`
+        content: screenFrame
+            ? [
+                { type: 'text', text: `${userMessage}\n\n[The user is sharing their screen; the attached image is their current screen. Use it when relevant.]\n\n${styleReminder}` },
+                { type: 'image_url', image_url: { url: screenFrame } }
+            ]
+            : `${userMessage}\n\n${styleReminder}`
     });
     
     // Save user message to history

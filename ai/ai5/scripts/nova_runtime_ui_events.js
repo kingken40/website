@@ -53,6 +53,19 @@ function setupEventListeners() {
         });
     }
 
+    const ultraShortResponseMode = document.getElementById('ultraShortResponseMode');
+    if (ultraShortResponseMode) {
+        ultraShortResponseMode.checked = ultraShortResponseModeEnabled;
+        ultraShortResponseMode.addEventListener('change', () => {
+            ultraShortResponseModeEnabled = ultraShortResponseMode.checked;
+            localStorage.setItem(ULTRA_SHORT_RESPONSE_MODE_STORAGE_KEY, String(ultraShortResponseModeEnabled));
+            showNotification(
+                ultraShortResponseModeEnabled ? 'Even shorter responses enabled.' : 'Even shorter responses off.',
+                2200
+            );
+        });
+    }
+
     const speechResumeBtn = document.getElementById('speechResumeBtn');
     const speechPauseBtn = document.getElementById('speechPauseBtn');
     const speechStopBtn = document.getElementById('speechStopBtn');

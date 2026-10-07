@@ -497,13 +497,41 @@ function initializeVoice() {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 }
 
+// Picks the most likely transcript from a recognition result; with several alternatives,
+// prefers the highest-confidence one and any that contains an assistant name.
+function pickBestTranscript(result) {
+    let best = '';
+    let bestScore = -1;
+    for (let a = 0; a < result.length; a++) {
+        const text = (result[a].transcript || '').trim();
+        if (!text) continue;
+        const confidence = result[a].confidence > 0 ? result[a].confidence : (a === 0 ? 0.5 : 0.4);
+        const nameBonus = /\b(nova|avon|n\.?o\.?v\.?a\.?|a\.?v\.?o\.?n\.?)\b/i.test(text) ? 0.05 : 0;
+        const score = confidence + nameBonus;
+        if (score > bestScore) { best = text; bestScore = score; }
+    }
+    return best;
+}
+
+// Joins result fragments with spaces so adjacent results never fuse words together.
+function joinTranscriptParts(...parts) {
+    return parts.map(part => String(part || '').trim()).filter(Boolean).join(' ');
+}
+
+// Mobile browsers sometimes re-send a final result already captured; ignore exact repeats.
+function isRepeatedTranscript(existing, incoming) {
+    const a = String(existing || '').trim().toLowerCase();
+    const b = String(incoming || '').trim().toLowerCase();
+    return !!b && a.endsWith(b);
+}
+
 function setupSpeechRecognition() {
     if (!recognition) return;
     
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.lang = 'en-US';
-    recognition.maxAlternatives = 1;
+    recognition.lang = navigator.language || 'en-US';
+    recognition.maxAlternatives = 5;
     
     recognition.onstart = function() {
         console.log('🎤 Voice recognition started');
@@ -802,12 +830,12 @@ function setupSpeechRecognition() {
         let interimTranscript = '';
         
         for (let i = event.resultIndex; i < event.results.length; i++) {
-            const transcript = event.results[i][0].transcript.trim();
+            const transcript = pickBestTranscript(event.results[i]);
             
             if (event.results[i].isFinal) {
-                finalTranscript += transcript;
+                finalTranscript = joinTranscriptParts(finalTranscript, transcript);
             } else {
-                interimTranscript += transcript;
+                interimTranscript = joinTranscriptParts(interimTranscript, transcript);
             }
         }
 
@@ -839,7 +867,9 @@ function setupSpeechRecognition() {
         } else {
             // Push-to-talk mode - accumulate transcript while button is held
             if (finalTranscript) {
-                pendingTranscript = (pendingTranscript ? pendingTranscript + ' ' : '') + finalTranscript;
+                if (!isRepeatedTranscript(pendingTranscript, finalTranscript)) {
+                    pendingTranscript = joinTranscriptParts(pendingTranscript, finalTranscript);
+                }
                 lastInterimTranscript = '';
                 console.log('🗣️ Captured final:', finalTranscript, '| Total:', pendingTranscript);
                 updateVoiceStatus(`Captured: "${pendingTranscript}"`);
@@ -1146,12 +1176,12 @@ function startCommandListening() {
         let interimTranscript = '';
         
         for (let i = event.resultIndex; i < event.results.length; i++) {
-            const transcript = event.results[i][0].transcript.trim();
+            const transcript = pickBestTranscript(event.results[i]);
             
             if (event.results[i].isFinal) {
-                finalTranscript += transcript;
+                finalTranscript = joinTranscriptParts(finalTranscript, transcript);
             } else {
-                interimTranscript += transcript;
+                interimTranscript = joinTranscriptParts(interimTranscript, transcript);
             }
         }
         

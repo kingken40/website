@@ -30,6 +30,7 @@ const LAST_RESPONSE_MODEL_STORAGE_KEY = 'nova_last_response_model';
 const NOVELTY_MEMORY_STORAGE_KEY = 'nova_novelty_memory';
 const NOVELTY_MEMORY_LIMIT = 40;
 const SHORT_RESPONSE_MODE_STORAGE_KEY = 'nova_short_response_mode';
+const ULTRA_SHORT_RESPONSE_MODE_STORAGE_KEY = 'nova_ultra_short_response_mode';
 
 function loadStoredText(keyName, defaultValue = '') {
     try {
@@ -57,6 +58,7 @@ let currentModel = 'openai/gpt-4o-mini'; // Default OpenRouter model
 let manualModelOverride = loadStoredText(MODEL_PREFERENCE_STORAGE_KEY, 'auto') || 'auto';
 let lastResponseModel = loadStoredText(LAST_RESPONSE_MODEL_STORAGE_KEY, '');
 let shortResponseModeEnabled = loadStoredText(SHORT_RESPONSE_MODE_STORAGE_KEY, 'false') === 'true';
+let ultraShortResponseModeEnabled = loadStoredText(ULTRA_SHORT_RESPONSE_MODE_STORAGE_KEY, 'false') === 'true';
 let openRouterModelCatalog = [];
 
 const providerConfig = {

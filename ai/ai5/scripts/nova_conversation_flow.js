@@ -586,6 +586,7 @@ async function continueConversation(selectedAssistant = null) {
     const recipient = selectedAssistant || (lastAssistantMessage.sender === 'Avon' ? 'other' : 'nova');
     const recipientName = recipient === 'other' ? 'A.V.O.N.' : 'N.O.V.A.';
     const previousSpeaker = lastAssistantMessage.sender === 'Avon' ? 'A.V.O.N.' : 'N.O.V.A.';
+    const previousTime = lastAssistantMessage.timestamp ? ` at ${lastAssistantMessage.timestamp}` : '';
 
     isResponseInFlight = true;
     updateContinuationButtonState();
@@ -597,17 +598,17 @@ async function continueConversation(selectedAssistant = null) {
     }
 
     const continuationPrompt = recipientName === previousSpeaker
-        ? `Continue your previous response naturally based on this ongoing chat.
+        ? `You are ${recipientName}, continuing your own earlier message (you said it${previousTime}). Continue it naturally based on this ongoing chat.
 Keep it directly relevant to what we are discussing right now.
 Do not restart from scratch, do not repeat the same points, and do not be random.
 Build from where you left off with useful next details.
 
 Your previous response:
 ${lastAssistantMessage.text}`
-        : `You are ${recipientName}. Respond directly to ${previousSpeaker}'s prior message in this group chat, as a distinct assistant addressing ${previousSpeaker}.
+        : `You are ${recipientName}. ${previousSpeaker}, the other assistant, said the following${previousTime}; it was NOT you. Respond directly to ${previousSpeaker}'s message in this group chat, as a distinct assistant addressing ${previousSpeaker}.
 Stay relevant to the same topic, add useful perspective or continue the thought, and do not impersonate ${previousSpeaker} or repeat their answer.
 
-${previousSpeaker}'s message:
+${previousSpeaker}'s message${previousTime}:
 ${lastAssistantMessage.text}`;
 
     try {
@@ -623,6 +624,68 @@ ${lastAssistantMessage.text}`;
         updateContinuationButtonState();
     }
 }
+
+// Screen sharing: while on, the latest screen frame is attached to each AI request.
+let screenShareStream = null;
+let screenShareVideo = null;
+
+function setScreenShareUi(active) {
+    const btn = document.getElementById('screenShareBtn');
+    if (!btn) return;
+    btn.classList.toggle('active', active);
+    btn.setAttribute('aria-pressed', String(active));
+    btn.querySelector('i')?.classList.toggle('fa-eye', !active);
+    btn.querySelector('i')?.classList.toggle('fa-eye-slash', active);
+}
+
+function stopScreenShare(message) {
+    if (screenShareStream) {
+        screenShareStream.getTracks().forEach(track => track.stop());
+    }
+    screenShareStream = null;
+    if (screenShareVideo) screenShareVideo.srcObject = null;
+    screenShareVideo = null;
+    setScreenShareUi(false);
+    if (message) showNotification(message, 2200);
+}
+
+// Returns a JPEG data URL of the current shared screen, or null when not sharing.
+window.getScreenShareFrame = function () {
+    if (!screenShareStream || !screenShareVideo || !screenShareVideo.videoWidth) return null;
+    const scale = Math.min(1, 1280 / screenShareVideo.videoWidth);
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(screenShareVideo.videoWidth * scale);
+    canvas.height = Math.round(screenShareVideo.videoHeight * scale);
+    canvas.getContext('2d').drawImage(screenShareVideo, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', 0.6);
+};
+
+async function toggleScreenShare() {
+    if (screenShareStream) return stopScreenShare('Screen sharing stopped.');
+    if (!navigator.mediaDevices?.getDisplayMedia) {
+        showNotification('Screen sharing is not supported in this browser.', 3000);
+        return;
+    }
+    try {
+        screenShareStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+    } catch (error) {
+        screenShareStream = null;
+        showNotification('Screen sharing was cancelled or blocked.', 2500);
+        return;
+    }
+    screenShareVideo = document.createElement('video');
+    screenShareVideo.muted = true;
+    screenShareVideo.playsInline = true;
+    screenShareVideo.srcObject = screenShareStream;
+    await screenShareVideo.play().catch(() => {});
+    screenShareStream.getVideoTracks()[0]?.addEventListener('ended', () => stopScreenShare('Screen sharing ended.'));
+    setScreenShareUi(true);
+    showNotification('Screen sharing on: the AI can now see your screen. Use a vision-capable model.', 3500);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('screenShareBtn')?.addEventListener('click', toggleScreenShare);
+});
 
 // Auto-Pilot: N.O.V.A and A.V.O.N. reply to each other, one message at a time, until toggled off.
 let autoPilotActive = false;
