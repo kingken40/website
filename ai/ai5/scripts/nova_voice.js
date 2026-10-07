@@ -166,6 +166,7 @@ async function playViaLocalVoiceBridge(text, onEndCallback) {
         isSpeechOutputActive = true;
         window.isSpeechOutputActive = true;
         activeSpeechOutputText = normalizeVoiceTranscript(text);
+        recentSpokenText = activeSpeechOutputText;
         speechInterruptTriggered = false;
         updateSpeakingUI(true);
 
@@ -229,6 +230,23 @@ let activeSpeechOutputText = '';
 let speechInterruptTriggered = false;
 let lastSpeechInterruptAt = 0;
 let speechInterruptListeningMode = false;
+let recentSpokenText = '';
+let lastSpeechEndedAt = 0;
+
+// True when a transcript is most likely the assistant's own voice picked up by the mic,
+// either while it speaks or just after (phone speakers echo for a moment).
+function isAssistantEchoTranscript(text) {
+    const normalized = normalizeVoiceTranscript(text);
+    if (!normalized || !recentSpokenText) return false;
+    const speakingNow = isSpeechOutputActive || isSpeaking ||
+        !!(window.speechSynthesis && (window.speechSynthesis.speaking || window.speechSynthesis.pending));
+    if (!speakingNow && Date.now() - lastSpeechEndedAt > 2500) return false;
+    if (recentSpokenText.includes(normalized)) return true;
+    const words = normalized.split(' ').filter(Boolean);
+    const spokenWords = new Set(recentSpokenText.split(' ').filter(Boolean));
+    const overlap = words.filter(word => spokenWords.has(word)).length;
+    return words.length >= 2 && overlap / words.length >= 0.6;
+}
 
 function normalizeVoiceTranscript(text) {
     return String(text || '')
@@ -843,6 +861,10 @@ function setupSpeechRecognition() {
             processSpeechInterruptCandidate(finalTranscript, interimTranscript);
             return;
         }
+
+        if (isAssistantEchoTranscript(finalTranscript)) finalTranscript = '';
+        if (isAssistantEchoTranscript(interimTranscript)) interimTranscript = '';
+        if (!finalTranscript && !interimTranscript) return;
         
         // Handle wake phrase detection when wake listening is active
         if (isWakeListening && wakeWordEnabled) {
@@ -1185,6 +1207,8 @@ function startCommandListening() {
             }
         }
         
+        if (isAssistantEchoTranscript(finalTranscript)) finalTranscript = '';
+        if (isAssistantEchoTranscript(interimTranscript)) interimTranscript = '';
         console.log('🎤 Command recognition - Final:', finalTranscript, 'Interim:', interimTranscript);
         
         if (finalTranscript) {
@@ -1885,6 +1909,7 @@ function setupUtteranceAndSpeak(text, onEndCallback, assistant = 'nova') {
         isSpeechOutputActive = true;
         window.isSpeechOutputActive = true;
         activeSpeechOutputText = normalizeVoiceTranscript(text);
+        recentSpokenText = activeSpeechOutputText;
         speechInterruptTriggered = false;
         updateSpeakingUI(true);
         utteranceStartedAt = Date.now();
@@ -2150,6 +2175,7 @@ function updateVoiceUI(listening) {
 }
 
 function updateSpeakingUI(speaking) {
+    if (!speaking) lastSpeechEndedAt = Date.now();
     const arcReactor = document.querySelector('.arc-reactor');
     const arcCore = document.querySelector('.arc-core');
     
