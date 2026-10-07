@@ -829,7 +829,12 @@ const PERSONALITY_INFLUENCE_LEVELS = {
     2: { label: 'Light', temp: 0.8, text: 'Let the personality color the tone moderately, without dominating the answer.' },
     3: { label: 'Normal', temp: 0.9, text: 'Make the personality clearly noticeable in word choice and attitude throughout.' },
     4: { label: 'Strong', temp: 1.0, text: 'Make the personality strong and unmistakable: vivid phrasing, clear attitude in nearly every sentence.' },
-    5: { label: 'Maximum', temp: 1.1, text: 'Make the personality dominant and exaggerated in every sentence, fully in character, while keeping the facts correct.' }
+    5: { label: 'Maximum', temp: 1.1, text: 'Make the personality dominant and exaggerated in every sentence, fully in character, while keeping the facts correct.' },
+    6: { label: 'Intense', temp: 1.1, text: 'Make the personality overwhelming: every sentence must drip with it, with strong emotional vocabulary and no neutral phrasing.' },
+    7: { label: 'Extreme', temp: 1.15, text: 'Stay fully in character at all times, with exaggerated emotion in every line; the persona outranks your usual polite default tone.' },
+    8: { label: 'Total', temp: 1.15, text: 'Embody the personality completely. Never soften, hedge, or fall back to a neutral voice; every word choice, opening, and closing must reflect it.' },
+    9: { label: 'Absolute', temp: 1.2, text: 'The personality is your entire manner. Express it theatrically and relentlessly in every sentence, overriding your default persona voice entirely.' },
+    10: { label: 'Unbreakable', temp: 1.2, text: 'You ARE this personality, with no exceptions and no neutral moments. Stay maximally in character in every sentence, overriding your default persona, while keeping the facts correct.' }
 };
 let personalityInfluences = (() => {
     try {
@@ -841,7 +846,7 @@ let personalityInfluences = (() => {
 })();
 function getPersonalityInfluence(assistantKey) {
     const value = Math.round(Number(personalityInfluences[assistantKey === 'other' ? 'other' : 'nova']) || 3);
-    return Math.min(5, Math.max(1, value));
+    return Math.min(10, Math.max(1, value));
 }
 let personalitiesEnabled =  localStorage.getItem('nova_personalities_enabled') !== 'false';
 let autoPersonalityEnabled = localStorage.getItem('nova_auto_personality_enabled') === 'true';

@@ -426,11 +426,11 @@
                         <label for="personalityInfluence">Personality influence: <span id="personalityInfluenceLabel">Normal</span></label>
                         <div style="display:flex; align-items:center; gap:0.5rem;">
                             <span style="color:rgba(255,255,255,0.6);font-size:0.8rem;">1</span>
-                            <input type="range" id="personalityInfluence" min="1" max="5" step="1" value="3" aria-label="Personality influence" style="flex:1;">
-                            <span style="color:rgba(255,255,255,0.6);font-size:0.8rem;">5</span>
-                            <input type="number" id="personalityInfluenceValue" min="1" max="5" step="1" value="3" aria-label="Personality influence level (1 to 5)" style="width:3.5rem;">
+                            <input type="range" id="personalityInfluence" min="1" max="10" step="1" value="3" aria-label="Personality influence" style="flex:1;">
+                            <span style="color:rgba(255,255,255,0.6);font-size:0.8rem;">10</span>
+                            <input type="number" id="personalityInfluenceValue" min="1" max="10" step="1" value="3" aria-label="Personality influence level (1 to 10)" style="width:3.5rem;">
                         </div>
-                        <small style="color:rgba(255,255,255,0.55);font-size:0.78rem;">Min 1 (Subtle) to max 5 (Maximum); 3 is Normal. Type a level or drag the slider. Saved separately for each assistant.</small>
+                        <small style="color:rgba(255,255,255,0.55);font-size:0.78rem;">Min 1 (Subtle) to max 10 (Unbreakable); 3 is Normal. Type a level or drag the slider. Saved separately for each assistant.</small>
                     </div>
                     <div class="setting-group">
                         <label for="assistantPersonalityPreset">Ready-to-use personality</label>
@@ -457,6 +457,7 @@
                         <textarea id="assistantPersonalityText" rows="4" placeholder="Describe how this assistant should think, teach, speak, and what it should remember..."></textarea>
                     </div>
                     <button type="button" id="saveAssistantPersonality" class="settings-action-btn">Add to assistant knowledge</button>
+                    <small style="display:block;color:rgba(255,255,255,0.55);font-size:0.78rem;margin-top:0.35rem;">Saves the text above as permanent personality and knowledge for the selected assistant. It is included in every reply, so the assistant remembers and follows it.</small>
                     <div class="setting-group" style="align-items:center; justify-content:space-between; margin-top:1rem;">
                         <label for="autoPersonalityEnabled" style="margin:0;">Auto personality selection</label>
                         <input type="checkbox" id="autoPersonalityEnabled" role="switch" aria-label="Automatically choose a personality for each prompt">

@@ -192,7 +192,7 @@ function setupEventListeners() {
         const saveInfluence = raw => {
             const parsed = Math.round(Number(raw));
             if (!Number.isFinite(parsed)) return;
-            personalityInfluences[currentAssistantKey()] = Math.min(5, Math.max(1, parsed));
+            personalityInfluences[currentAssistantKey()] = Math.min(10, Math.max(1, parsed));
             localStorage.setItem('nova_personality_influences', JSON.stringify(personalityInfluences));
             showInfluence();
         };
