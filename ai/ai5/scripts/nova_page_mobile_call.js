@@ -66,10 +66,17 @@
         bindMobileSettingsButton(topSettingsBtn);
 
         // â”€â”€ Sync desktop chatMessages â†’ mobile transcript â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        function scrollOverlayToBottom() {
+            var overlay = document.querySelector('.mobile-call-ui');
+            if (!overlay || transcriptCollapsed) return;
+            setTimeout(function () { overlay.scrollTop = overlay.scrollHeight; }, 380);
+        }
+
         function syncMessages() {
             if (!srcMsgs || !transcriptMsgs) return;
             transcriptMsgs.innerHTML = srcMsgs.innerHTML;
             transcriptMsgs.scrollTop = transcriptMsgs.scrollHeight;
+            scrollOverlayToBottom();
         }
 
         if (srcMsgs) {
@@ -228,6 +235,12 @@
             if (transcript) transcript.classList.toggle('collapsed', transcriptCollapsed);
             if (transcriptToggle) {
                 transcriptToggle.setAttribute('aria-expanded', String(!transcriptCollapsed));
+            }
+            if (transcriptCollapsed) {
+                var ov = document.querySelector('.mobile-call-ui');
+                if (ov) ov.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                scrollOverlayToBottom();
             }
         }
 

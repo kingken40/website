@@ -628,14 +628,17 @@ ${lastAssistantMessage.text}`;
 // Screen sharing: while on, the latest screen frame is attached to each AI request.
 let screenShareStream = null;
 let screenShareVideo = null;
+let screenShareTarget = 'both';
 
 function setScreenShareUi(active) {
-    const btn = document.getElementById('screenShareBtn');
-    if (!btn) return;
-    btn.classList.toggle('active', active);
-    btn.setAttribute('aria-pressed', String(active));
-    btn.querySelector('i')?.classList.toggle('fa-eye', !active);
-    btn.querySelector('i')?.classList.toggle('fa-eye-slash', active);
+    ['screenShareBtn', 'mobileScreenShareBtn'].forEach(id => {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-pressed', String(active));
+        btn.querySelector('i')?.classList.toggle('fa-eye', !active);
+        btn.querySelector('i')?.classList.toggle('fa-eye-slash', active);
+    });
 }
 
 function stopScreenShare(message) {
@@ -650,7 +653,8 @@ function stopScreenShare(message) {
 }
 
 // Returns a JPEG data URL of the current shared screen, or null when not sharing.
-window.getScreenShareFrame = function () {
+window.getScreenShareFrame = function (assistant) {
+    if (assistant && screenShareTarget !== 'both' && screenShareTarget !== assistant) return null;
     if (!screenShareStream || !screenShareVideo || !screenShareVideo.videoWidth) return null;
     const scale = Math.min(1, 1280 / screenShareVideo.videoWidth);
     const canvas = document.createElement('canvas');
@@ -660,8 +664,17 @@ window.getScreenShareFrame = function () {
     return canvas.toDataURL('image/jpeg', 0.6);
 };
 
-async function toggleScreenShare() {
+async function toggleScreenShare(chosenTarget) {
     if (screenShareStream) return stopScreenShare('Screen sharing stopped.');
+    if (typeof chosenTarget !== 'string') {
+        const chooser = document.getElementById('screenShareAssistantModal');
+        if (chooser && groupChatEnabled && mutedGroupAssistant === 'both') {
+            chooser.classList.add('active');
+            return;
+        }
+        chosenTarget = 'both';
+    }
+    screenShareTarget = chosenTarget;
     if (!navigator.mediaDevices?.getDisplayMedia) {
         showNotification('Screen sharing is not supported in this browser.', 3000);
         return;
@@ -684,7 +697,15 @@ async function toggleScreenShare() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('screenShareBtn')?.addEventListener('click', toggleScreenShare);
+    document.getElementById('screenShareBtn')?.addEventListener('click', () => toggleScreenShare());
+    document.getElementById('mobileScreenShareBtn')?.addEventListener('click', () => toggleScreenShare());
+    const shareModal = document.getElementById('screenShareAssistantModal');
+    const closeShareModal = () => shareModal?.classList.remove('active');
+    document.getElementById('closeScreenShareAssistantModal')?.addEventListener('click', closeShareModal);
+    shareModal?.addEventListener('click', e => { if (e.target === shareModal) closeShareModal(); });
+    [['shareWithNova', 'nova'], ['shareWithAvon', 'other'], ['shareWithBoth', 'both']].forEach(([id, target]) => {
+        document.getElementById(id)?.addEventListener('click', () => { closeShareModal(); toggleScreenShare(target); });
+    });
 });
 
 // Auto-Pilot: N.O.V.A and A.V.O.N. reply to each other, one message at a time, until toggled off.

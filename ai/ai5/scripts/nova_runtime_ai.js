@@ -1480,7 +1480,7 @@ If live web blocks are included, treat them as current evidence and use them dir
                         : `[Voice requirement for this reply: answer as ${personaLabel} in your own distinct core persona, not a generic assistant voice. ${ultraShortResponseModeEnabled ? 'Reply with one very short sentence (about 10 words or fewer), only the answer.' : shortResponseModeEnabled ? 'Answer in one or two short sentences maximum, only what was asked.' : 'Give a full, detailed answer.'}]`;
 
     // Add current user message
-    const screenFrame = window.getScreenShareFrame?.();
+    const screenFrame = window.getScreenShareFrame?.(isAvon ? 'other' : 'nova');
     messages.push({
         role: "user",
         content: screenFrame

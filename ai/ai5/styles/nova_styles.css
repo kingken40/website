@@ -2387,7 +2387,10 @@ body.no-animations * {
     z-index: 500;
     flex-direction: column;
     background: radial-gradient(ellipse at center top, #001830 0%, #000a1a 55%, #000000 100%);
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-width: none;
+    overflow-anchor: none;
     -webkit-tap-highlight-color: transparent;
     user-select: none;
     -webkit-user-select: none;
@@ -2450,8 +2453,8 @@ body.no-animations * {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 0 1rem;
-    min-height: 0;
+    padding: 0 1rem 0.5rem;
+    min-height: min-content;
     position: relative;
 }
 
@@ -2625,8 +2628,9 @@ body.no-animations * {
 /* Transcript strip */
 .mobile-transcript {
     flex-shrink: 0;
-    max-height: 32vh;
+    max-height: 24vh;
     min-height: 44px;
+    margin-top: 0.75rem; /* sits lower so the N.O.V.A title above stays visible */
     display: flex;
     flex-direction: column;
     background: rgba(0, 8, 22, 0.8);
@@ -2734,17 +2738,23 @@ body.no-animations * {
     transform: scale(0.95);
 }
 
-/* Mobile control bar */
+/* Mobile control bar: scrollable row; buttons keep a fixed size */
 .mobile-call-controls {
     display: flex;
     align-items: center;
-    justify-content: space-around;
+    justify-content: flex-start;
+    gap: 0.5rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
     padding: 0.9rem 1rem;
     padding-bottom: max(1.1rem, env(safe-area-inset-bottom));
     background: rgba(0, 3, 12, 0.92);
     border-top: 1px solid rgba(0, 170, 255, 0.1);
     flex-shrink: 0;
 }
+
+.mobile-call-controls::-webkit-scrollbar { display: none; }
 
 .mobile-ctrl-btn {
     display: flex;
@@ -2753,37 +2763,30 @@ body.no-animations * {
     gap: 0.3rem;
     background: rgba(0, 34, 68, 0.65);
     border: 1px solid rgba(0, 170, 255, 0.28);
-    border-radius: 18px;
-    padding: 0.75rem 1.1rem;
+    border-radius: 14px;
+    padding: 0.62rem 0.3rem;
     color: rgba(255, 255, 255, 0.8);
     cursor: pointer;
     transition: all 0.2s ease;
-    min-width: 62px;
+    flex: 0 0 65px;
+    width: 65px;
     -webkit-tap-highlight-color: transparent;
 }
 
-@media (max-width: 420px) {
-    .mobile-call-controls {
-        gap: 0.25rem;
-        padding-left: 0.35rem;
-        padding-right: 0.35rem;
-    }
-
-    .mobile-ctrl-btn {
-        min-width: 0;
-        flex: 1 1 0;
-        padding-left: 0.35rem;
-        padding-right: 0.35rem;
-    }
+.mobile-ctrl-btn.active {
+    border-color: #00ff88;
+    background: rgba(0, 90, 50, 0.55);
 }
 
+.mobile-ctrl-btn.active i { color: #00ff88; }
+
 .mobile-ctrl-btn i {
-    font-size: 1.25rem;
+    font-size: 1.15rem;
     color: #00aaff;
 }
 
 .mobile-ctrl-btn > span {
-    font-size: 0.65rem;
+    font-size: 0.62rem;
     color: rgba(255, 255, 255, 0.55);
     text-transform: uppercase;
     letter-spacing: 0.5px;
