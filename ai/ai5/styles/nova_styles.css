@@ -2696,15 +2696,26 @@ body.no-animations * {
     max-width: 100%;
     box-sizing: border-box;
     min-width: 0;
-    overflow-wrap: anywhere;
-    word-break: break-word;
+    overflow-wrap: break-word;
+    word-break: normal;
+}
+
+/* Stack header, text and buttons so text uses the full bubble width */
+.mobile-transcript-messages .message {
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.mobile-transcript-messages .message-content {
+    flex: none;
+    width: 100%;
 }
 
 .message-content {
     min-width: 0;
     max-width: 100%;
-    overflow-wrap: anywhere;
-    word-break: break-word;
+    overflow-wrap: break-word;
+    word-break: normal;
 }
 
 .message-content pre,
