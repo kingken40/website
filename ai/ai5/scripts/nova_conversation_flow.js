@@ -366,6 +366,7 @@ function cancelEdit(messageId) {
 }
 
 function processUserMessage(userMessage) {
+    window.noteAutoModeUserActivity?.();
     console.log('💭 ==========================================');
     console.log('💭 processUserMessage CALLED');
     console.log('💭 Message:', userMessage);
@@ -693,6 +694,29 @@ window.getScreenShareFrame = function (assistant) {
     return canvas.toDataURL('image/jpeg', 0.6);
 };
 
+window.getScreenShareSignature = function (assistant) {
+    if (assistant && screenShareTarget !== 'both' && screenShareTarget !== assistant) return null;
+    if (!screenShareStream || !screenShareVideo || !screenShareVideo.videoWidth) return null;
+    const canvas = document.createElement('canvas');
+    canvas.width = 32;
+    canvas.height = 18;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    if (!context) throw new Error('Could not inspect the shared screen.');
+    context.drawImage(screenShareVideo, 0, 0, canvas.width, canvas.height);
+    const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+    const signature = new Uint8Array(canvas.width * canvas.height * 3);
+    for (let pixel = 0; pixel < canvas.width * canvas.height; pixel += 1) {
+        signature[pixel * 3] = pixels[pixel * 4] >> 4;
+        signature[pixel * 3 + 1] = pixels[pixel * 4 + 1] >> 4;
+        signature[pixel * 3 + 2] = pixels[pixel * 4 + 2] >> 4;
+    }
+    return signature;
+};
+
+window.getScreenShareTarget = function () {
+    return screenShareStream ? screenShareTarget : null;
+};
+
 async function toggleScreenShare(chosenTarget) {
     if (screenShareStream) return stopScreenShare('Screen sharing stopped.');
     if (typeof chosenTarget !== 'string') {
@@ -737,8 +761,34 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// Auto-Pilot: N.O.V.A and A.V.O.N. reply to each other, one message at a time, until toggled off.
+// Auto Mode checks meaningful changes in a shared screen and speaks only when useful.
+let autoModeActive = false;
+let autoModeRunId = 0;
+let autoModeLastInteractionAt = 0;
+let autoModeLastSpokeAt = 0;
+let autoModeEvaluationInFlight = false;
 let autoPilotActive = false;
+let autoPilotRunId = 0;
+
+function setAutoModeUi(active) {
+    ['autoModeBtn', 'mobileAutoModeBtn'].forEach(id => {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-pressed', String(active));
+        btn.title = active
+            ? 'Auto Mode is on: proactively notice useful changes on your shared screen'
+            : 'Auto Mode: proactively notice useful changes on your shared screen';
+    });
+}
+
+function stopAutoMode(message) {
+    if (!autoModeActive) return;
+    autoModeActive = false;
+    autoModeRunId += 1;
+    setAutoModeUi(false);
+    if (message) showNotification(message, 2200);
+}
 
 function setAutoPilotUi(active) {
     ['autoPilotBtn', 'mobileAutoPilotBtn'].forEach(id => {
@@ -752,13 +802,159 @@ function setAutoPilotUi(active) {
 function stopAutoPilot(message) {
     if (!autoPilotActive) return;
     autoPilotActive = false;
+    autoPilotRunId += 1;
     setAutoPilotUi(false);
     if (message) showNotification(message, 2200);
 }
 
-async function runAutoPilotLoop() {
+function noteAutoModeUserActivity() {
+    autoModeLastInteractionAt = Date.now();
+}
+window.noteAutoModeUserActivity = noteAutoModeUserActivity;
+
+['pointerdown', 'keydown', 'touchstart', 'wheel'].forEach(eventName => {
+    document.addEventListener(eventName, noteAutoModeUserActivity, { passive: true });
+});
+
+function getAutoModeAssistant() {
+    const allowed = groupChatEnabled
+        ? mutedGroupAssistant === 'nova'
+            ? ['nova']
+            : mutedGroupAssistant === 'other'
+                ? ['other']
+                : ['nova', 'other']
+        : [window.activeVoiceAssistant === 'other' ? 'other' : 'nova'];
+    const shareTarget = window.getScreenShareTarget?.();
+    if (!shareTarget) return null;
+    const visible = shareTarget === 'both' ? allowed : allowed.filter(assistant => assistant === shareTarget);
+    if (!visible.length) return null;
+    if (visible.length === 1) return visible[0];
+
+    const lastAssistant = getLastAssistantMessage();
+    const preferred = lastAssistant
+        ? lastAssistant.sender === 'Avon' ? 'nova' : 'other'
+        : 'nova';
+    return visible.includes(preferred) ? preferred : visible[0];
+}
+
+function getScreenChangeRatio(previous, current) {
+    if (!previous || !current || previous.length !== current.length) return 1;
+    let changedPixels = 0;
+    const totalPixels = current.length / 3;
+    for (let pixel = 0; pixel < totalPixels; pixel += 1) {
+        const offset = pixel * 3;
+        const distance = Math.abs(current[offset] - previous[offset]) +
+            Math.abs(current[offset + 1] - previous[offset + 1]) +
+            Math.abs(current[offset + 2] - previous[offset + 2]);
+        if (distance >= 15) changedPixels += 1;
+    }
+    return changedPixels / totalPixels;
+}
+
+const AUTO_MODE_PROMPT = `AUTO MODE SCREEN CHECK
+Review the latest shared-screen image together with the recent conversation. Decide whether there is something concrete and timely that would genuinely help the user right now.
+Speak only when a visible item is clearly relevant to the user's earlier request (for example, a useful search result or link), or when the screen shows an important problem they may have missed.
+Do not narrate ordinary browsing, repeat earlier advice, guess at hidden content, or offer generic suggestions. Do not click, search, submit, or claim to have taken actions.
+If no meaningful, relevant observation is warranted, reply with exactly: NO_ACTION
+Otherwise reply with only one brief, natural spoken observation (at most two sentences).`;
+
+async function runAutoModeLoop(runId) {
     const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-    while (autoPilotActive) {
+    let lastEvaluatedSignature = null;
+    let lastEvaluationAt = 0;
+
+    while (autoModeActive && runId === autoModeRunId) {
+        await sleep(5000);
+        if (!autoModeActive || runId !== autoModeRunId) return;
+
+        const assistant = getAutoModeAssistant();
+        if (!assistant || autoModeEvaluationInFlight) continue;
+
+        let signature;
+        try {
+            signature = window.getScreenShareSignature?.(assistant);
+        } catch (error) {
+            console.error('Auto Mode could not inspect the shared screen:', error);
+            stopAutoMode(`Auto Mode paused: ${error.message}`);
+            return;
+        }
+        if (!signature || getScreenChangeRatio(lastEvaluatedSignature, signature) < 0.04) continue;
+
+        const now = Date.now();
+        const messageInput = document.getElementById('messageInput');
+        const userIsComposing = Boolean(messageInput?.value.trim());
+        const hasConversationContext = conversationHistory.some(message => message.role === 'user' && message.content);
+        if (now - lastEvaluationAt < 20000 ||
+            now - autoModeLastInteractionAt < 3500 ||
+            now - autoModeLastSpokeAt < 45000 ||
+            !hasConversationContext ||
+            isResponseInFlight ||
+            window.isSpeaking ||
+            window.voiceInterruptInProgress ||
+            window.speechSynthesis?.speaking ||
+            userIsComposing) {
+            continue;
+        }
+
+        lastEvaluatedSignature = signature;
+        lastEvaluationAt = now;
+        autoModeEvaluationInFlight = true;
+        try {
+            const replyResult = await generateAIResponse(AUTO_MODE_PROMPT, currentPersonality, {
+                assistant,
+                modelOverride: assistant === 'other' ? groupChatModel : undefined,
+                groupChat: groupChatEnabled,
+                individualChat: !groupChatEnabled || mutedGroupAssistant !== 'both',
+                skipUserHistory: true,
+                proactiveEvaluation: true
+            });
+            if (!autoModeActive || runId !== autoModeRunId) return;
+
+            const reply = String(replyResult?.reply || '').trim();
+            if (!reply || /^NO_ACTION(?:\s|[.!:—-]|$)/i.test(reply)) continue;
+            if (Date.now() - autoModeLastInteractionAt < 3500 ||
+                isResponseInFlight ||
+                window.isSpeaking ||
+                window.voiceInterruptInProgress ||
+                window.speechSynthesis?.speaking) {
+                continue;
+            }
+
+            const sender = assistant === 'other' ? 'Avon' : 'Nova';
+            addMessage(reply, sender, null, replyResult.model);
+            conversationHistory.push({
+                role: 'assistant',
+                speaker: sender,
+                content: reply,
+                personality: currentPersonality,
+                timestamp: new Date().toISOString(),
+                model: replyResult.model
+            });
+            autoModeLastSpokeAt = Date.now();
+            speakAssistantResponse(reply, sender);
+        } catch (error) {
+            console.error('Auto Mode screen check failed:', error);
+            stopAutoMode(`Auto Mode paused: ${error.message}`);
+            return;
+        } finally {
+            autoModeEvaluationInFlight = false;
+        }
+    }
+}
+
+function toggleAutoMode() {
+    if (autoModeActive) return stopAutoMode('Auto Mode off.');
+    stopAutoPilot();
+    autoModeActive = true;
+    autoModeRunId += 1;
+    setAutoModeUi(true);
+    showNotification('Auto Mode on. Share your screen for proactive, screen-aware help.', 3500);
+    runAutoModeLoop(autoModeRunId);
+}
+
+async function runAutoPilotLoop(runId) {
+    const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+    while (autoPilotActive && runId === autoPilotRunId) {
         if (isResponseInFlight || window.speechSynthesis?.speaking) {
             await sleep(500);
             continue;
@@ -767,7 +963,7 @@ async function runAutoPilotLoop() {
         if (!last) return stopAutoPilot('Auto-Pilot needs a first response to start from. Send a message first.');
         const countBefore = document.querySelectorAll('#chatMessages .message').length;
         await continueConversation(last.sender === 'Avon' ? 'nova' : 'other');
-        if (!autoPilotActive) break;
+        if (!autoPilotActive || runId !== autoPilotRunId) return;
         if (document.querySelectorAll('#chatMessages .message').length <= countBefore) {
             return stopAutoPilot('Auto-Pilot stopped: no new reply was produced.');
         }
@@ -781,6 +977,8 @@ function toggleAutoPilot() {
         showNotification('Send a message first so the assistants have something to talk about.', 2500);
         return;
     }
+
+    stopAutoMode();
     const groupToggle = document.getElementById('groupChatEnabled');
     if (!groupChatEnabled && groupToggle) {
         groupToggle.checked = true;
@@ -792,15 +990,21 @@ function toggleAutoPilot() {
         muteSelect.dispatchEvent(new Event('change'));
     }
     autoPilotActive = true;
+    autoPilotRunId += 1;
     setAutoPilotUi(true);
     showNotification('Auto-Pilot on: N.O.V.A and A.V.O.N. are now chatting.', 2500);
-    runAutoPilotLoop();
+    runAutoPilotLoop(autoPilotRunId);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('autoModeBtn')?.addEventListener('click', toggleAutoMode);
+    document.getElementById('mobileAutoModeBtn')?.addEventListener('click', toggleAutoMode);
     document.getElementById('autoPilotBtn')?.addEventListener('click', toggleAutoPilot);
     document.getElementById('mobileAutoPilotBtn')?.addEventListener('click', toggleAutoPilot);
-    document.getElementById('clearChat')?.addEventListener('click', () => stopAutoPilot());
+    document.getElementById('clearChat')?.addEventListener('click', () => {
+        stopAutoMode();
+        stopAutoPilot();
+    });
 });
 
 // Handle interrupt when user speaks during Nova's response (topic change)

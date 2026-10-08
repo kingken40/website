@@ -262,7 +262,7 @@ function isAvonIdentityRequest(userMessage) {
 
 // Try the server-side /api/chat proxy (uses OPENROUTER_API_KEY or OPENAI_API_KEY env variable on Vercel)
 async function generateViaServerProxy(userMessage, personality, options = {}) {
-    const webIntent = _resolveWebIntent(userMessage);
+    const webIntent = options.proactiveEvaluation ? null : _resolveWebIntent(userMessage);
     const shouldUseWeb = !!webIntent;
     let collectedWebSources = [];
     let proxyMessage = userMessage;
@@ -281,8 +281,14 @@ async function generateViaServerProxy(userMessage, personality, options = {}) {
     const requestPayload = {
         model: options.modelOverride || currentModel,
         messages: messages,
-        max_tokens: options.fastResponse ? 512 : 4096,
-        temperature: personality === 'brainstorm' ? 0.95 : (resolveActivePersonalityPreset(assistantPresetSelections?.[options.assistant === 'other' ? 'other' : 'nova'], userMessage) ? PERSONALITY_INFLUENCE_LEVELS[getPersonalityInfluence(options.assistant === 'other' ? 'other' : 'nova')].temp : 0.7),
+        max_tokens: options.proactiveEvaluation ? 220 : options.fastResponse ? 512 : 4096,
+        temperature: options.proactiveEvaluation
+            ? 0.2
+            : personality === 'brainstorm'
+                ? 0.95
+                : (resolveActivePersonalityPreset(assistantPresetSelections?.[options.assistant === 'other' ? 'other' : 'nova'], userMessage)
+                    ? PERSONALITY_INFLUENCE_LEVELS[getPersonalityInfluence(options.assistant === 'other' ? 'other' : 'nova')].temp
+                    : 0.7),
         stream: false
     };
 
@@ -385,7 +391,7 @@ async function generateAIResponse(userMessage, personality, options = {}) {
     const avonIdentityRequest = responseSender === 'Avon' && isAvonIdentityRequest(userMessage);
     const privateServerRequest = isPrivateServerRequest(userMessage);
 
-    if (options.fastResponse || isCurrentTimeRequest(userMessage) || avonIdentityRequest || privateServerRequest) {
+    if (!options.proactiveEvaluation && (options.fastResponse || isCurrentTimeRequest(userMessage) || avonIdentityRequest || privateServerRequest)) {
         const reply = avonIdentityRequest
             ? 'I am A.V.O.N. Avon is simply the shorter spoken name for me; it is not a different assistant.'
             : privateServerRequest
@@ -417,6 +423,7 @@ async function generateAIResponse(userMessage, personality, options = {}) {
             const proxyResult = await generateViaServerProxy(userMessage, personality, options);
             const reply = proxyResult.reply;
             const responseModel = proxyResult.model || lastResponseModel || currentModel;
+            if (options.proactiveEvaluation) return { reply, model: responseModel };
             if (!options.noveltyRetry && isNoveltyReplyDuplicate(userMessage, reply)) {
                 console.log('?? Novelty reply duplicated prior memory - retrying with stronger instruction');
                 await generateAIResponse(userMessage, personality, { ...options, noveltyRetry: true, skipUserHistory: true });
@@ -436,6 +443,7 @@ async function generateAIResponse(userMessage, personality, options = {}) {
             }
             return;
         } catch (proxyErr) {
+            if (options.proactiveEvaluation) throw proxyErr;
             if (window.voiceInterruptInProgress && proxyErr && proxyErr.name === 'AbortError') {
                 console.log('?? Server proxy request aborted due to user interrupt');
                 return;
@@ -468,7 +476,7 @@ async function generateAIResponse(userMessage, personality, options = {}) {
         // --- Web search / URL fetch ---
         let effectiveMessage = userMessage;
         let requestModel = options.modelOverride || provider.model;
-        const webIntent = _resolveWebIntent(userMessage);
+        const webIntent = options.proactiveEvaluation ? null : _resolveWebIntent(userMessage);
         const shouldUseWeb = !!webIntent;
         let collectedWebSources = [];
         if (webIntent) {
@@ -493,8 +501,8 @@ async function generateAIResponse(userMessage, personality, options = {}) {
         const requestPayload = {
             model: requestModel,
             messages: messages,
-            max_tokens: options.fastResponse ? 512 : provider.maxTokens,
-            temperature: personality === 'brainstorm' ? 0.95 : (resolveActivePersonalityPreset(assistantPresetSelections?.[options.assistant === 'other' ? 'other' : 'nova'], userMessage) ? PERSONALITY_INFLUENCE_LEVELS[getPersonalityInfluence(options.assistant === 'other' ? 'other' : 'nova')].temp : 0.7),
+            max_tokens: options.proactiveEvaluation ? 220 : options.fastResponse ? 512 : provider.maxTokens,
+            temperature: options.proactiveEvaluation ? 0.2 : personality === 'brainstorm' ? 0.95 : (resolveActivePersonalityPreset(assistantPresetSelections?.[options.assistant === 'other' ? 'other' : 'nova'], userMessage) ? PERSONALITY_INFLUENCE_LEVELS[getPersonalityInfluence(options.assistant === 'other' ? 'other' : 'nova')].temp : 0.7),
             stream: false
         };
         
@@ -679,6 +687,7 @@ async function generateAIResponse(userMessage, personality, options = {}) {
             _ensureWebSourcesInReply(rawReply, mergedSources, shouldUseWeb),
             userMessage
         );
+        if (options.proactiveEvaluation) return { reply, model: responseModel };
         console.log('?', currentProvider.toUpperCase(), 'Response Success - Length:', reply.length, 'characters');
         console.log('?? Personality:', personality);
 
@@ -726,6 +735,7 @@ async function generateAIResponse(userMessage, personality, options = {}) {
         }
         
     } catch (error) {
+        if (options.proactiveEvaluation) throw error;
         console.error('?? DEBUG - Full error object:', error);
         console.error('?? DEBUG - Error message:', error.message);
         console.error('?? DEBUG - Error stack:', error.stack);
@@ -1477,7 +1487,7 @@ If live web blocks are included, treat them as current evidence and use them dir
     // In group chat, make clear who the user is talking to so the other assistant knows too.
     const currentAddressee = window.currentUserAddressee || null;
     let addresseeNote = '';
-    if (groupChatEnabled) {
+    if (groupChatEnabled && !options.proactiveEvaluation) {
         const otherName = speakerName(isAvon ? 'Nova' : 'Avon');
         if (currentAddressee) {
             addresseeNote = speakerName(currentAddressee) === myName
@@ -1493,9 +1503,11 @@ If live web blocks are included, treat them as current evidence and use them dir
     
     // Restate voice/length rules next to the user's turn; models obey the last turn most reliably.
     const personaLabel = isAvon ? 'A.V.O.N.' : 'N.O.V.A.';
-    const styleReminder = presetConfig
-        ? `[Voice requirement for this reply: answer as ${personaLabel} in a clearly "${presetConfig.name}" personality - ${presetConfig.instructions} ${PERSONALITY_INFLUENCE_LEVELS[getPersonalityInfluence(assistantKey)].text} Regardless of how earlier replies sounded.                 ${ultraShortResponseModeEnabled ? 'Reply with one very short sentence (about 10 words or fewer), only the answer.' : shortResponseModeEnabled ? 'Answer in one or two short sentences maximum, only what was asked.' : 'Give a full, detailed answer.'}]`
-                        : `[Voice requirement for this reply: answer as ${personaLabel} in your own distinct core persona, not a generic assistant voice. ${ultraShortResponseModeEnabled ? 'Reply with one very short sentence (about 10 words or fewer), only the answer.' : shortResponseModeEnabled ? 'Answer in one or two short sentences maximum, only what was asked.' : 'Give a full, detailed answer.'}]`;
+    const styleReminder = options.proactiveEvaluation
+        ? `[Auto Mode requirement: answer as ${personaLabel}. Return exactly NO_ACTION unless the shared screen reveals something directly and usefully relevant to the user's conversation. If it does, say only one brief, natural observation of at most two sentences. Do not take actions.]`
+        : presetConfig
+            ? `[Voice requirement for this reply: answer as ${personaLabel} in a clearly "${presetConfig.name}" personality - ${presetConfig.instructions} ${PERSONALITY_INFLUENCE_LEVELS[getPersonalityInfluence(assistantKey)].text} Regardless of how earlier replies sounded.                 ${ultraShortResponseModeEnabled ? 'Reply with one very short sentence (about 10 words or fewer), only the answer.' : shortResponseModeEnabled ? 'Answer in one or two short sentences maximum, only what was asked.' : 'Give a full, detailed answer.'}]`
+            : `[Voice requirement for this reply: answer as ${personaLabel} in your own distinct core persona, not a generic assistant voice. ${ultraShortResponseModeEnabled ? 'Reply with one very short sentence (about 10 words or fewer), only the answer.' : shortResponseModeEnabled ? 'Answer in one or two short sentences maximum, only what was asked.' : 'Give a full, detailed answer.'}]`;
 
     // Add current user message
     const screenFrame = window.getScreenShareFrame?.(isAvon ? 'other' : 'nova');

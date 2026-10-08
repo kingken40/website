@@ -188,9 +188,21 @@ class handler(BaseHTTPRequestHandler):
             # Run Jina enrichment for all providers (GPT models need context; perplexity has native search)
             last_user_index = _extract_last_user_index(data.get('messages'))
             if last_user_index is not None:
-                original_content = data['messages'][last_user_index].get('content', '')
-                enriched_content, fallback_sources = _build_server_web_context(original_content)
-                data['messages'][last_user_index]['content'] = enriched_content
+                message = data['messages'][last_user_index]
+                original_content = message.get('content', '')
+                if isinstance(original_content, list):
+                    enriched_parts = []
+                    for part in original_content:
+                        if isinstance(part, dict) and part.get('type') == 'text':
+                            enriched_text, sources = _build_server_web_context(part.get('text', ''))
+                            enriched_parts.append({**part, 'text': enriched_text})
+                            fallback_sources = _merge_sources(fallback_sources, sources)
+                        else:
+                            enriched_parts.append(part)
+                    message['content'] = enriched_parts
+                else:
+                    enriched_content, fallback_sources = _build_server_web_context(original_content)
+                    message['content'] = enriched_content
 
             data['model'] = _normalize_model_for_provider(
                 data.get('model'),
