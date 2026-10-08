@@ -69,9 +69,18 @@ function setupEventListeners() {
     const speechResumeBtn = document.getElementById('speechResumeBtn');
     const speechPauseBtn = document.getElementById('speechPauseBtn');
     const speechStopBtn = document.getElementById('speechStopBtn');
-    speechResumeBtn?.addEventListener('click', () => window.resumeSpeech?.());
-    speechPauseBtn?.addEventListener('click', () => window.pauseSpeech?.());
-    speechStopBtn?.addEventListener('click', () => window.stopSpeech?.());
+    const mobileSpeechResumeBtn = document.getElementById('mobileSpeechResumeBtn');
+    const mobileSpeechPauseBtn = document.getElementById('mobileSpeechPauseBtn');
+    const mobileSpeechStopBtn = document.getElementById('mobileSpeechStopBtn');
+    [speechResumeBtn, mobileSpeechResumeBtn].forEach(button => {
+        button?.addEventListener('click', () => window.resumeSpeech?.());
+    });
+    [speechPauseBtn, mobileSpeechPauseBtn].forEach(button => {
+        button?.addEventListener('click', () => window.pauseSpeech?.());
+    });
+    [speechStopBtn, mobileSpeechStopBtn].forEach(button => {
+        button?.addEventListener('click', () => window.stopSpeech?.());
+    });
 
     const avonVoiceSelect = document.getElementById('avonVoiceSelection');
     const previewAvonVoiceBtn = document.getElementById('previewAvonVoiceBtn');

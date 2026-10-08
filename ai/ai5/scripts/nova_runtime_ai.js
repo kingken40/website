@@ -161,7 +161,11 @@ function extractResponseText(choice) {
             content = String(content);
         }
     }
-    return content.trim();
+    return content.replace(/^\s*\[([^\]]+)\]\s*:?\s*/, (prefix, label) => {
+        const assistantName = '(?:nova|avon|n\\.?\\s*o\\.?\\s*v\\.?\\s*a\\.?|a\\.?\\s*v\\.?\\s*o\\.?\\s*n\\.?)';
+        const ownTranscriptLabel = new RegExp(`^you\\s*\\([^)]*${assistantName}[^)]*\\)(?:\\s+(?:said|at)\\b.*)?$`, 'i');
+        return ownTranscriptLabel.test(label.trim()) ? '' : prefix;
+    }).trim();
 }
 
 function needsResponseCompletion(reply, finishReason) {
@@ -1386,7 +1390,7 @@ If live web blocks are included, treat them as current evidence and use them dir
             options.conversationPartner
                 ? `For this continuation, you are responding directly to ${options.conversationPartner}'s message. Address ${options.conversationPartner} as your fellow assistant, preserve the topic and context, and do not claim to be them.`
                 : '',
-            'In the conversation history, lines tagged "[You (...) said at TIME]" are your own earlier messages, and lines tagged "[<name>, the other assistant, said at TIME]" or "[User said at TIME]" came from someone else. Use the times to understand when things were said. Never write these bracketed tags in your own reply.',
+            'Conversation history is provided in chronological order. Address your reply to the user; never narrate or reproduce speaker labels, timestamps, or transcript metadata.',
             personalityInstructions,
             novaStyleContext,
             identityContext,
@@ -1453,32 +1457,26 @@ If live web blocks are included, treat them as current evidence and use them dir
     let historyCharsUsed = 0;
     const speakerName = key => key === 'Avon' ? 'A.V.O.N.' : 'N.O.V.A.';
     const myName = speakerName(isAvon ? 'Avon' : 'Nova');
-    const formatClock = iso => {
-        const d = new Date(iso);
-        return isNaN(d) ? '' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    };
     for (const msg of recentHistory) {
         const summarizedContent = summarizeMessageForContext(msg.content, historyCharLimit);
         if (!summarizedContent) continue;
         if (historyCharsUsed + summarizedContent.length > historyTotalCharLimit) {
             break;
         }
-        const clock = formatClock(msg.timestamp);
-        const at = clock ? ` at ${clock}` : '';
         let role = msg.role;
         let content = summarizedContent;
         if (msg.role === 'assistant' && msg.speaker) {
             const author = speakerName(msg.speaker);
             if (author === myName) {
-                content = `[You (${myName}) said${at}]: ${summarizedContent}`;
+                content = summarizedContent;
             } else {
                 // The other assistant's words are presented as incoming messages, not as the model's own.
                 role = 'user';
-                content = `[${author}, the other assistant, said${at}]: ${summarizedContent}`;
+                content = `${author} (the other assistant) said: ${summarizedContent}`;
             }
-        } else if (msg.role === 'user' && clock) {
+        } else if (msg.role === 'user') {
             const toWho = msg.addressedTo ? ` to ${speakerName(msg.addressedTo)}` : '';
-            content = `[User said${at}${toWho}]: ${summarizedContent}`;
+            content = `User${toWho} said: ${summarizedContent}`;
         }
         messages.push({ role, content });
         historyCharsUsed += summarizedContent.length;
