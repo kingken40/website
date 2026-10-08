@@ -408,19 +408,13 @@
                         <option value="auto">Auto-Select</option>
                     </select>
                 </div>
-                <div class="setting-group" style="align-items:center; justify-content:space-between;">
-                    <div style="display:flex; flex-direction:column; gap:0.25rem;">
-                        <label for="shortResponseMode" style="margin:0;">Shorter responses</label>
-                        <small style="color:rgba(255,255,255,0.6);">When on, answers are very brief: one or two short sentences, only what was asked. Turn on "Even shorter responses" for a single short sentence.</small>
-                    </div>
-                    <input type="checkbox" id="shortResponseMode" role="switch" aria-label="Enable shorter responses">
-                </div>
-                <div class="setting-group" style="align-items:center; justify-content:space-between;">
-                    <div style="display:flex; flex-direction:column; gap:0.25rem;">
-                        <label for="ultraShortResponseMode" style="margin:0;">Even shorter responses</label>
-                        <small style="color:rgba(255,255,255,0.6);">When on, the assistant replies with one very short sentence (about 10 words or fewer).</small>
-                    </div>
-                    <input type="checkbox" id="ultraShortResponseMode" role="switch" aria-label="Enable even shorter responses">
+                <div class="setting-group" style="flex-direction:column; align-items:stretch;">
+                    <label for="responseLengthMode">Response Speed</label>
+                    <select id="responseLengthMode" aria-label="Response Speed">
+                        <option value="normal">Normal</option>
+                        <option value="short">Shorter Responses</option>
+                        <option value="ultra">Even Shorter Responses</option>
+                    </select>
                 </div>
                 <div class="setting-group group-chat-settings">
                     <label for="groupChatEnabled">Group chat with N.O.V.A + A.V.O.N.</label>

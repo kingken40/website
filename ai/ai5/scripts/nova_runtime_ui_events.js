@@ -40,29 +40,20 @@ function setupEventListeners() {
     });
     applyChatBubbleColors();
 
-    const shortResponseMode = document.getElementById('shortResponseMode');
-    if (shortResponseMode) {
-        shortResponseMode.checked = shortResponseModeEnabled;
-        shortResponseMode.addEventListener('change', () => {
-            shortResponseModeEnabled = shortResponseMode.checked;
+    const responseLengthMode = document.getElementById('responseLengthMode');
+    if (responseLengthMode) {
+        responseLengthMode.value = ultraShortResponseModeEnabled
+            ? 'ultra'
+            : shortResponseModeEnabled
+                ? 'short'
+                : 'normal';
+        responseLengthMode.addEventListener('change', () => {
+            shortResponseModeEnabled = responseLengthMode.value !== 'normal';
+            ultraShortResponseModeEnabled = responseLengthMode.value === 'ultra';
             localStorage.setItem(SHORT_RESPONSE_MODE_STORAGE_KEY, String(shortResponseModeEnabled));
-            showNotification(
-                shortResponseModeEnabled ? 'Shorter response mode enabled.' : 'Fuller response style restored.',
-                2200
-            );
-        });
-    }
-
-    const ultraShortResponseMode = document.getElementById('ultraShortResponseMode');
-    if (ultraShortResponseMode) {
-        ultraShortResponseMode.checked = ultraShortResponseModeEnabled;
-        ultraShortResponseMode.addEventListener('change', () => {
-            ultraShortResponseModeEnabled = ultraShortResponseMode.checked;
             localStorage.setItem(ULTRA_SHORT_RESPONSE_MODE_STORAGE_KEY, String(ultraShortResponseModeEnabled));
-            showNotification(
-                ultraShortResponseModeEnabled ? 'Even shorter responses enabled.' : 'Even shorter responses off.',
-                2200
-            );
+            const selectedLabel = responseLengthMode.selectedOptions[0]?.textContent || 'Normal';
+            showNotification(`Response speed set to ${selectedLabel}.`, 2200);
         });
     }
 
