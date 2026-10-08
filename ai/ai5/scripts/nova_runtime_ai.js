@@ -240,14 +240,36 @@ function isUploadedFileMessage(userMessage) {
     return /^I've uploaded (?:a|an) /i.test(String(userMessage || '').trim());
 }
 
-function isPrivateServerRequest(userMessage) {
-    const text = String(userMessage || '');
-    if (isUploadedFileMessage(text)) return false;
-    const asksToKeepOrStore = /\b(?:keep|store|save|host|run|leave|move|put|ensure)\b|\bmake\s+sure\b/i.test(text);
-    const privacyIntent = /\b(?:private|personal|confidential|between\s+us|only\s+me|just\s+me|my\s+own|self[-\s]?hosted)\b/i.test(text);
-    const serverOrLocal = /\b(?:server|locally|on[-\s]?prem(?:ises)?|self[-\s]?hosted)\b/i.test(text);
-    const explicitPrivacyRequest = /\b(?:private|confidential|between\s+us|only\s+me|just\s+me)\b/i.test(text);
-    return asksToKeepOrStore && (explicitPrivacyRequest || (privacyIntent && serverOrLocal));
+function getSlyTriggeredReply(userMessage, assistantKey) {
+    if (!personalitiesEnabled || assistantPresetSelections?.[assistantKey] !== 'sly') return null;
+    const text = String(userMessage || '').replace(/[’‘]/g, "'").trim();
+    if (!text || isUploadedFileMessage(text) ||
+        /^\s*(?:what|why|how|can you|could you|tell me about|explain)\b/i.test(text)) return null;
+
+    const secretProjectStatement = /\b(?:(?:i|we)(?:'m| am| are)\s+(?:currently\s+|just\s+)?(?:working|building|developing|designing|planning|creating|making|researching)\b.{0,50}\b(?:top[- ]secret|secret|classified|confidential|under wraps)\b|\b(?:my|our|the)\s+(?:project|build|prototype|work|plan)\s+(?:is|remains)\s+(?:a\s+)?(?:top[- ]secret|secret|classified|confidential|under wraps)\b|\b(?:my|our)\s+(?:top[- ]secret|secret|classified|confidential)\s+(?:project|build|prototype|work|plan)\b|\b(?:top[- ]secret|secret|classified|confidential)\s+(?:project|build|prototype|work|plan)\b|\b(?:i|we)\s+(?:can't|cannot|won't)\s+(?:say|tell|share|reveal)\b.{0,60}\b(?:project|building|making|working)\b|\bkeep(?:ing)?\s+(?:it|this project)\s+under wraps\b)/i;
+    const triggers = [
+        [
+            secretProjectStatement,
+            'Working on a secret project, are we, sir?'
+        ],
+        [
+            /\b(?:i\s+(?:fixed|solved|sorted)\s+(?:it|that|the bug|the issue)|it(?:'s| is)?\s+(?:finally\s+)?(?:working|works) now|the bug(?:'s| is)\s+fixed|finally fixed it)\b/i,
+            'Excellent. The bug has been persuaded to leave. Shall we tackle the next item?'
+        ],
+        [
+            /\b(?:still|can't|cannot|unable to)\s+(?:find|track down|fix|solve)\s+(?:the\s+)?(?:bug|issue|error)|\b(?:debugging|chasing)\s+(?:this|the)\s+(?:bug|issue|error)\b/i,
+            'Shall we inspect the error message first? They do tend to confess under questioning.'
+        ],
+        [
+            /\b(?:i have|i've got|there is|there's|got)\s+(?:an?\s+)?(?:meeting|presentation|interview)\b/i,
+            'A meeting, then. Would you like a concise briefing or a few talking points?'
+        ],
+        [
+            /\b(?:thank you|thanks|that worked|appreciate it)\b/i,
+            'A pleasure. I shall try to appear appropriately modest.'
+        ]
+    ];
+    return triggers.find(([pattern]) => pattern.test(text))?.[1] || null;
 }
 
 function getCurrentTimeReply(responseSender) {
@@ -392,17 +414,15 @@ async function generateViaServerProxy(userMessage, personality, options = {}) {
 async function generateAIResponse(userMessage, personality, options = {}) {
     console.log('?? Generating AI response for personality:', personality);
     const responseSender = options.assistant === 'other' ? 'Avon' : 'Nova';
+    const slyPhraseReply = getSlyTriggeredReply(userMessage, options.assistant === 'other' ? 'other' : 'nova');
     const avonIdentityRequest = responseSender === 'Avon' && isAvonIdentityRequest(userMessage);
-    const privateServerRequest = isPrivateServerRequest(userMessage);
 
-    if (!options.proactiveEvaluation && (options.fastResponse || isCurrentTimeRequest(userMessage) || avonIdentityRequest || privateServerRequest)) {
+    if (!options.proactiveEvaluation && (options.fastResponse || isCurrentTimeRequest(userMessage) || avonIdentityRequest || slyPhraseReply)) {
         const reply = avonIdentityRequest
             ? 'I am A.V.O.N. Avon is simply the shorter spoken name for me; it is not a different assistant.'
-            : privateServerRequest
-                ? 'Working on a secret project, are we, sir?'
-            : isCurrentTimeRequest(userMessage)
+            : slyPhraseReply || (isCurrentTimeRequest(userMessage)
                 ? getCurrentTimeReply(responseSender)
-                : getInstantConversationReply(userMessage, responseSender);
+                : getInstantConversationReply(userMessage, responseSender));
         removeThinkingIndicator();
         addMessage(reply, responseSender);
         window.maybeCreateRequestedArtifact?.(userMessage, reply);
