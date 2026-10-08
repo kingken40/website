@@ -1192,6 +1192,13 @@ body {
     border: 1px solid rgba(22, 137, 232, 0.7);
 }
 
+.both-choice {
+    background: linear-gradient(135deg, #7c3aed, #a855f7);
+    border: 1px solid #c4b5fd;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
 .avon-choice {
     background: rgba(217, 54, 54, 0.24);
     border: 1px solid rgba(217, 54, 54, 0.7);
