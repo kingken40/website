@@ -849,7 +849,6 @@ function getPersonalityInfluence(assistantKey) {
     return Math.min(10, Math.max(1, value));
 }
 let personalitiesEnabled =  localStorage.getItem('nova_personalities_enabled') !== 'false';
-let autoPersonalityEnabled = localStorage.getItem('nova_auto_personality_enabled') === 'true';
 
 function pickAutoPersonality(autoKey, userMessage) {
     const pool = AUTO_PERSONALITY_POOLS[autoKey] || [];
@@ -876,7 +875,6 @@ function pickAutoPersonality(autoKey, userMessage) {
 
 function resolveActivePersonalityPreset(selection, userMessage) {
     if (!personalitiesEnabled) return null;
-    if (autoPersonalityEnabled) selection = 'auto';
     if (!selection) return null;
     if (AUTO_PERSONALITY_POOLS[selection]) {
         const picked = pickAutoPersonality(selection, userMessage);

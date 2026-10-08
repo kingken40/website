@@ -170,15 +170,6 @@ function setupEventListeners() {
     }
 
     const influenceSlider = document.getElementById('personalityInfluence');
-    const autoPersonalityToggle = document.getElementById('autoPersonalityEnabled');
-    if (autoPersonalityToggle) {
-        autoPersonalityToggle.checked = autoPersonalityEnabled;
-        autoPersonalityToggle.addEventListener('change', () => {
-            autoPersonalityEnabled = autoPersonalityToggle.checked;
-            localStorage.setItem('nova_auto_personality_enabled', String(autoPersonalityEnabled));
-            showNotification(autoPersonalityEnabled ? 'Auto personality on; it will adapt to each prompt.' : 'Auto personality off.', 2200);
-        });
-    }
     const influenceNumber = document.getElementById('personalityInfluenceValue');
     const influenceLabel = document.getElementById('personalityInfluenceLabel');
     if (influenceSlider) {
@@ -251,7 +242,7 @@ function setupEventListeners() {
         voiceEnabled: ['wakePhraseEnabled'],
         voiceResponse: ['voiceVolume', 'voiceSpeed', 'voiceSelection', 'previewVoiceBtn', 'avonVoiceSelection', 'previewAvonVoiceBtn', 'localVoiceBridgeEnabled', 'localVoiceBridgeUrl'],
         localVoiceBridgeEnabled: ['localVoiceBridgeUrl'],
-        personalitiesEnabled: ['assistantPersonalityPreset', 'personalityInfluence', 'personalityInfluenceValue', 'autoPersonalityEnabled']
+        personalitiesEnabled: ['assistantPersonalityPreset', 'personalityInfluence', 'personalityInfluenceValue']
     };
     function applySettingDependencies() {
         const off = new Set();
