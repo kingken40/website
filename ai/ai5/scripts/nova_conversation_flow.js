@@ -442,6 +442,7 @@ function processUserMessage(userMessage) {
         const voiceTarget = window.activeVoiceAssistant || null;
         const explicitTarget = getExplicitGroupMessageTarget(userMessage);
         const responseTarget = explicitTarget || voiceTarget;
+        window.currentUserAddressee = groupChatEnabled && responseTarget ? responseTarget : null;
         const fastResponse = isQuickConversationMessage(userMessage);
         const novaAllowed = responseTarget !== 'other' && mutedGroupAssistant !== 'other';
         const avonAllowed = groupChatEnabled && responseTarget !== 'nova' && mutedGroupAssistant !== 'nova';
@@ -485,6 +486,7 @@ function processUserMessage(userMessage) {
                 updateChatSuggestions(userMessage);
             } finally {
                 window.activeVoiceAssistant = null;
+                window.currentUserAddressee = null;
                 if (requestRunId === activeResponseRunId) {
                     isResponseInFlight = false;
                     updateContinuationButtonState();
@@ -502,28 +504,55 @@ function processUserMessage(userMessage) {
 
 }
 
-function updateChatSuggestions(currentText = '') {
+const SUGGESTION_STOP_WORDS = new Set('the and but than that this these those with without from into onto about above below over under again further once here there when where why how all any both each few more most other some such only own same too very can will just should would could might must have has had having does did doing been being are was were you your yours they them their what which who whom whose also like really actually maybe sure okay yes not nor for off out per via get got let make made one two many much well even still ever never always often it\'s i\'m i\'ve i\'ll we our ours'.split(' '));
+
+function extractSuggestionTopics(text) {
+    const counts = new Map();
+    String(text || '').replace(/```[\s\S]*?```/g, ' ').toLowerCase().split(/[^a-z0-9'\-]+/).forEach(word => {
+        if (word.length < 4 || SUGGESTION_STOP_WORDS.has(word) || /^\d+$/.test(word)) return;
+        counts.set(word, (counts.get(word) || 0) + 1);
+    });
+    return [...counts.entries()].sort((a, b) => b[1] - a[1] || b[0].length - a[0].length).map(entry => entry[0]);
+}
+
+function buildChatSuggestionPool() {
+    const lastAssistant = [...chatHistory].reverse().find(m => (m.sender === 'Nova' || m.sender === 'Avon') && m.text);
+    const lastUser = [...chatHistory].reverse().find(m => m.sender === 'user' && m.text);
+    const reply = String(lastAssistant?.text || '');
+    const lower = (reply + ' ' + String(lastUser?.text || '')).toLowerCase();
+    const topics = extractSuggestionTopics(reply || lastUser?.text || '');
+    const topic = topics[0];
+    const topic2 = topics[1];
+    const pool = [];
+    const add = (...items) => items.forEach(item => { if (item && !pool.includes(item)) pool.push(item); });
+
+    if (/\?\s*$/.test(reply.trim())) add('Yes, go ahead', 'No, not right now', 'Can you clarify that?');
+    if (/```|\b(code|error|bug|function|exception|compile|script|variable)\b/.test(lower)) {
+        add('Explain this code step by step', 'Show a corrected example', 'What edge cases could break this?', 'How would I test this?');
+    }
+    if (/\b(lecture|class|study|exam|homework|assignment|course|quiz)\b/.test(lower)) {
+        add('Create a study guide from this', 'Quiz me on this', 'Make flashcards for this');
+    }
+    if (/\b(recipe|cook|bake|ingredient)\b/.test(lower)) add('List the ingredients I need', 'Can I substitute anything?');
+    if (/\b(weather|temperature|forecast|rain)\b/.test(lower)) add('What about tomorrow?', 'Should I bring a jacket?');
+    if (/\b(\d+\s*(steps?|ways|options|tips)|first|second|step)\b/.test(lower)) add('Walk me through step one', 'Which option is best?');
+    if (topic) add(`Tell me more about ${topic}`, `Give me an example of ${topic}`);
+    if (topic && topic2) add(`How does ${topic} relate to ${topic2}?`);
+    if (topic) add(`What are common mistakes with ${topic}?`);
+    if (groupChatEnabled && lastAssistant) {
+        const other = lastAssistant.sender === 'Avon' ? 'Nova' : 'Avon';
+        add(`${other}, what do you think about that?`, `${other}, do you agree?`);
+    }
+    add('Summarize that in one sentence', 'Explain it more simply', 'What should I do next?');
+    return pool;
+}
+
+function updateChatSuggestions() {
     const container = document.getElementById('chatSuggestions');
     if (!container) return;
-    const text = String(currentText || '').toLowerCase();
-    const suggestionSets = text.includes('code') || text.includes('error')
-        ? [
-            ['Explain this step by step', 'Show a corrected example', 'Find the likely bug'],
-            ['Review this for edge cases', 'Make this more efficient', 'Add a test for it']
-        ]
-        : text.includes('lecture') || text.includes('class')
-            ? [
-                ['Create a study guide', 'Quiz me on this', 'Explain the hardest concept'],
-                ['Make flashcards', 'Give me a real-world example', 'What should I memorize?']
-            ]
-            : [
-                ['Ask a follow-up question', 'Give me an example', 'Summarize the key points'],
-                ['Explain it more simply', 'Compare the alternatives', 'What should I do next?']
-            ];
-    const suggestionSetIndex = Number(container.dataset.suggestionSet || 0) % suggestionSets.length;
-    const suggestions = suggestionSets[suggestionSetIndex];
-    container.dataset.suggestionSet = String(suggestionSetIndex);
-    container.innerHTML = `<span class="suggestion-spacer" aria-hidden="true"></span>${suggestions.map(suggestion =>
+    const pool = buildChatSuggestionPool();
+    const offset = Number(container.dataset.suggestionSet || 0);
+    const suggestions = [0, 1, 2].map(i => pool[(offset * 3 + i) % pool.length]).filter((s, i, arr) => arr.indexOf(s) === i);    container.innerHTML = `<span class="suggestion-spacer" aria-hidden="true"></span>${suggestions.map(suggestion =>
         `<button type="button" class="chat-suggestion" onclick="applyChatSuggestion('${escapeHtml(suggestion).replace(/'/g, '&#39;')}')">${escapeHtml(suggestion)}</button>`
     ).join('')}<button type="button" class="chat-suggestions-refresh" onclick="refreshChatSuggestions()" title="Show different relevant suggestions" aria-label="Show different relevant suggestions"><i class="fas fa-sync-alt"></i></button>`;
 }
@@ -539,8 +568,8 @@ window.applyChatSuggestion = applyChatSuggestion;
 function refreshChatSuggestions() {
     const container = document.getElementById('chatSuggestions');
     const input = document.getElementById('messageInput');
-    if (container) container.dataset.suggestionSet = String((Number(container.dataset.suggestionSet || 0) + 1) % 2);
-    updateChatSuggestions(input?.value || '');
+    if (container) container.dataset.suggestionSet = String(Number(container.dataset.suggestionSet || 0) + 1);
+    updateChatSuggestions();
 }
 window.refreshChatSuggestions = refreshChatSuggestions;
 

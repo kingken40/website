@@ -1467,10 +1467,28 @@ If live web blocks are included, treat them as current evidence and use them dir
                 content = `[${author}, the other assistant, said${at}]: ${summarizedContent}`;
             }
         } else if (msg.role === 'user' && clock) {
-            content = `[User said${at}]: ${summarizedContent}`;
+            const toWho = msg.addressedTo ? ` to ${speakerName(msg.addressedTo)}` : '';
+            content = `[User said${at}${toWho}]: ${summarizedContent}`;
         }
         messages.push({ role, content });
         historyCharsUsed += summarizedContent.length;
+    }
+
+    // In group chat, make clear who the user is talking to so the other assistant knows too.
+    const currentAddressee = window.currentUserAddressee || null;
+    let addresseeNote = '';
+    if (groupChatEnabled) {
+        const otherName = speakerName(isAvon ? 'Nova' : 'Avon');
+        if (currentAddressee) {
+            addresseeNote = speakerName(currentAddressee) === myName
+                ? `[The user is speaking directly to you (${myName}).]`
+                : `[The user is speaking directly to ${otherName}, not to you. You are ${myName}; only chime in if it is useful, and do not answer as if it were addressed to you.]`;
+        } else {
+            const lastAssistant = [...conversationHistory].reverse().find(m => m.role === 'assistant' && m.speaker);
+            if (lastAssistant) {
+                addresseeNote = `[The user did not name anyone; this is most likely a reply to what ${speakerName(lastAssistant.speaker)} said last.]`;
+            }
+        }
     }
     
     // Restate voice/length rules next to the user's turn; models obey the last turn most reliably.
@@ -1485,10 +1503,10 @@ If live web blocks are included, treat them as current evidence and use them dir
         role: "user",
         content: screenFrame
             ? [
-                { type: 'text', text: `${userMessage}\n\n[The user is sharing their screen; the attached image is their current screen. Use it when relevant.]\n\n${styleReminder}` },
+                { type: 'text', text: `${userMessage}\n\n[The user is sharing their screen; the attached image is their current screen. Use it when relevant.]\n\n${addresseeNote}\n\n${styleReminder}` },
                 { type: 'image_url', image_url: { url: screenFrame } }
             ]
-            : `${userMessage}\n\n${styleReminder}`
+            : `${userMessage}\n\n${addresseeNote ? addresseeNote + '\n\n' : ''}${styleReminder}`
     });
     
     // Save user message to history
@@ -1497,6 +1515,7 @@ If live web blocks are included, treat them as current evidence and use them dir
             role: 'user',
             content: userMessage,
             personality: personality,
+            addressedTo: groupChatEnabled ? currentAddressee : null,
             timestamp: new Date().toISOString()
         });
     }
