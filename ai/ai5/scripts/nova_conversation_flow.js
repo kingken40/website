@@ -741,10 +741,12 @@ document.addEventListener('DOMContentLoaded', () => {
 let autoPilotActive = false;
 
 function setAutoPilotUi(active) {
-    const btn = document.getElementById('autoPilotBtn');
-    if (!btn) return;
-    btn.classList.toggle('active', active);
-    btn.setAttribute('aria-pressed', String(active));
+    ['autoPilotBtn', 'mobileAutoPilotBtn'].forEach(id => {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-pressed', String(active));
+    });
 }
 
 function stopAutoPilot(message) {
@@ -797,6 +799,7 @@ function toggleAutoPilot() {
 
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('autoPilotBtn')?.addEventListener('click', toggleAutoPilot);
+    document.getElementById('mobileAutoPilotBtn')?.addEventListener('click', toggleAutoPilot);
     document.getElementById('clearChat')?.addEventListener('click', () => stopAutoPilot());
 });
 
