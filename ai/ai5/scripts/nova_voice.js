@@ -166,7 +166,7 @@ async function playViaLocalVoiceBridge(text, onEndCallback) {
         isSpeechOutputActive = true;
         window.isSpeechOutputActive = true;
         activeSpeechOutputText = normalizeVoiceTranscript(text);
-        recentSpokenText = activeSpeechOutputText;
+        rememberSpokenText(text);
         speechInterruptTriggered = false;
         updateSpeakingUI(true);
 
@@ -232,22 +232,65 @@ let lastSpeechInterruptAt = 0;
 let speechInterruptListeningMode = false;
 let recentSpokenText = '';
 let lastSpeechEndedAt = 0;
+const recentSpokenHistory = [];
+const SPOKEN_HISTORY_WINDOW_MS = 90000;
+
+// Phones play TTS through a speaker right next to the mic, and iOS delivers recognition
+// results late, so they need a longer guard window and a longer pause before re-listening.
+const IS_TOUCH_PHONE = (() => {
+    const ua = navigator.userAgent || '';
+    return /iPhone|iPad|iPod|Android/i.test(ua) ||
+        (/Macintosh/i.test(ua) && (navigator.maxTouchPoints || 0) > 1);
+})();
+const ECHO_TRANSCRIPT_WINDOW_MS = IS_TOUCH_PHONE ? 6000 : 1500;
+const ECHO_LISTEN_DELAY_MS = IS_TOUCH_PHONE ? 1800 : 400;
+
+function rememberSpokenText(text) {
+    const normalized = normalizeVoiceTranscript(text);
+    if (!normalized) return;
+    const now = Date.now();
+    recentSpokenText = normalized;
+    const last = recentSpokenHistory[recentSpokenHistory.length - 1];
+    if (last && last.text === normalized) {
+        last.at = now;
+    } else {
+        recentSpokenHistory.push({ text: normalized, at: now });
+    }
+    while (recentSpokenHistory.length &&
+        (now - recentSpokenHistory[0].at > SPOKEN_HISTORY_WINDOW_MS || recentSpokenHistory.length > 12)) {
+        recentSpokenHistory.shift();
+    }
+}
+
+function isSpeechOutputBusy() {
+    return !!(isSpeechOutputActive || isSpeaking ||
+        (window.speechSynthesis && (window.speechSynthesis.speaking || window.speechSynthesis.pending)));
+}
+
+// True while the mic could still be hearing the assistant's own voice.
+function isWithinEchoTail(extraMs = 0) {
+    return isSpeechOutputBusy() || Date.now() - lastSpeechEndedAt < ECHO_LISTEN_DELAY_MS + extraMs;
+}
 
 // True when a transcript is most likely the assistant's own voice picked up by the mic,
 // either while it speaks or just after (phone speakers echo for a moment).
 function isAssistantEchoTranscript(text) {
     const normalized = normalizeVoiceTranscript(text);
-    if (!normalized || !recentSpokenText) return false;
-    const speakingNow = isSpeechOutputActive || isSpeaking ||
-        !!(window.speechSynthesis && (window.speechSynthesis.speaking || window.speechSynthesis.pending));
-    if (!speakingNow && Date.now() - lastSpeechEndedAt > 1500) return false;
+    if (!normalized || !recentSpokenHistory.length) return false;
+    if (!isSpeechOutputBusy() && Date.now() - lastSpeechEndedAt > ECHO_TRANSCRIPT_WINDOW_MS) return false;
     const words = normalized.split(' ').filter(Boolean);
-    // Short phrases ("yes", "stop", "tell me more") are too likely to be the user
-    if (words.length < 4) return false;
-    if (recentSpokenText.includes(normalized)) return true;
-    const spokenWords = new Set(recentSpokenText.split(' ').filter(Boolean));
-    const overlap = words.filter(word => spokenWords.has(word)).length;
-    return overlap / words.length >= 0.85;
+    // Single words ("yes", "stop") are too likely to be the user
+    if (words.length < 2) return false;
+    const now = Date.now();
+    return recentSpokenHistory.some(entry => {
+        if (now - entry.at > SPOKEN_HISTORY_WINDOW_MS) return false;
+        if (entry.text.includes(normalized)) return true;
+        // Partial phrases are only judged by exact matches, which is safe for short user replies
+        if (words.length < 4) return false;
+        const spokenWords = new Set(entry.text.split(' ').filter(Boolean));
+        const overlap = words.filter(word => spokenWords.has(word)).length;
+        return overlap / words.length >= (IS_TOUCH_PHONE ? 0.7 : 0.85);
+    });
 }
 
 function normalizeVoiceTranscript(text) {
@@ -407,7 +450,7 @@ function processSpeechInterruptCandidate(finalTranscript, interimTranscript) {
     }
 
     setTimeout(() => {
-        processVoiceCommand(rawCandidate || candidate);
+        submitVoiceTranscript(rawCandidate || candidate);
     }, 120);
 }
 
@@ -629,7 +672,7 @@ function setupSpeechRecognition() {
                 isWakeWordSession = true;
                 window.isWakeWordSession = true;
                 updateVoiceStatus('Processing command...');
-                processVoiceCommand(transcript);
+                submitVoiceTranscript(transcript);
             } else {
                 console.log('🎙️ Always-listening turn ended with no transcript');
                 updateVoiceStatus(getAlwaysListeningStatus());
@@ -940,12 +983,12 @@ function startWakeListening() {
     // Check if speech is currently active (use our own isSpeaking flag as
     // primary — speechSynthesis.speaking can lag behind utterance.onend in
     // some browsers, causing the old single-shot retry to give up too early)
-    const speechActive = isSpeaking ||
+    const speechActive = isSpeaking || isWithinEchoTail() ||
         (window.speechSynthesis && (window.speechSynthesis.speaking || window.speechSynthesis.pending));
     if (speechActive) {
         console.log('👂 Cannot start listening - Nova is currently speaking');
         setTimeout(function retryWake() {
-            const stillSpeaking = isSpeaking ||
+            const stillSpeaking = isSpeaking || isWithinEchoTail() ||
                 (window.speechSynthesis && (window.speechSynthesis.speaking || window.speechSynthesis.pending));
             if (!stillSpeaking) {
                 if (wakeWordEnabled) startWakeListening();
@@ -1009,7 +1052,7 @@ function scheduleWakeListeningRecovery(delay = 500) {
             return;
         }
 
-        const speechActive = isSpeaking || isSpeechOutputActive ||
+        const speechActive = isSpeaking || isSpeechOutputActive || isWithinEchoTail() ||
             (window.speechSynthesis && (window.speechSynthesis.speaking || window.speechSynthesis.pending));
         if (speechActive) {
             scheduleWakeListeningRecovery(400);
@@ -1068,7 +1111,7 @@ function restoreWakeListeningAfterResponse() {
             if (alwaysListeningHotkeyMode && !isListening && !isSpeechOutputActive) {
                 startAlwaysListeningTurn();
             }
-        }, 400);
+        }, ECHO_LISTEN_DELAY_MS);
         return;
     }
 
@@ -1227,7 +1270,7 @@ function startCommandListening() {
             setTimeout(() => {
                 if (commandTranscript) {
                     console.log('🎤 ➡️ Calling processVoiceCommand with:', commandTranscript);
-                    processVoiceCommand(commandTranscript);
+                    submitVoiceTranscript(commandTranscript);
                 } else {
                     console.error('🎤 ❌ commandTranscript is empty!');
                 }
@@ -1266,6 +1309,25 @@ function startCommandListening() {
         window.isListening = false;
         scheduleWakeListeningRecovery();
     }
+}
+
+function submitVoiceTranscript(transcript) {
+    // Drop anything that is really the assistant hearing itself
+    if (isAssistantEchoTranscript(transcript)) {
+        console.log('🔇 Ignoring assistant echo:', transcript);
+        isWakeWordSession = false;
+        window.isWakeWordSession = false;
+        updateVoiceStatus(alwaysListeningHotkeyMode ? getAlwaysListeningStatus() : getDefaultReadyStatus());
+        setTimeout(() => {
+            if (alwaysListeningHotkeyMode && !isListening) {
+                startAlwaysListeningTurn();
+            } else if (wakeWordEnabled && !alwaysListeningHotkeyMode && !isListening) {
+                scheduleWakeListeningRecovery(ECHO_LISTEN_DELAY_MS);
+            }
+        }, ECHO_LISTEN_DELAY_MS);
+        return;
+    }
+    processVoiceCommand(transcript);
 }
 
 function processVoiceCommand(transcript) {
@@ -1911,7 +1973,7 @@ function setupUtteranceAndSpeak(text, onEndCallback, assistant = 'nova') {
         isSpeechOutputActive = true;
         window.isSpeechOutputActive = true;
         activeSpeechOutputText = normalizeVoiceTranscript(text);
-        recentSpokenText = activeSpeechOutputText;
+        rememberSpokenText(text);
         speechInterruptTriggered = false;
         updateSpeakingUI(true);
         utteranceStartedAt = Date.now();
@@ -3209,7 +3271,7 @@ function startAlwaysListeningTurn() {
 
     const synthSpeaking = window.speechSynthesis &&
         (window.speechSynthesis.speaking || window.speechSynthesis.pending);
-    if (isSpeaking || isSpeechOutputActive || synthSpeaking) {
+    if (isSpeaking || isSpeechOutputActive || synthSpeaking || isWithinEchoTail()) {
         setTimeout(() => {
             if (alwaysListeningHotkeyMode) startAlwaysListeningTurn();
         }, 500);
