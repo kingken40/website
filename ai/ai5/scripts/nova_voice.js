@@ -263,8 +263,8 @@ function rememberSpokenText(text) {
 }
 
 function isSpeechOutputBusy() {
-    return !!(isSpeechOutputActive || isSpeaking ||
-        (window.speechSynthesis && (window.speechSynthesis.speaking || window.speechSynthesis.pending)));
+    // speechSynthesis.speaking is not checked: iOS can leave it stuck true, which would block the mic forever
+    return !!(isSpeechOutputActive || isSpeaking);
 }
 
 // True while the mic could still be hearing the assistant's own voice.
