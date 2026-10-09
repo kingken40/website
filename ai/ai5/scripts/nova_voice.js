@@ -3269,7 +3269,7 @@ function startAlwaysListeningTurn() {
         return;
     }
 
-    const synthSpeaking = window.speechSynthesis &&
+    const synthSpeaking = !IS_TOUCH_PHONE && window.speechSynthesis &&
         (window.speechSynthesis.speaking || window.speechSynthesis.pending);
     if (isSpeaking || isSpeechOutputActive || synthSpeaking || isWithinEchoTail()) {
         setTimeout(() => {
