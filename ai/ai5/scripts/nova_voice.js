@@ -902,7 +902,7 @@ function setupSpeechRecognition() {
             }
         }
 
-        if (isSpeechOutputActive || (window.speechSynthesis && (window.speechSynthesis.speaking || window.speechSynthesis.pending))) {
+        if (isSpeechOutputActive || (!IS_TOUCH_PHONE && window.speechSynthesis && (window.speechSynthesis.speaking || window.speechSynthesis.pending))) {
             processSpeechInterruptCandidate(finalTranscript, interimTranscript);
             return;
         }
@@ -2954,14 +2954,13 @@ let groqRecordingActive = false;
 
 async function startGroqRecording() {
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const stream = await navigator.mediaDevices.getUserMedia({
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 }
+        });
         groqAudioChunks = [];
 
-        const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-            ? 'audio/webm;codecs=opus'
-            : MediaRecorder.isTypeSupported('audio/webm')
-                ? 'audio/webm'
-                : '';
+        const mimeType = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/aac']
+            .find(type => MediaRecorder.isTypeSupported(type)) || '';
 
         groqMediaRecorder = mimeType
             ? new MediaRecorder(stream, { mimeType })
@@ -3007,7 +3006,10 @@ async function stopGroqRecordingAndTranscribe() {
 
             try {
                 const formData = new FormData();
-                const ext = mimeType.includes('ogg') ? 'ogg' : 'webm';
+                // iOS Safari records mp4/aac; a wrong extension makes Whisper fail or mishear
+                const ext = mimeType.includes('ogg') ? 'ogg'
+                    : (mimeType.includes('mp4') || mimeType.includes('aac')) ? 'm4a'
+                    : 'webm';
                 formData.append('file', audioBlob, `recording.${ext}`);
                 formData.append('model', 'whisper-large-v3-turbo');
                 formData.append('language', 'en');
