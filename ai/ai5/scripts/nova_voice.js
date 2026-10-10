@@ -1,4 +1,4 @@
-﻿/* ========================================
+/* ========================================
    N.O.V.A VOICE RECOGNITION & SYNTHESIS
    Advanced Voice Control System
 ======================================== */
@@ -18,7 +18,7 @@ let hasVoicePermission = false;
 let voicePermissionRequestInFlight = null;
 let pendingTranscript = '';
 let lastInterimTranscript = '';
-let wakeWordEnabled = localStorage.getItem('Nova_wake_word_enabled') !== 'false'; // Default on unless explicitly disabled
+let wakeWordEnabled = false; // Wake word is turned off; continuous listening (R+T) is used instead
 let isWakeWordSession = false; // Track if current interaction is from wake word
 let alwaysListeningHotkeyMode = false; // R+T toggled continuous listening
 let alwaysListeningTurnActive = false;
@@ -450,18 +450,6 @@ function processSpeechInterruptCandidate(finalTranscript, interimTranscript) {
 
 let interruptCapture = null;
 const INTERRUPT_PAUSE_MS = 1400;
-
-// Wake-word listening can silently die after errors or restarts; keep checking and revive it
-setInterval(() => {
-    if (!wakeWordEnabled || !hasVoicePermission || !isVoiceSupported || !recognition) return;
-    if (alwaysListeningHotkeyMode || hotkeyActive || hotkeyListening || groqRecordingActive || interruptCapture) return;
-    if (isListening || restartPending || isSpeechOutputBusy() || isWithinEchoTail()) return;
-    if (document.querySelector('.thinking-indicator')) return;
-    console.log('👂 Watchdog reviving wake listening');
-    isWakeListening = true;
-    window.isWakeListening = true;
-    startWakeListening();
-}, 3000);
 
 // Settings switch: let the user speak over the assistant to interrupt it
 document.addEventListener('DOMContentLoaded', () => {
@@ -3855,17 +3843,11 @@ function initializeFullSystem() {
         initializeVoiceSelectionUI();
         setupSettingsEventListeners();
 
-        const wakeToggle = document.getElementById('wakePhraseEnabled');
-        const storedWakeWordEnabled = localStorage.getItem('Nova_wake_word_enabled');
-        const shouldEnableWakeWord = storedWakeWordEnabled === null
-            ? (wakeToggle ? !!wakeToggle.checked : true)
-            : storedWakeWordEnabled === 'true';
+        // Wake word is removed from settings for now; continuous listening (R+T) replaces it
+        localStorage.setItem('Nova_wake_word_enabled', 'false');
+        const shouldEnableWakeWord = false;
 
         wakeWordEnabled = shouldEnableWakeWord;
-        if (wakeToggle) {
-            wakeToggle.checked = shouldEnableWakeWord;
-        }
-
         if (shouldEnableWakeWord) {
             enableWakeListening(true);
         } else {
