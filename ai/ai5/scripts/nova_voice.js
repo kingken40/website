@@ -243,8 +243,8 @@ const IS_TOUCH_PHONE = (() => {
     return /iPhone|iPad|iPod|Android/i.test(ua) ||
         (/Macintosh/i.test(ua) && (navigator.maxTouchPoints || 0) > 1);
 })();
-const ECHO_TRANSCRIPT_WINDOW_MS = IS_TOUCH_PHONE ? 6000 : 3000;
-const ECHO_LISTEN_DELAY_MS = IS_TOUCH_PHONE ? 1800 : 800;
+const ECHO_TRANSCRIPT_WINDOW_MS = IS_TOUCH_PHONE ? 6000 : 5000;
+const ECHO_LISTEN_DELAY_MS = IS_TOUCH_PHONE ? 1800 : 1500;
 
 function rememberSpokenText(text) {
     const normalized = normalizeVoiceTranscript(text);
@@ -291,10 +291,10 @@ function isAssistantEchoTranscript(text) {
         if (now - entry.at > SPOKEN_HISTORY_WINDOW_MS) return false;
         if (entry.text.includes(normalized)) return true;
         // Partial phrases are only judged by exact matches, which is safe for short user replies
-        if (words.length < 4) return false;
+        if (words.length < 3) return false;
         const spokenWords = new Set(entry.text.split(' ').filter(Boolean));
         const overlap = words.filter(word => spokenWords.has(word)).length;
-        return overlap / words.length >= (IS_TOUCH_PHONE ? 0.7 : 0.85);
+        return overlap / words.length >= 0.5;
     });
 }
 
@@ -345,7 +345,7 @@ function isLikelySpeechEcho(normalizedTranscript) {
         if (candidateWords.length < 3) return false;
         const spokenWordSet = new Set(source.split(' ').filter(Boolean));
         const overlap = candidateWords.filter(word => spokenWordSet.has(word)).length;
-        return (overlap / candidateWords.length) >= 0.6;
+        return (overlap / candidateWords.length) >= 0.45;
     });
 }
 
@@ -417,7 +417,7 @@ function processSpeechInterruptCandidate(finalTranscript, interimTranscript) {
     let candidate = '';
     let rawCandidate = '';
 
-    if (normalizedFinal && countTranscriptWords(normalizedFinal) >= 2) {
+    if (normalizedFinal && countTranscriptWords(normalizedFinal) >= 3) {
         candidate = normalizedFinal;
         rawCandidate = String(finalTranscript || '').trim();
     } else if (normalizedInterim && countTranscriptWords(normalizedInterim) >= 4) {
