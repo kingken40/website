@@ -242,8 +242,8 @@ const IS_TOUCH_PHONE = (() => {
     return /iPhone|iPad|iPod|Android/i.test(ua) ||
         (/Macintosh/i.test(ua) && (navigator.maxTouchPoints || 0) > 1);
 })();
-const ECHO_TRANSCRIPT_WINDOW_MS = IS_TOUCH_PHONE ? 6000 : 1500;
-const ECHO_LISTEN_DELAY_MS = IS_TOUCH_PHONE ? 1800 : 400;
+const ECHO_TRANSCRIPT_WINDOW_MS = IS_TOUCH_PHONE ? 6000 : 3000;
+const ECHO_LISTEN_DELAY_MS = IS_TOUCH_PHONE ? 1800 : 800;
 
 function rememberSpokenText(text) {
     const normalized = normalizeVoiceTranscript(text);
@@ -328,22 +328,20 @@ function detectWakeAssistant(text) {
 window.detectWakeAssistant = detectWakeAssistant;
 
 function isLikelySpeechEcho(normalizedTranscript) {
-    if (!normalizedTranscript || !activeSpeechOutputText) return false;
-
-    if (activeSpeechOutputText.includes(normalizedTranscript)) {
-        return true;
-    }
-
+    if (!normalizedTranscript) return false;
     const candidateWords = normalizedTranscript.split(' ').filter(Boolean);
-    if (candidateWords.length < 3) return false;
+    const sources = recentSpokenHistory.map(entry => entry.text);
+    if (activeSpeechOutputText) sources.push(normalizeVoiceTranscript(activeSpeechOutputText));
 
-    const spokenWordSet = new Set(activeSpeechOutputText.split(' ').filter(Boolean));
-    let overlapCount = 0;
-    candidateWords.forEach(word => {
-        if (spokenWordSet.has(word)) overlapCount++;
+    // Speaker bleed is often partial or slightly misheard, so judge against everything said recently
+    return sources.some(source => {
+        if (!source) return false;
+        if (source.includes(normalizedTranscript)) return true;
+        if (candidateWords.length < 3) return false;
+        const spokenWordSet = new Set(source.split(' ').filter(Boolean));
+        const overlap = candidateWords.filter(word => spokenWordSet.has(word)).length;
+        return (overlap / candidateWords.length) >= 0.6;
     });
-
-    return (overlapCount / candidateWords.length) >= 0.8;
 }
 
 function clearSpeechInterruptState() {
@@ -482,12 +480,17 @@ function finishInterruptCapture() {
         window.isListening = false;
         try { recognition.abort(); } catch (e) {}
     }
-    if (text) submitVoiceTranscript(text);
+    if (text && !isLikelySpeechEcho(normalizeVoiceTranscript(text))) submitVoiceTranscript(text);
+    else if (text) console.log('🛑 Discarded interrupt capture that matched assistant speech:', text);
 }
 
 // Returns true when the result was consumed as part of an in-progress interrupt
 function handleInterruptCaptureResult(finalTranscript, interimTranscript) {
     if (!interruptCapture) return false;
+    // After the assistant stops, its own tail can still be picked up; don't add it to what the user said
+    if (isLikelySpeechEcho(normalizeVoiceTranscript(finalTranscript))) finalTranscript = '';
+    if (isLikelySpeechEcho(normalizeVoiceTranscript(interimTranscript))) interimTranscript = '';
+    if (!finalTranscript && !interimTranscript) return true;
     if (finalTranscript) {
         interruptCapture.finalText = joinTranscriptParts(interruptCapture.finalText, finalTranscript);
         interruptCapture.interimText = '';
