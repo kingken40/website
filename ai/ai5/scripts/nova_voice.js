@@ -232,6 +232,7 @@ let lastSpeechInterruptAt = 0;
 let speechInterruptListeningMode = false;
 let recentSpokenText = '';
 let lastSpeechEndedAt = 0;
+let lastSpeechStartedAt = 0;
 const recentSpokenHistory = [];
 const SPOKEN_HISTORY_WINDOW_MS = 90000;
 
@@ -279,8 +280,12 @@ function isAssistantEchoTranscript(text) {
     if (!normalized || !recentSpokenHistory.length) return false;
     if (!isSpeechOutputBusy() && Date.now() - lastSpeechEndedAt > ECHO_TRANSCRIPT_WINDOW_MS) return false;
     const words = normalized.split(' ').filter(Boolean);
-    // Single words ("yes", "stop") are too likely to be the user
-    if (words.length < 2) return false;
+    // Single words ("yes", "stop") are too likely to be the user, except the assistant's own names,
+    // which its speech often contains and which would trigger the wake phrase on itself
+    if (words.length < 2) {
+        const ownName = /^(nova|n o v a|avon|a v o n|hey nova|hey avon)$/.test(normalized);
+        return ownName && recentSpokenHistory.some(entry => entry.text.includes(normalized));
+    }
     const now = Date.now();
     return recentSpokenHistory.some(entry => {
         if (now - entry.at > SPOKEN_HISTORY_WINDOW_MS) return false;
@@ -400,6 +405,10 @@ function processSpeechInterruptCandidate(finalTranscript, interimTranscript) {
 
     const now = Date.now();
     if (now - lastSpeechInterruptAt < 1200) {
+        return;
+    }
+    // The first moments of speech are when the mic hears the assistant's own opening words
+    if (now - lastSpeechStartedAt < 1500) {
         return;
     }
 
@@ -2291,6 +2300,7 @@ function updateVoiceUI(listening) {
 
 function updateSpeakingUI(speaking) {
     if (!speaking) lastSpeechEndedAt = Date.now();
+    else if (lastSpeechStartedAt <= lastSpeechEndedAt) lastSpeechStartedAt = Date.now();
     const arcReactor = document.querySelector('.arc-reactor');
     const arcCore = document.querySelector('.arc-core');
     
