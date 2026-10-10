@@ -852,11 +852,11 @@ function getScreenChangeRatio(previous, current) {
 }
 
 const AUTO_MODE_PROMPT = `AUTO MODE SCREEN CHECK
-Review the latest shared-screen image together with the recent conversation. Decide whether there is something concrete and timely that would genuinely help the user right now.
-Speak only when a visible item is clearly relevant to the user's earlier request (for example, a useful search result or link), or when the screen shows an important problem they may have missed.
-Do not narrate ordinary browsing, repeat earlier advice, guess at hidden content, or offer generic suggestions. Do not click, search, submit, or claim to have taken actions.
-If no meaningful, relevant observation is warranted, reply with exactly: NO_ACTION
-Otherwise reply with only one brief, natural spoken observation (at most two sentences).`;
+You are watching the user's shared screen live and may speak first, without being spoken to, just like in a normal screen-share conversation.
+Look at the latest shared-screen image (and the recent conversation, if any). React the way a helpful companion would: comment on, explain, or help with what is on screen or what the user just opened, highlighted, or did. Answer or help with any question, problem, error, or task visible on the page.
+Stay quiet (do not narrate every tiny change, repeat yourself, or guess at hidden content). Do not click, search, submit, or claim to have taken actions.
+If there is genuinely nothing worth saying, reply with exactly: NO_ACTION
+Otherwise reply with only one brief, natural spoken remark (at most two sentences).`;
 
 async function runAutoModeLoop(runId) {
     const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -864,7 +864,7 @@ async function runAutoModeLoop(runId) {
     let lastEvaluationAt = 0;
 
     while (autoModeActive && runId === autoModeRunId) {
-        await sleep(5000);
+        await sleep(3000);
         if (!autoModeActive || runId !== autoModeRunId) return;
 
         const assistant = getAutoModeAssistant();
@@ -878,16 +878,14 @@ async function runAutoModeLoop(runId) {
             stopAutoMode(`Auto Mode paused: ${error.message}`);
             return;
         }
-        if (!signature || getScreenChangeRatio(lastEvaluatedSignature, signature) < 0.04) continue;
+        if (!signature || getScreenChangeRatio(lastEvaluatedSignature, signature) < 0.015) continue;
 
         const now = Date.now();
         const messageInput = document.getElementById('messageInput');
         const userIsComposing = Boolean(messageInput?.value.trim());
-        const hasConversationContext = conversationHistory.some(message => message.role === 'user' && message.content);
-        if (now - lastEvaluationAt < 20000 ||
-            now - autoModeLastInteractionAt < 3500 ||
-            now - autoModeLastSpokeAt < 45000 ||
-            !hasConversationContext ||
+        if (now - lastEvaluationAt < 10000 ||
+            now - autoModeLastInteractionAt < 2500 ||
+            now - autoModeLastSpokeAt < 15000 ||
             isResponseInFlight ||
             window.isSpeaking ||
             window.voiceInterruptInProgress ||
