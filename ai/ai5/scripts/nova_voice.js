@@ -2421,11 +2421,14 @@ function startVoiceRecognition(options = {}) {
     }
     
     if (isListening) {
-        recognition.stop();
+        // A stale or interrupt-mode session may still hold the recognizer; reset it and start fresh
+        speechInterruptListeningMode = false;
+        isListening = false;
+        window.isListening = false;
+        try { recognition.abort(); } catch (e) {}
+        setTimeout(() => startVoiceRecognition(options), 250);
         return;
     }
-    
-    // Clear any pending transcript and release state
     pendingTranscript = '';
     lastInterimTranscript = '';
     pttReleaseMode = false;
@@ -3303,6 +3306,10 @@ async function toggleAlwaysListeningMode() {
     } else if (recognition && isListening) {
         try { recognition.abort(); } catch (e) {}
     }
+    // Free the recognizer right away so the first turn can start
+    isListening = false;
+    window.isListening = false;
+    speechInterruptListeningMode = false;
 
     isWakeListening = false;
     window.isWakeListening = false;
@@ -3311,7 +3318,7 @@ async function toggleAlwaysListeningMode() {
     window.alwaysListeningHotkeyMode = true;
     showVoiceNotification('Always-listening mode enabled (R+T to turn off)', 2500);
     updateVoiceStatus(getAlwaysListeningStatus());
-    startAlwaysListeningTurn();
+    setTimeout(startAlwaysListeningTurn, 250);
 }
 
 function startAlwaysListeningTurn() {
