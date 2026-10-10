@@ -2451,6 +2451,14 @@ function startVoiceRecognition(options = {}) {
         updateVoiceUI(false);
         isListening = false;
         pendingTranscript = '';
+
+        // The recognizer is likely stuck from a previous turn; rebuild it and retry once
+        if (!options.retried && hotkeyListening) {
+            recreateRecognition(false);
+            hotkeyListening = true;
+            setTimeout(() => startVoiceRecognition({ ...options, retried: true }), 200);
+            return;
+        }
         
         // Restart wake listening if it was active
         if (wasWakeListening && wakeWordEnabled) {
@@ -3319,6 +3327,26 @@ async function toggleAlwaysListeningMode() {
     showVoiceNotification('Always-listening mode enabled (R+T to turn off)', 2500);
     updateVoiceStatus(getAlwaysListeningStatus());
     setTimeout(startAlwaysListeningTurn, 250);
+    startAlwaysListeningWatchdog();
+}
+
+let alwaysListeningWatchdog = null;
+
+// Always-listening must survive any single turn failing to hand the mic back
+function startAlwaysListeningWatchdog() {
+    if (alwaysListeningWatchdog) return;
+    alwaysListeningWatchdog = setInterval(() => {
+        if (!alwaysListeningHotkeyMode) {
+            clearInterval(alwaysListeningWatchdog);
+            alwaysListeningWatchdog = null;
+            return;
+        }
+        if (isListening || alwaysListeningTurnActive || isSpeechOutputBusy() || isWithinEchoTail()) return;
+        if (document.querySelector('.thinking-indicator')) return;
+        if (groqRecordingActive || hotkeyActive || interruptCapture) return;
+        console.log('🎙️ Watchdog restarting always-listening turn');
+        startAlwaysListeningTurn();
+    }, 2500);
 }
 
 function startAlwaysListeningTurn() {
