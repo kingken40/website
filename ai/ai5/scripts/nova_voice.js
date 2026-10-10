@@ -427,31 +427,76 @@ function processSpeechInterruptCandidate(finalTranscript, interimTranscript) {
     console.log('🛑 Speech interrupt captured:', candidate);
     showVoiceNotification('Interrupt detected — listening...', 1500);
     window.voiceInterruptInProgress = true;
-    setTimeout(() => {
-        if (window.voiceInterruptInProgress) {
-            window.voiceInterruptInProgress = false;
-        }
-    }, 3000);
 
+    // Clear this first so stopSpeech() doesn't abort the mic we want to keep open
+    speechInterruptListeningMode = false;
     stopSpeech();
     pendingTranscript = '';
     lastInterimTranscript = '';
     alwaysListeningTurnActive = false;
-    speechInterruptListeningMode = false;
 
-    if (recognition && isListening) {
+    // Keep the mic open and hear the user out; submit once they pause
+    interruptCapture = { finalText: normalizedFinal ? String(finalTranscript).trim() : '', interimText: normalizedFinal ? '' : String(interimTranscript).trim(), timer: null };
+    updateVoiceStatus('Listening...');
+    scheduleInterruptSubmit();
+}
+
+let interruptCapture = null;
+const INTERRUPT_PAUSE_MS = 1400;
+
+// Settings switch: let the user speak over the assistant to interrupt it
+document.addEventListener('DOMContentLoaded', () => {
+    const toggle = document.getElementById('interruptsEnabled');
+    if (!toggle) return;
+    const apply = (on) => {
+        interruptListeningEnabled = on;
+        window.interruptListeningEnabled = on;
+        if (!on) {
+            if (interruptCapture) finishInterruptCapture();
+            stopSpeechInterruptListening(true);
+        }
+    };
+    toggle.checked = localStorage.getItem('nova_interrupts_enabled') === 'true';
+    apply(toggle.checked);
+    toggle.addEventListener('change', () => {
+        localStorage.setItem('nova_interrupts_enabled', String(toggle.checked));
+        apply(toggle.checked);
+    });
+});
+
+function scheduleInterruptSubmit() {
+    if (!interruptCapture) return;
+    clearTimeout(interruptCapture.timer);
+    interruptCapture.timer = setTimeout(finishInterruptCapture, INTERRUPT_PAUSE_MS);
+}
+
+function finishInterruptCapture() {
+    if (!interruptCapture) return;
+    const text = joinTranscriptParts(interruptCapture.finalText, interruptCapture.interimText).trim();
+    clearTimeout(interruptCapture.timer);
+    interruptCapture = null;
+    window.voiceInterruptInProgress = false;
+    speechInterruptTriggered = false;
+    if (recognition) {
         isListening = false;
         window.isListening = false;
-        try {
-            recognition.abort();
-        } catch (e) {
-            console.log('🛑 Recognition abort skipped during interrupt:', e.message);
-        }
+        try { recognition.abort(); } catch (e) {}
     }
+    if (text) submitVoiceTranscript(text);
+}
 
-    setTimeout(() => {
-        submitVoiceTranscript(rawCandidate || candidate);
-    }, 120);
+// Returns true when the result was consumed as part of an in-progress interrupt
+function handleInterruptCaptureResult(finalTranscript, interimTranscript) {
+    if (!interruptCapture) return false;
+    if (finalTranscript) {
+        interruptCapture.finalText = joinTranscriptParts(interruptCapture.finalText, finalTranscript);
+        interruptCapture.interimText = '';
+    } else if (interimTranscript) {
+        interruptCapture.interimText = interimTranscript;
+    }
+    updateVoiceStatus(`Listening: "${joinTranscriptParts(interruptCapture.finalText, interruptCapture.interimText)}"`);
+    scheduleInterruptSubmit();
+    return true;
 }
 
 // Voice command patterns
@@ -902,6 +947,8 @@ function setupSpeechRecognition() {
             }
         }
 
+        if (handleInterruptCaptureResult(finalTranscript, interimTranscript)) return;
+
         if (isSpeechOutputActive || (!IS_TOUCH_PHONE && window.speechSynthesis && (window.speechSynthesis.speaking || window.speechSynthesis.pending))) {
             processSpeechInterruptCandidate(finalTranscript, interimTranscript);
             return;
@@ -1252,6 +1299,7 @@ function startCommandListening() {
             }
         }
         
+        if (handleInterruptCaptureResult(finalTranscript, interimTranscript)) return;
         if (isAssistantEchoTranscript(finalTranscript)) finalTranscript = '';
         if (isAssistantEchoTranscript(interimTranscript)) interimTranscript = '';
         console.log('🎤 Command recognition - Final:', finalTranscript, 'Interim:', interimTranscript);
