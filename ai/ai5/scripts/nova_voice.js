@@ -451,6 +451,18 @@ function processSpeechInterruptCandidate(finalTranscript, interimTranscript) {
 let interruptCapture = null;
 const INTERRUPT_PAUSE_MS = 1400;
 
+// Wake-word listening can silently die after errors or restarts; keep checking and revive it
+setInterval(() => {
+    if (!wakeWordEnabled || !hasVoicePermission || !isVoiceSupported || !recognition) return;
+    if (alwaysListeningHotkeyMode || hotkeyActive || hotkeyListening || groqRecordingActive || interruptCapture) return;
+    if (isListening || restartPending || isSpeechOutputBusy() || isWithinEchoTail()) return;
+    if (document.querySelector('.thinking-indicator')) return;
+    console.log('👂 Watchdog reviving wake listening');
+    isWakeListening = true;
+    window.isWakeListening = true;
+    startWakeListening();
+}, 3000);
+
 // Settings switch: let the user speak over the assistant to interrupt it
 document.addEventListener('DOMContentLoaded', () => {
     const toggle = document.getElementById('interruptsEnabled');
