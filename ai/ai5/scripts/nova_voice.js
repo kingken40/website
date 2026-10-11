@@ -273,6 +273,13 @@ function isWithinEchoTail(extraMs = 0) {
     return isSpeechOutputBusy() || Date.now() - lastSpeechEndedAt < ECHO_LISTEN_DELAY_MS + extraMs;
 }
 
+// True when the mic must be ignored because the assistant is speaking or has only just stopped.
+function isMicMutedForSpeech() {
+    const synthBusy = !IS_TOUCH_PHONE && !!(window.speechSynthesis &&
+        (window.speechSynthesis.speaking || window.speechSynthesis.pending));
+    return synthBusy || isWithinEchoTail();
+}
+
 // True when a transcript is most likely the assistant's own voice picked up by the mic,
 // either while it speaks or just after (phone speakers echo for a moment).
 function isAssistantEchoTranscript(text) {
@@ -454,7 +461,14 @@ const INTERRUPT_PAUSE_MS = 1400;
 // Settings switch: let the user speak over the assistant to interrupt it
 document.addEventListener('DOMContentLoaded', () => {
     const toggle = document.getElementById('interruptsEnabled');
+    // The mic is always off while the assistant speaks, so barge-in is permanently disabled
+    localStorage.setItem('nova_interrupts_enabled', 'false');
+    interruptListeningEnabled = false;
+    window.interruptListeningEnabled = false;
     if (!toggle) return;
+    toggle.checked = false;
+    toggle.closest('.setting-group')?.style.setProperty('display', 'none');
+    return;
     const apply = (on) => {
         interruptListeningEnabled = on;
         window.interruptListeningEnabled = on;
@@ -959,13 +973,10 @@ function setupSpeechRecognition() {
             }
         }
 
+        // The mic is treated as OFF while the assistant speaks (and briefly after), so it never hears itself
+        if (isMicMutedForSpeech()) return;
+
         if (handleInterruptCaptureResult(finalTranscript, interimTranscript)) return;
-
-        if (isSpeechOutputActive || (!IS_TOUCH_PHONE && window.speechSynthesis && (window.speechSynthesis.speaking || window.speechSynthesis.pending))) {
-            processSpeechInterruptCandidate(finalTranscript, interimTranscript);
-            return;
-        }
-
         if (isAssistantEchoTranscript(finalTranscript)) finalTranscript = '';
         if (isAssistantEchoTranscript(interimTranscript)) interimTranscript = '';
         if (!finalTranscript && !interimTranscript) return;
@@ -1311,6 +1322,7 @@ function startCommandListening() {
             }
         }
         
+        if (isMicMutedForSpeech()) return;
         if (handleInterruptCaptureResult(finalTranscript, interimTranscript)) return;
         if (isAssistantEchoTranscript(finalTranscript)) finalTranscript = '';
         if (isAssistantEchoTranscript(interimTranscript)) interimTranscript = '';
