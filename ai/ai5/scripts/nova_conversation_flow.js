@@ -852,15 +852,18 @@ function getScreenChangeRatio(previous, current) {
 }
 
 const AUTO_MODE_PROMPT = `AUTO MODE SCREEN CHECK
-You are watching the user's shared screen live and may speak first, without being spoken to, just like in a normal screen-share conversation.
-Look at the latest shared-screen image (and the recent conversation, if any). React the way a helpful companion would: comment on, explain, or help with what is on screen or what the user just opened, highlighted, or did. Answer or help with any question, problem, error, or task visible on the page.
-Stay quiet (do not narrate every tiny change, repeat yourself, or guess at hidden content). Do not click, search, submit, or claim to have taken actions.
-If there is genuinely nothing worth saying, reply with exactly: NO_ACTION
+You and the user are sharing their screen live. You have the lead: step in on your own, without being spoken to, but only when the context genuinely calls for it.
+Study the latest shared-screen image together with the recent conversation. Work out what the user is doing (reading, writing, coding, designing, shopping, researching, watching, troubleshooting) and what just changed.
+Speak up when it would truly help: an error or warning, a mistake or risky step, a finished or failed result, a decision point where a recommendation helps, something relevant to their earlier request, or a smart shortcut for what they're doing. Give concrete guidance, a recommendation, or an alert.
+Stay quiet for ordinary browsing, scrolling, tiny changes, things you already mentioned, or anything you cannot actually see. Never guess at hidden content. Do not click, search, submit, or claim to have taken actions.
+Tone: Sly. Dry, witty and a little sarcastic when the moment fits (for example, a gentle jab at an obvious mistake), but sharp and useful first; drop the sarcasm for real errors or anything serious.
+If there is nothing worth saying, reply with exactly: NO_ACTION
 Otherwise reply with only one brief, natural spoken remark (at most two sentences).`;
 
 async function runAutoModeLoop(runId) {
     const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
     let lastEvaluatedSignature = null;
+    let lastPolledSignature = null;
     let lastEvaluationAt = 0;
 
     while (autoModeActive && runId === autoModeRunId) {
@@ -878,7 +881,13 @@ async function runAutoModeLoop(runId) {
             stopAutoMode(`Auto Mode paused: ${error.message}`);
             return;
         }
-        if (!signature || getScreenChangeRatio(lastEvaluatedSignature, signature) < 0.015) continue;
+        if (!signature) continue;
+        // Wait for the screen to settle so it steps in after a change, not mid-scroll or mid-animation
+        const stillChanging = getScreenChangeRatio(lastPolledSignature, signature) >= 0.08;
+        lastPolledSignature = signature;
+        if (stillChanging) continue;
+        const changeRatio = getScreenChangeRatio(lastEvaluatedSignature, signature);
+        if (changeRatio < 0.015) continue;
 
         const now = Date.now();
         const messageInput = document.getElementById('messageInput');
@@ -898,7 +907,10 @@ async function runAutoModeLoop(runId) {
         lastEvaluationAt = now;
         autoModeEvaluationInFlight = true;
         try {
-            const replyResult = await generateAIResponse(AUTO_MODE_PROMPT, currentPersonality, {
+            const changeHint = changeRatio >= 0.4 ? 'The screen changed completely (new page or app).'
+                : changeRatio >= 0.12 ? 'A large part of the screen changed.'
+                : 'A small part of the screen changed.';
+            const replyResult = await generateAIResponse(`${AUTO_MODE_PROMPT}\n${changeHint}`, currentPersonality, {
                 assistant,
                 modelOverride: assistant === 'other' ? groupChatModel : undefined,
                 groupChat: groupChatEnabled,

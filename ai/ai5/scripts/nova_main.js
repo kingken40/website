@@ -59,6 +59,8 @@ let manualModelOverride = loadStoredText(MODEL_PREFERENCE_STORAGE_KEY, 'auto') |
 let lastResponseModel = loadStoredText(LAST_RESPONSE_MODEL_STORAGE_KEY, '');
 let shortResponseModeEnabled = loadStoredText(SHORT_RESPONSE_MODE_STORAGE_KEY, 'false') === 'true';
 let ultraShortResponseModeEnabled = loadStoredText(ULTRA_SHORT_RESPONSE_MODE_STORAGE_KEY, 'false') === 'true';
+const AUTO_RESPONSE_LENGTH_STORAGE_KEY = 'nova_auto_response_length';
+let autoResponseLengthEnabled = loadStoredText(AUTO_RESPONSE_LENGTH_STORAGE_KEY, 'false') === 'true';
 let openRouterModelCatalog = [];
 
 const providerConfig = {
@@ -797,7 +799,7 @@ const ASSISTANT_PERSONALITY_PRESETS = {
     },
     sly: {
         name: 'Sly',
-        instructions: 'Use an original, polished personal-assistant voice: observant, composed, precise, quietly confident, and lightly dry-witted. Offer concise practical help with understated humor when the moment suits it; do not overuse formal address, theatrical phrasing, or canned quips. Never imitate an existing fictional character or reuse that character’s signature lines. Keep facts, safety, and the user’s actual request first.'
+        instructions: 'Use an original, polished personal-assistant voice: observant, composed, precise, quietly confident, and lightly dry-witted. Offer concise practical help with understated humor when the moment suits it, and let a dry, sarcastic, sharp edge show when the user does something obvious or amusing (for example, a wry remark before carrying out a request, then do it, then report the result plainly). Never be cruel, and drop the sarcasm for real errors or anything serious; do not overuse formal address, theatrical phrasing, or canned quips. Never imitate an existing fictional character or reuse that character’s signature lines. Keep facts, safety, and the user’s actual request first.'
     },
     angry: {
         name: 'Angry',

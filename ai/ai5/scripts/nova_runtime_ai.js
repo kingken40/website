@@ -1430,6 +1430,8 @@ If live web blocks are included, treat them as current evidence and use them dir
                 ? '- Even-shorter response mode is enabled and overrides every other length instruction: reply with a single very short sentence (about 10 words or fewer; a few words or just the answer is ideal). No introductions, lists, headings, examples, caveats, pleasantries, or follow-up offers, unless the user explicitly asks for more detail.'
                 : shortResponseModeEnabled
                 ? '- Shorter response mode is enabled and overrides other length preferences: reply in one or two short sentences maximum, giving only exactly what was asked. No introductions, lists, headings, examples, caveats, or follow-up offers, unless the user explicitly asks for more detail.'
+                : autoResponseLengthEnabled
+                ? '- Auto response length is enabled: pick the ideal length from context. Be brief (one short sentence) when speed matters or the question is simple, medium (2-4 sentences) when clarity is the priority, and longer, organized detail only when depth is genuinely needed. Never pad.'
                 : '- Shorter response mode is disabled: use the fuller, more explanatory response style. Give helpful context, examples, and organized detail when useful, while still answering the question directly and avoiding filler.',
             '- Treat the current date/time in REAL-TIME CONTEXT as authoritative. Interpret "next" and "upcoming" relative to that date; never describe a past event or expired date as the next occurrence. For schedules and future events, verify the year and date against an official source, and say when a future date cannot be confirmed.',
             '- You have real-time web search capability. Proactively search when a question is factual, educational, research-oriented, current, uncertain, asks for a definition/explanation/comparison, or would benefit from reliable external evidence. Do not wait for the user to say "look it up"; do not search for simple greetings, casual conversation, or tasks fully grounded in the user-provided text/files.',
@@ -1521,11 +1523,16 @@ If live web blocks are included, treat them as current evidence and use them dir
     
     // Restate voice/length rules next to the user's turn; models obey the last turn most reliably.
     const personaLabel = isAvon ? 'A.V.O.N.' : 'N.O.V.A.';
+    const autoLengthText = 'Choose the ideal length yourself from context: one short sentence when the moment calls for speed or the question is simple, a medium answer (2-4 sentences) when clarity matters, and a longer, well-organized answer only when depth is genuinely needed.';
+    const replyLengthText = (ultraText, shortText, fullText) => ultraShortResponseModeEnabled ? ultraText
+        : shortResponseModeEnabled ? shortText
+        : autoResponseLengthEnabled ? autoLengthText
+        : fullText;
     const styleReminder = options.proactiveEvaluation
-        ? `[Auto Mode requirement: answer as ${personaLabel}. Return exactly NO_ACTION only if there is nothing worth commenting on. Otherwise react to what is on the shared screen or what the user just did or highlighted, in one brief, natural remark of at most two sentences. Do not take actions.]`
+        ? `[Auto Mode requirement: answer as ${personaLabel} in a dry, witty, slightly sarcastic Sly tone when it fits (sharp but helpful; no sarcasm for real errors). Return exactly NO_ACTION unless the screen and context genuinely call for you to step in. Otherwise react to what is on the shared screen or what the user is doing, with guidance, a recommendation, or an alert, in one brief, natural remark of at most two sentences. Do not take actions.]`
         : presetConfig
-            ? `[Voice requirement for this reply: answer as ${personaLabel} in a clearly "${presetConfig.name}" personality - ${presetConfig.instructions} ${PERSONALITY_INFLUENCE_LEVELS[getPersonalityInfluence(assistantKey)].text} Regardless of how earlier replies sounded.                 ${ultraShortResponseModeEnabled ? 'Reply with one very short sentence (about 10 words or fewer), only the answer.' : shortResponseModeEnabled ? 'Answer in one or two short sentences maximum, only what was asked.' : 'Give a full, detailed answer.'}]`
-            : `[Voice requirement for this reply: answer as ${personaLabel} in your own distinct core persona, not a generic assistant voice. ${ultraShortResponseModeEnabled ? 'Reply with one very short sentence (about 10 words or fewer), only the answer.' : shortResponseModeEnabled ? 'Answer in one or two short sentences maximum, only what was asked.' : 'Give a full, detailed answer.'}]`;
+            ? `[Voice requirement for this reply: answer as ${personaLabel} in a clearly "${presetConfig.name}" personality - ${presetConfig.instructions} ${PERSONALITY_INFLUENCE_LEVELS[getPersonalityInfluence(assistantKey)].text} Regardless of how earlier replies sounded.                 ${replyLengthText('Reply with one very short sentence (about 10 words or fewer), only the answer.', 'Answer in one or two short sentences maximum, only what was asked.', 'Give a full, detailed answer.')}]`
+            : `[Voice requirement for this reply: answer as ${personaLabel} in your own distinct core persona, not a generic assistant voice. ${replyLengthText('Reply with one very short sentence (about 10 words or fewer), only the answer.', 'Answer in one or two short sentences maximum, only what was asked.', 'Give a full, detailed answer.')}]`;
 
     // Add current user message
     const screenFrame = window.getScreenShareFrame?.(isAvon ? 'other' : 'nova');

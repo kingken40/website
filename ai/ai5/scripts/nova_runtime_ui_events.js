@@ -46,10 +46,14 @@ function setupEventListeners() {
             ? 'ultra'
             : shortResponseModeEnabled
                 ? 'short'
-                : 'normal';
+                : autoResponseLengthEnabled
+                    ? 'auto'
+                    : 'normal';
         responseLengthMode.addEventListener('change', () => {
-            shortResponseModeEnabled = responseLengthMode.value !== 'normal';
+            shortResponseModeEnabled = responseLengthMode.value === 'short' || responseLengthMode.value === 'ultra';
             ultraShortResponseModeEnabled = responseLengthMode.value === 'ultra';
+            autoResponseLengthEnabled = responseLengthMode.value === 'auto';
+            localStorage.setItem(AUTO_RESPONSE_LENGTH_STORAGE_KEY, String(autoResponseLengthEnabled));
             localStorage.setItem(SHORT_RESPONSE_MODE_STORAGE_KEY, String(shortResponseModeEnabled));
             localStorage.setItem(ULTRA_SHORT_RESPONSE_MODE_STORAGE_KEY, String(ultraShortResponseModeEnabled));
             const selectedLabel = responseLengthMode.selectedOptions[0]?.textContent || 'Normal';
