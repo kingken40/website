@@ -444,6 +444,10 @@
                         <label for="personalitiesEnabled" style="margin:0;">Use personalities</label>
                         <input type="checkbox" id="personalitiesEnabled" role="switch" aria-label="Enable personalities" checked>
                     </div>
+                    <div class="setting-group" style="align-items:center; justify-content:space-between;">
+                        <label for="argumentInclusion" style="margin:0;" title="When both assistants are Angry, they drag you into their argument">Argument Inclusion?</label>
+                        <input type="checkbox" id="argumentInclusion" role="switch" aria-label="Argument inclusion">
+                    </div>
                     <div class="setting-group">
                         <label for="personalityInfluence">Personality influence: <span id="personalityInfluenceLabel">Normal</span></label>
                         <div style="display:flex; align-items:center; gap:0.5rem;">
@@ -481,6 +485,12 @@
                     </div>
                     <button type="button" id="saveAssistantPersonality" class="settings-action-btn">Save assistant personality</button>
                     <small style="display:block;color:rgba(255,255,255,0.55);font-size:0.78rem;margin-top:0.35rem;">Saves the text above as this assistant's personality note. It is applied to every reply from the selected assistant and replaces the previous note.</small>
+                </div>
+                <div class="setting-section" style="margin-top: 1.5rem;">
+                    <h4 style="color:#FFD700; margin-bottom:1rem; border-bottom:1px solid rgba(255,215,0,0.3); padding-bottom:0.5rem;">⏰ Reminders</h4>
+                    <div id="remindersList" class="setting-group"></div>
+                    <button type="button" id="clearAllRemindersBtn" class="settings-action-btn">Clear all reminders</button>
+                    <small style="display:block;color:rgba(255,255,255,0.55);font-size:0.78rem;margin-top:0.35rem;">Say "set a reminder to &lt;task&gt; at &lt;time&gt; hourly" (or daily, weekly, every 30 minutes). Say "reminders" to list them and "remove reminder 2" to delete one.</small>
                 </div>
                 <div class="setting-section" style="margin-top: 1.5rem;">
                     <h4 style="color:#FFD700; margin-bottom:1rem; border-bottom:1px solid rgba(255,215,0,0.3); padding-bottom:0.5rem;">🎨 Chat Bubble Colors</h4>

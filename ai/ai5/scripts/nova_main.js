@@ -855,6 +855,7 @@ function getPersonalityInfluence(assistantKey) {
     return Math.min(10, Math.max(1, value));
 }
 let personalitiesEnabled =  localStorage.getItem('nova_personalities_enabled') !== 'false';
+let argumentInclusionEnabled = localStorage.getItem('nova_argument_inclusion') === 'true';
 
 function pickAutoPersonality(autoKey, userMessage) {
     const pool = AUTO_PERSONALITY_POOLS[autoKey] || [];

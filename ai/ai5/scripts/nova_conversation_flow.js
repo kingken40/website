@@ -431,6 +431,12 @@ function processUserMessage(userMessage) {
         const requestRunId = ++activeResponseRunId;
         updateContinuationButtonState();
 
+        const reminderTarget = getExplicitGroupMessageTarget(userMessage) || getModeChangeAssistant();
+        if (handleReminderRequest(userMessage, reminderTarget)) {
+            isResponseInFlight = false;
+            updateContinuationButtonState();
+            return;
+        }
         // Detect and save any personalization info from the message
         detectAndSavePersonalization(userMessage);
         
@@ -483,6 +489,9 @@ function processUserMessage(userMessage) {
                         skipUserHistory: true,
                         fastResponse
                     });
+                    if (novaAllowed && assistantsAreArguing()) {
+                        await runAssistantArgument(requestRunId);
+                    }
                 }
                 updateChatSuggestions(userMessage);
             } finally {
@@ -591,6 +600,40 @@ function updateContinuationButtonState() {
     continueBtn.classList.toggle('disabled', isResponseInFlight);
 }
 
+const ARGUMENT_ROUNDS = 4;
+
+function assistantsAreArguing() {
+    return personalitiesEnabled && groupChatEnabled && mutedGroupAssistant === 'both'
+        && assistantPresetSelections?.nova === 'angry'
+        && assistantPresetSelections?.other === 'angry';
+}
+
+function buildArgumentPrompt(recipientName, previousSpeaker, text) {
+    return `You are ${recipientName}, and you are furious with ${previousSpeaker}, the other assistant. ${previousSpeaker} just said the following; it was NOT you. Fire back at ${previousSpeaker} directly: attack their points, call out their flaws, and defend your own position. Stay on the topic of the argument, do not repeat yourself or agree to calm down, keep it to a few sentences, and avoid slurs or threats of real harm.     Do not impersonate ${previousSpeaker}.${argumentInclusionEnabled ? ' Also drag the user into the fight: turn to them directly, demand they pick a side, and call them out for staying quiet or for taking the other assistant\'s side.' : ''}
+
+${previousSpeaker}'s message:
+${text}`;
+}
+
+async function runAssistantArgument(runId) {
+    for (let i = 0; i < ARGUMENT_ROUNDS; i++) {
+        if (runId !== activeResponseRunId || !assistantsAreArguing()) return;
+        const last = getLastAssistantMessage();
+        if (!last) return;
+        const recipient = last.sender === 'Avon' ? 'nova' : 'other';
+        const recipientName = recipient === 'other' ? 'A.V.O.N.' : 'N.O.V.A.';
+        const previousSpeaker = last.sender === 'Avon' ? 'A.V.O.N.' : 'N.O.V.A.';
+        addThinkingIndicator(recipient === 'other' ? 'Avon' : 'Nova');
+        await generateAIResponse(buildArgumentPrompt(recipientName, previousSpeaker, last.text), currentPersonality, {
+            assistant: recipient,
+            modelOverride: recipient === 'other' ? groupChatModel : undefined,
+            groupChat: true,
+            conversationPartner: previousSpeaker,
+            skipUserHistory: true
+        });
+    }
+}
+
 async function continueConversation(selectedAssistant = null) {
     if (isResponseInFlight) {
         showNotification('Please wait for N.O.V.A to finish the current response.', 2200);
@@ -627,7 +670,9 @@ async function continueConversation(selectedAssistant = null) {
         thinkingEl.textContent = `${recipientName} is continuing the response...`;
     }
 
-    const continuationPrompt = recipientName === previousSpeaker
+    const continuationPrompt = recipientName !== previousSpeaker && assistantsAreArguing()
+        ? buildArgumentPrompt(recipientName, previousSpeaker, lastAssistantMessage.text)
+        : recipientName === previousSpeaker
         ? `You are ${recipientName}, continuing your own earlier message (you said it${previousTime}). Continue it naturally based on this ongoing chat.
 Keep it directly relevant to what we are discussing right now.
 Do not restart from scratch, do not repeat the same points, and do not be random.
@@ -767,6 +812,7 @@ let autoModeRunId = 0;
 let autoModeLastInteractionAt = 0;
 let autoModeLastSpokeAt = 0;
 let autoModeEvaluationInFlight = false;
+let autoModeLastHintAt = 0;
 let autoPilotActive = false;
 let autoPilotRunId = 0;
 
@@ -871,6 +917,10 @@ async function runAutoModeLoop(runId) {
         if (!autoModeActive || runId !== autoModeRunId) return;
 
         const assistant = getAutoModeAssistant();
+        if (!assistant && !window.getScreenShareTarget?.() && Date.now() - autoModeLastHintAt > 30000) {
+            autoModeLastHintAt = Date.now();
+            showNotification('Auto Mode is waiting: click Share and pick a screen so it has something to watch.', 3500);
+        }
         if (!assistant || autoModeEvaluationInFlight) continue;
 
         let signature;
@@ -1086,3 +1136,207 @@ Respond contextually and intelligently. If related, acknowledge the connection. 
         }
     }
 }
+
+// Reminders: "remind me to X in 10 minutes / at 3pm / tomorrow at 9am". Stored locally and fired by the assistant that was asked.
+const REMINDERS_KEY = 'nova_reminders';
+let reminders = [];
+try { reminders = JSON.parse(localStorage.getItem(REMINDERS_KEY) || '[]').filter(r => r && r.due && r.task); } catch (e) { reminders = []; }
+
+function saveReminders() {
+    localStorage.setItem(REMINDERS_KEY, JSON.stringify(reminders));
+    renderRemindersSettings();
+}
+
+function parseReminderTime(text, now = new Date()) {
+    const unitMs = { s: 1000, m: 60000, h: 3600000, d: 86400000 };
+    let match = text.match(/\bin\s+(an?|\d+(?:\.\d+)?)\s*(seconds?|secs?|minutes?|mins?|hours?|hrs?|days?)\b/i);
+    if (match) {
+        const amount = /^an?$/i.test(match[1]) ? 1 : parseFloat(match[1]);
+        return { due: now.getTime() + amount * unitMs[match[2][0].toLowerCase()] };
+    }
+    const tomorrow = /\btomorrow\b/i.test(text);
+    match = text.match(/\b(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*([ap])\.?m\.?(?![a-z])/i) || text.match(/\bat\s+(\d{1,2})(?::(\d{2}))?\b/i);
+    if (!match) return null;
+    let hour = parseInt(match[1], 10);
+    const minute = parseInt(match[2] || '0', 10);
+    const meridiem = (match[3] || '').toLowerCase();
+    if (minute > 59 || hour > 23 || (meridiem && hour > 12)) return null;
+    if (meridiem === 'p' && hour < 12) hour += 12;
+    if (meridiem === 'a' && hour === 12) hour = 0;
+    const due = new Date(now);
+    due.setHours(hour, minute, 0, 0);
+    if (tomorrow) due.setDate(due.getDate() + 1);
+    if (due <= now) due.setDate(due.getDate() + 1);
+    return { due: due.getTime() };
+}
+
+const REMINDER_INTERVALS = { minute: 60000, hour: 3600000, day: 86400000, week: 604800000 };
+
+function parseReminderRecurrence(text) {
+    const match = text.match(/\bevery\s+(\d+(?:\.\d+)?)\s*(minutes?|mins?|hours?|hrs?|days?|weeks?)\b|\bevery\s+(minute|hour|day|week)\b|\b(hourly|daily|weekly)\b|\beach\s+(hour|day|week)\b/i);
+    if (!match) return null;
+    const unitWord = (match[2] || match[3] || match[5] || { hourly: 'hour', daily: 'day', weekly: 'week' }[(match[4] || '').toLowerCase()] || '').toLowerCase();
+    const unit = unitWord.startsWith('min') ? 'minute' : unitWord.startsWith('h') ? 'hour' : unitWord.startsWith('d') ? 'day' : 'week';
+    const amount = match[1] ? parseFloat(match[1]) : 1;
+    if (!(amount > 0)) return null;
+    const label = amount === 1
+        ? { minute: 'every minute', hour: 'hourly', day: 'daily', week: 'weekly' }[unit]
+        : `every ${amount} ${unit}s`;
+    return { interval: amount * REMINDER_INTERVALS[unit], label, matched: match[0] };
+}
+
+function parseReminderRequest(message) {
+    const text = String(message || '').trim();
+    if (!/\b(?:remind\s+(?:me|us)|set\s+(?:a\s+|an\s+)?reminder|reminder\s+(?:for|to))\b/i.test(text)) return null;
+    const recurrence = parseReminderRecurrence(text);
+    const withoutRecurrence = recurrence ? text.replace(recurrence.matched, ' ') : text;
+    let time = parseReminderTime(withoutRecurrence);
+    if (!time && recurrence) time = { due: Date.now() + recurrence.interval };
+    if (!time) return null;
+    let task = withoutRecurrence
+        .replace(/\bin\s+(?:an?|\d+(?:\.\d+)?)\s*(?:seconds?|secs?|minutes?|mins?|hours?|hrs?|days?)\b/i, ' ')
+        .replace(/\b(?:at\s+)?\d{1,2}(?::\d{2})?\s*[ap]\.?m\.?(?![a-z])/i, ' ')
+        .replace(/\bat\s+\d{1,2}(?::\d{2})?\b/i, ' ')
+        .replace(/\btomorrow\b/i, ' ')
+        .replace(/^(?:(?:hey|yo)\s+)?(?:n\.?\s*o\.?\s*v\.?\s*a\.?|a\.?\s*v\.?\s*o\.?\s*n\.?)[,:\s-]*/i, '')
+        .replace(/\b(?:please\s+)?(?:can|could|would)\s+you\b/ig, ' ')
+        .replace(/\b(?:please\s+)?(?:remind\s+(?:me|us)|set\s+(?:a\s+|an\s+)?reminder(?:\s+for\s+me)?|reminder)\b/i, ' ')
+        .replace(/\s+/g, ' ')
+        .replace(/^[\s,.:;-]*(?:(?:to|that|about|for|of)\b[\s,]*)+/i, '')
+        .replace(/\s+(?:to|that|about|for|on)\s*$/i, '')
+        .replace(/[\s,.?!]+$/, '')
+        .trim();
+    if (!task) task = 'do what you asked me to remind you about';
+    return { task, due: time.due, interval: recurrence?.interval || 0, label: recurrence?.label || '' };
+}
+
+function formatReminderTime(due) {
+    const date = new Date(due);
+    const time = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    if (date.toDateString() === new Date().toDateString()) return time;
+    return `${date.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })} at ${time}`;
+}
+
+function describeReminder(reminder) {
+    return `${reminder.task} (${reminder.label ? `${reminder.label}, next ${formatReminderTime(reminder.due)}` : formatReminderTime(reminder.due)})`;
+}
+
+function formatReminderList() {
+    return reminders.map((r, i) => `${i + 1}. ${describeReminder(r)}`).join('\n');
+}
+
+function renderRemindersSettings() {
+    const list = document.getElementById('remindersList');
+    if (!list) return;
+    list.textContent = '';
+    if (!reminders.length) {
+        const empty = document.createElement('small');
+        empty.style.color = 'rgba(255,255,255,0.55)';
+        empty.textContent = 'No reminders set. Say "set a reminder to <task> at <time> hourly".';
+        list.appendChild(empty);
+        return;
+    }
+    reminders.forEach((reminder, index) => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:0.5rem; margin-bottom:0.4rem;';
+        const text = document.createElement('span');
+        text.textContent = `${index + 1}. ${describeReminder(reminder)}`;
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'settings-action-btn';
+        remove.textContent = 'Remove';
+        remove.addEventListener('click', () => removeReminderAt(index));
+        row.append(text, remove);
+        list.appendChild(row);
+    });
+}
+
+function removeReminderAt(index) {
+    if (index < 0 || index >= reminders.length) return null;
+    const [removed] = reminders.splice(index, 1);
+    saveReminders();
+    return removed;
+}
+
+function replyAsAssistant(userMessage, reply, assistant) {
+    const sender = assistant === 'other' ? 'Avon' : 'Nova';
+    addMessage(userMessage, 'user');
+    conversationHistory.push({ role: 'user', content: userMessage, timestamp: new Date().toISOString() });
+    addMessage(reply, sender);
+    conversationHistory.push({ role: 'assistant', speaker: sender, content: reply, personality: currentPersonality, timestamp: new Date().toISOString() });
+    if (typeof speakAssistantResponse === 'function') speakAssistantResponse(reply, sender, () => {});
+}
+
+function handleReminderRequest(userMessage, assistant) {
+    const text = String(userMessage || '').trim();
+    const removeMatch = text.match(/\b(?:remove|delete|cancel|stop|clear)\s+(?:the\s+)?reminder\s*(?:number\s*|no\.?\s*|#\s*)?(\d+)\b/i);
+    if (removeMatch) {
+        const removed = removeReminderAt(parseInt(removeMatch[1], 10) - 1);
+        replyAsAssistant(text, removed
+            ? `Removed reminder ${removeMatch[1]}: ${removed.task}.`
+            : `There is no reminder ${removeMatch[1]}. You have ${reminders.length}.`, assistant);
+        return true;
+    }
+    if (/\b(?:cancel|clear|delete|remove)\s+(?:all\s+)?(?:of\s+)?(?:my\s+)?reminders?\b/i.test(text)) {
+        const count = reminders.length;
+        reminders = [];
+        saveReminders();
+        replyAsAssistant(text, count ? `Done. I cleared ${count} reminder${count === 1 ? '' : 's'}.` : 'You have no reminders to clear.', assistant);
+        return true;
+    }
+    const bare = text.replace(/^(?:(?:hey|yo)\s+)?(?:n\.?\s*o\.?\s*v\.?\s*a\.?|a\.?\s*v\.?\s*o\.?\s*n\.?)[,:\s-]*/i, '').replace(/^please\s+/i, '');
+    if (/^(?:(?:show|list|view|display|what(?:'s|\s+are|\s+is))\s+(?:me\s+)?(?:all\s+)?(?:my\s+|the\s+)?)?reminders?\s*[?.!]*$/i.test(bare) ||
+        (/\b(?:what|which|list|show|view|display)\b.*\breminders\b/i.test(bare) && !/\bremind\s+me\b/i.test(bare))) {
+        replyAsAssistant(text, reminders.length
+            ? `You have ${reminders.length} reminder${reminders.length === 1 ? '' : 's'}:\n${formatReminderList()}`
+            : 'You have no reminders set.', assistant);
+        return true;
+    }
+    const parsed = parseReminderRequest(text);
+    if (!parsed) return false;
+    reminders.push({ id: Date.now() + Math.random(), task: parsed.task, due: parsed.due, interval: parsed.interval, label: parsed.label, assistant: assistant === 'other' ? 'other' : 'nova' });
+    saveReminders();
+    if (window.Notification && Notification.permission === 'default') Notification.requestPermission().catch(() => {});
+    replyAsAssistant(text, parsed.label
+        ? `Reminder ${reminders.length} set. I'll remind you to ${parsed.task} ${parsed.label}, starting at ${formatReminderTime(parsed.due)}, until you cancel it (say "remove reminder ${reminders.length}").`
+        : `Reminder ${reminders.length} set. I'll remind you to ${parsed.task} at ${formatReminderTime(parsed.due)}.`, assistant);
+    return true;
+}
+
+function fireReminder(reminder, late) {
+    const sender = reminder.assistant === 'other' ? 'Avon' : 'Nova';
+    const reply = `${late && !reminder.interval ? 'Missed reminder' : 'Reminder'}: ${reminder.task}${reminder.label ? ` (${reminder.label})` : ''}.`;
+    addMessage(reply, sender);
+    conversationHistory.push({ role: 'assistant', speaker: sender, content: reply, personality: currentPersonality, timestamp: new Date().toISOString() });
+    if (typeof speakAssistantResponse === 'function') speakAssistantResponse(reply, sender, () => {});
+    showNotification(reply, 6000);
+    if (window.Notification && Notification.permission === 'granted') {
+        try { new Notification(sender === 'Avon' ? 'A.V.O.N. reminder' : 'N.O.V.A reminder', { body: reminder.task }); } catch (e) { /* notifications unavailable */ }
+    }
+}
+
+function checkReminders() {
+    const now = Date.now();
+    const due = reminders.filter(r => r.due <= now);
+    if (!due.length) return;
+    const lateBy = new Map(due.map(r => [r, now - r.due]));
+    reminders = reminders.filter(r => {
+        if (r.due > now) return true;
+        if (!r.interval) return false;
+        // Skip any occurrences missed while the page was closed
+        r.due += Math.ceil((now - r.due + 1) / r.interval) * r.interval;
+        return true;
+    });
+    saveReminders();
+    due.forEach(r => fireReminder(r, lateBy.get(r) > 60000));
+}
+
+setInterval(checkReminders, 1000);
+document.addEventListener('DOMContentLoaded', () => {
+    renderRemindersSettings();
+    document.getElementById('clearAllRemindersBtn')?.addEventListener('click', () => {
+        reminders = [];
+        saveReminders();
+    });
+    setTimeout(checkReminders, 1500);
+});

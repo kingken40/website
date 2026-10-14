@@ -173,6 +173,16 @@ function setupEventListeners() {
         });
     }
 
+    const argumentInclusionToggle = document.getElementById('argumentInclusion');
+    if (argumentInclusionToggle) {
+        argumentInclusionToggle.checked = argumentInclusionEnabled;
+        argumentInclusionToggle.addEventListener('change', () => {
+            argumentInclusionEnabled = argumentInclusionToggle.checked;
+            localStorage.setItem('nova_argument_inclusion', String(argumentInclusionEnabled));
+            showNotification(argumentInclusionEnabled ? 'Angry assistants will drag you into their argument.' : 'Angry assistants will argue only with each other.', 2400);
+        });
+    }
+
     const influenceSlider = document.getElementById('personalityInfluence');
     const influenceNumber = document.getElementById('personalityInfluenceValue');
     const influenceLabel = document.getElementById('personalityInfluenceLabel');
@@ -246,7 +256,7 @@ function setupEventListeners() {
         voiceEnabled: ['wakePhraseEnabled'],
         voiceResponse: ['voiceVolume', 'voiceSpeed', 'voiceSelection', 'previewVoiceBtn', 'avonVoiceSelection', 'previewAvonVoiceBtn', 'localVoiceBridgeEnabled', 'localVoiceBridgeUrl'],
         localVoiceBridgeEnabled: ['localVoiceBridgeUrl'],
-        personalitiesEnabled: ['assistantPersonalityPreset', 'personalityInfluence', 'personalityInfluenceValue']
+        personalitiesEnabled: ['assistantPersonalityPreset', 'argumentInclusion', 'personalityInfluence', 'personalityInfluenceValue']
     };
     function applySettingDependencies() {
         const off = new Set();
