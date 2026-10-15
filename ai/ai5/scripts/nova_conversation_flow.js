@@ -12,7 +12,10 @@ function registerNovaServiceWorker() {
 
 async function enableSystemNotifications() {
     if (!window.Notification) {
-        showNotification('This browser does not support notifications.', 3000);
+        const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+        showNotification(ios
+            ? 'On iPhone/iPad, Chrome and Edge can\'t send notifications. Open the site in Safari, tap Share > Add to Home Screen, then open it from the home screen and turn this on.'
+            : 'Notifications need a secure (https) page. Open the site over https and try again.', 8000);
         return false;
     }
     const permission = Notification.permission === 'default' ? await Notification.requestPermission() : Notification.permission;

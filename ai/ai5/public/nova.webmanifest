@@ -1,0 +1,9 @@
+{
+  "name": "N.O.V.A / A.V.O.N.",
+  "short_name": "N.O.V.A",
+  "start_url": "./AI_v5_JARVIS.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000"
+}
