@@ -76,9 +76,12 @@ function saveCurrentChat() {
     const normalizedPersonality = normalizePersonalityKey(currentPersonality);
     currentPersonality = normalizedPersonality;
 
+    const defaultChatName = `${personalities[normalizedPersonality]?.name || 'Nova'} Chat`;
     const chatData = {
         id: currentChatId,
-        name: existingChat?.name || `${personalities[normalizedPersonality]?.name || 'Nova'} Chat`,
+        name: existingChat?.name || defaultChatName,
+        titled: Boolean(existingChat?.titled),
+        nameLocked: Boolean(existingChat?.nameLocked),
         timestamp: Date.now(),
         personality: normalizedPersonality,
         messages: chatHistory,
@@ -104,6 +107,83 @@ function saveCurrentChat() {
     
     localStorage.setItem('nova_chat_history', JSON.stringify(allChats));
     console.log('💾 Chat saved:', currentChatId, '| Messages:', chatHistory.length);
+    maybeGenerateChatTitle(chatData);
+}
+
+// AI-generated chat names: replace the default "<Mode> Chat" name once there is a real exchange to summarize.
+var chatTitleAttempts = {};
+var chatTitleInFlight = new Set();
+
+function isDefaultChatName(name) {
+    return !name || /^[\w .\-]+ Chat$/.test(String(name).trim());
+}
+
+function maybeGenerateChatTitle(chat) {
+    if (!chat || chat.titled || chat.nameLocked || !isDefaultChatName(chat.name)) return;
+    if (chatTitleInFlight.has(chat.id) || (chatTitleAttempts[chat.id] || 0) >= 3) return;
+    const messages = (chat.messages || []).filter(m => m && m.text && (m.sender === 'user' || m.sender === 'Nova' || m.sender === 'Avon'));
+    if (!messages.some(m => m.sender === 'user') || !messages.some(m => m.sender !== 'user' && !/^Greetings|^Good day|^Hello/i.test(m.text))) return;
+
+    chatTitleInFlight.add(chat.id);
+    chatTitleAttempts[chat.id] = (chatTitleAttempts[chat.id] || 0) + 1;
+    generateChatTitle(messages).then(title => {
+        if (!title) return;
+        const allChats = JSON.parse(localStorage.getItem('nova_chat_history') || '[]');
+        const stored = allChats.find(c => c.id === chat.id);
+        if (!stored || stored.nameLocked) return;
+        stored.name = title;
+        stored.titled = true;
+        localStorage.setItem('nova_chat_history', JSON.stringify(allChats));
+        try { displayChatHistory(); } catch (e) { /* history modal not ready */ }
+    }).catch(error => {
+        console.warn('Chat title generation failed:', error);
+    }).finally(() => chatTitleInFlight.delete(chat.id));
+}
+
+async function generateChatTitle(messages) {
+    const transcript = messages.slice(0, 8).map(m => `${m.sender === 'user' ? 'User' : 'Assistant'}: ${String(m.text).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(0, 300)}`).join('\n');
+    const requestMessages = [
+        { role: 'system', content: 'You name chat conversations. Reply with only a short, specific title of 2 to 5 words that captures the main topic. No quotes, no trailing punctuation, no prefixes like "Title:".' },
+        { role: 'user', content: `Conversation:\n${transcript}\n\nTitle:` }
+    ];
+    const hasUserKey = (typeof OPENROUTER_API_KEY !== 'undefined' && String(OPENROUTER_API_KEY || '').trim()) ||
+        (typeof OPENAI_API_KEY !== 'undefined' && String(OPENAI_API_KEY || '').trim());
+    const provider = hasUserKey ? providerConfig[currentProvider] : null;
+    const headers = { 'Content-Type': 'application/json' };
+    if (provider) {
+        headers.Authorization = 'Bearer ' + provider.apiKey;
+        Object.assign(headers, provider.extraHeaders || {});
+    }
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
+    let data;
+    try {
+        const response = await fetch(provider ? provider.apiUrl : '/api/chat', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+                model: provider ? provider.model : currentModel,
+                messages: requestMessages,
+                max_tokens: 24,
+                temperature: 0.3,
+                stream: false
+            }),
+            signal: controller.signal
+        });
+        if (!response.ok) throw new Error(`Title request failed (${response.status})`);
+        data = await response.json();
+    } finally {
+        clearTimeout(timeoutId);
+    }
+    const raw = data?.choices?.[0]?.message?.content;
+    const text = Array.isArray(raw) ? raw.map(part => part?.text || '').join('') : String(raw || '');
+    const title = text.split('\n')[0]
+        .replace(/^["'“”‘’*#\s]+/, '')
+        .replace(/^title\s*:\s*/i, '')
+        .replace(/^["'“”‘’*#\s]+|["'“”‘’*#.!?:;,\s]+$/g, '')
+        .trim()
+        .slice(0, 60);
+    return title.length >= 2 ? title : null;
 }
 
 // Auto-save chat periodically
@@ -222,6 +302,7 @@ function renameChat(chatId, event) {
     
     // Update chat name
     chat.name = newName.trim();
+    chat.nameLocked = true;
     localStorage.setItem('nova_chat_history', JSON.stringify(allChats));
     
     // Refresh history display

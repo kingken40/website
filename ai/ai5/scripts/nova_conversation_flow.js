@@ -1,6 +1,60 @@
 // Conversation flow module
 // Extracted from nova_main.js for modular structure.
 
+// System notifications (reminders, and replies while the page is in the background).
+let systemNotificationsEnabled = localStorage.getItem('nova_system_notifications') === 'true';
+let novaServiceWorkerReg = null;
+
+function registerNovaServiceWorker() {
+    if (novaServiceWorkerReg || !('serviceWorker' in navigator)) return Promise.resolve(novaServiceWorkerReg);
+    return navigator.serviceWorker.register('nova_sw.js').then(reg => (novaServiceWorkerReg = reg)).catch(() => null);
+}
+
+async function enableSystemNotifications() {
+    if (!window.Notification) {
+        showNotification('This browser does not support notifications.', 3000);
+        return false;
+    }
+    const permission = Notification.permission === 'default' ? await Notification.requestPermission() : Notification.permission;
+    systemNotificationsEnabled = permission === 'granted';
+    localStorage.setItem('nova_system_notifications', String(systemNotificationsEnabled));
+    if (systemNotificationsEnabled) {
+        await registerNovaServiceWorker();
+        sendSystemNotification('Notifications on', 'N.O.V.A can now send you reminders and replies.', { force: true });
+    } else {
+        showNotification('Notifications are blocked. Allow them in your browser site settings.', 4000);
+    }
+    return systemNotificationsEnabled;
+}
+
+async function sendSystemNotification(title, body, { force = false, tag } = {}) {
+    if (!window.Notification || Notification.permission !== 'granted' || !(systemNotificationsEnabled || force)) return;
+    const options = { body: String(body || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 200), tag };
+    try {
+        const reg = novaServiceWorkerReg || await registerNovaServiceWorker();
+        if (reg && reg.showNotification) await reg.showNotification(title, options);
+        else new Notification(title, options);
+    } catch (e) {
+        try { new Notification(title, options); } catch (err) { /* notifications unavailable */ }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const toggle = document.getElementById('systemNotificationsToggle');
+    if (window.Notification && Notification.permission !== 'granted') systemNotificationsEnabled = false;
+    if (systemNotificationsEnabled) registerNovaServiceWorker();
+    if (!toggle) return;
+    toggle.checked = systemNotificationsEnabled;
+    toggle.addEventListener('change', async () => {
+        if (toggle.checked) {
+            toggle.checked = await enableSystemNotifications();
+        } else {
+            systemNotificationsEnabled = false;
+            localStorage.setItem('nova_system_notifications', 'false');
+        }
+    });
+});
+
 function getModeChangeAssistant() {
     if (window.activeVoiceAssistant === 'other') return 'other';
     if (groupChatEnabled && mutedGroupAssistant === 'other') return 'other';
@@ -97,6 +151,9 @@ function addMessage(text, sender, timestamp = null, responseModel = null) {
     
     const currentTime = timestamp || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+    if (!timestamp && document.hidden && !window.suppressReplyNotification && (sender === 'Nova' || sender === 'Avon')) {
+        sendSystemNotification(sender === 'Avon' ? 'A.V.O.N.' : 'N.O.V.A', text, { tag: 'nova-reply' });
+    }
     let senderName = 'You';
     if (sender === 'Nova') {
         const personality = personalities[currentPersonality] || personalities['Nova'];
@@ -1296,7 +1353,9 @@ function handleReminderRequest(userMessage, assistant) {
     if (!parsed) return false;
     reminders.push({ id: Date.now() + Math.random(), task: parsed.task, due: parsed.due, interval: parsed.interval, label: parsed.label, assistant: assistant === 'other' ? 'other' : 'nova' });
     saveReminders();
-    if (window.Notification && Notification.permission === 'default') Notification.requestPermission().catch(() => {});
+    if (window.Notification && Notification.permission === 'default' && !systemNotificationsEnabled) {
+        showNotification('Tip: turn on Notifications in Settings to get reminders when this tab is in the background.', 4500);
+    }
     replyAsAssistant(text, parsed.label
         ? `Reminder ${reminders.length} set. I'll remind you to ${parsed.task} ${parsed.label}, starting at ${formatReminderTime(parsed.due)}, until you cancel it (say "remove reminder ${reminders.length}").`
         : `Reminder ${reminders.length} set. I'll remind you to ${parsed.task} at ${formatReminderTime(parsed.due)}.`, assistant);
@@ -1306,13 +1365,13 @@ function handleReminderRequest(userMessage, assistant) {
 function fireReminder(reminder, late) {
     const sender = reminder.assistant === 'other' ? 'Avon' : 'Nova';
     const reply = `${late && !reminder.interval ? 'Missed reminder' : 'Reminder'}: ${reminder.task}${reminder.label ? ` (${reminder.label})` : ''}.`;
+    window.suppressReplyNotification = true;
     addMessage(reply, sender);
+    window.suppressReplyNotification = false;
     conversationHistory.push({ role: 'assistant', speaker: sender, content: reply, personality: currentPersonality, timestamp: new Date().toISOString() });
     if (typeof speakAssistantResponse === 'function') speakAssistantResponse(reply, sender, () => {});
     showNotification(reply, 6000);
-    if (window.Notification && Notification.permission === 'granted') {
-        try { new Notification(sender === 'Avon' ? 'A.V.O.N. reminder' : 'N.O.V.A reminder', { body: reminder.task }); } catch (e) { /* notifications unavailable */ }
-    }
+    sendSystemNotification(sender === 'Avon' ? 'A.V.O.N. reminder' : 'N.O.V.A reminder', reminder.task, { tag: `reminder-${reminder.id}` });
 }
 
 function checkReminders() {

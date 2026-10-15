@@ -2635,7 +2635,7 @@ body.no-animations * {
 /* Transcript strip */
 .mobile-transcript {
     flex-shrink: 0;
-    max-height: 24vh;
+    max-height: 45vh;
     min-height: 44px;
     margin-top: 0.75rem; /* sits lower so the N.O.V.A title above stays visible */
     display: flex;
