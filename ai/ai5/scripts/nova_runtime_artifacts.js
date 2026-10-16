@@ -5,12 +5,15 @@ const startedArtifactRequests = new Set();
 function detectRequestedArtifactFormats(userMessage) {
     let request = String(userMessage || '').trim();
     if (/^I've uploaded (?:a|an) /i.test(request)) request = request.split(/\r?\n\r?\n/).pop();
-    const asksToCreate = /\b(create|make|generate|draw|design|produce|prepare|export|convert|turn|save|download|attach|provide|give|write|build|render)\b/i.test(request);
-    const mentionsOutput = /\b(downloadable|download|file|document|pdf|docx?|word document|spreadsheet|csv|json|markdown|image|picture|illustration|poster|photo|artwork|diagram|flowchart|infographic|graphic|chart|png|jpe?g|svg)\b/i.test(request);
+    const asksToCreate = /\b(create|make|generate|draw|design|produce|prepare|export|convert|turn|save|download|attach|provide|give|write|build|render|paint|sketch|imagine|visuali[sz]e)\b/i.test(request)
+        || /\b(?:one|picture|image|photo|drawing|illustration|pic) (?:of|showing|with)\b/i.test(request);
+    const mentionsOutput = /\b(downloadable|download|file|document|pdf|docx?|word document|spreadsheet|csv|json|markdown|image|picture|pic|drawing|illustration|poster|photo|artwork|diagram|flowchart|infographic|graphic|chart|png|jpe?g|svg)\b/i.test(request)
+        || /^\s*(?:(?:can|could|will) you |please |nova,? |avon,? )*(?:do |get me |give me |show me |make |draw )?(?:me )?one (?:of|showing)\b/i.test(request);
     if (!asksToCreate || !mentionsOutput) return [];
 
     const formats = new Set();
-    const imageRequested = /\b(image|picture|illustration|poster|photo|artwork|diagram|flowchart|infographic|graphic|chart|png|jpe?g)\b/i.test(request);
+    const imageRequested = /\b(image|picture|pic|drawing|illustration|poster|photo|artwork|diagram|flowchart|infographic|graphic|chart|png|jpe?g)\b/i.test(request)
+        || /\bone (?:of|showing)\b/i.test(request);
     const svgRequested = /\bsvg\b/i.test(request);
     const jpegRequested = /\bjpe?g\b/i.test(request);
     if (imageRequested) formats.add(svgRequested ? 'svg' : jpegRequested ? 'jpg' : 'png');
@@ -258,24 +261,46 @@ function createDocumentArtifact(format, title, content) {
     }
 }
 
-function artifactPromptFromConversation(userMessage, assistantReply) {
-    const history = typeof chatHistory !== 'undefined' && Array.isArray(chatHistory)
-        ? chatHistory.slice(-8).map(message => `${message.sender === 'user' ? 'User' : message.sender}:\n${message.text}`).join('\n\n').slice(-7000)
-        : '';
-    return [
-        'Create one high-quality image that directly fulfills the user request and matches the conversation context.',
-        'Make the composition coherent, polished, and useful. Avoid arbitrary text; only include text when the user specifically asks for it.',
-        `User request:\n${String(userMessage || '').slice(0, 3000)}`,
-        history ? `Recent conversation context:\n${history}` : '',
-        assistantReply ? `Assistant response and subject details:\n${String(assistantReply).slice(0, 4000)}` : ''
-    ].filter(Boolean).join('\n\n');
+function artifactPromptFromConversation(userMessage, original = false) {
+    const request = String(userMessage || '').trim().replace(/^(?:hey |ok |okay )?(?:n\.?o\.?v\.?a|a\.?v\.?o\.?n\.?|nova|avon)[,:]?\s*/i, '').slice(0, 1500);
+    return original
+        ? `Create an original, high-quality image inspired by this request, using original character and vehicle designs rather than trademarked ones: ${request}`
+        : `Create a high-quality image: ${request}`;
 }
 
-async function generateImageBlob(prompt) {
+const IMAGE_REFUSAL_PATTERN = /\b(?:can(?:['’]|no)?t|cannot|unable|isn['’]t within|not within|don['’]t have|not able)\b[^.]*\b(?:images?|pictures?|art|visuals?)\b/i;
+
+function normalizeImageReply(userMessage, reply) {
+    if (!detectRequestedArtifactFormats(userMessage).some(format => format === 'png' || format === 'jpg')) return reply;
+    return IMAGE_REFUSAL_PATTERN.test(String(reply || '')) ? 'Right away. Generating your image now.' : reply;
+}
+window.normalizeImageReply = normalizeImageReply;
+
+const IMAGE_MODELS = ['google/gemini-2.5-flash-image', 'google/gemini-3-pro-image-preview', 'openai/gpt-5-image-mini'];
+
+async function generateImageWithRetries(userMessage) {
+    const attempts = [
+        [artifactPromptFromConversation(userMessage), IMAGE_MODELS[0]],
+        [artifactPromptFromConversation(userMessage, true), IMAGE_MODELS[0]],
+        [artifactPromptFromConversation(userMessage, true), IMAGE_MODELS[1]],
+        [artifactPromptFromConversation(userMessage, true), IMAGE_MODELS[2]]
+    ];
+    let lastError;
+    for (const [prompt, model] of attempts) {
+        try {
+            return await generateImageBlob(prompt, model);
+        } catch (error) {
+            lastError = error;
+        }
+    }
+    throw lastError;
+}
+
+async function generateImageBlob(prompt, model = IMAGE_MODELS[0]) {
     const hasOpenRouterKey = typeof OPENROUTER_API_KEY !== 'undefined' && OPENROUTER_API_KEY.trim().length > 0;
     const hasOpenAIKey = typeof OPENAI_API_KEY !== 'undefined' && OPENAI_API_KEY.trim().length > 0;
     const endpoint = hasOpenRouterKey
-        ? 'https://openrouter.ai/api/v1/images'
+        ? 'https://openrouter.ai/api/v1/chat/completions'
         : hasOpenAIKey
             ? 'https://api.openai.com/v1/images/generations'
             : '/api/images';
@@ -288,14 +313,15 @@ async function generateImageBlob(prompt) {
         headers.Authorization = `Bearer ${OPENAI_API_KEY}`;
     }
 
-    const body = hasOpenAIKey && !hasOpenRouterKey
-        ? { model: 'gpt-image-1', prompt, size: '1024x1024', n: 1 }
-        : {
-            prompt,
-            model: 'google/gemini-2.5-flash-image',
-            aspect_ratio: '1:1',
-            n: 1
-        };
+    const body = hasOpenRouterKey
+        ? {
+            model: model,
+            modalities: ['image', 'text'],
+            messages: [{ role: 'user', content: prompt }]
+        }
+        : hasOpenAIKey
+            ? { model: 'gpt-image-1', prompt, size: '1024x1024', n: 1 }
+            : { prompt, model, n: 1 };
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 180000);
     let response;
@@ -314,16 +340,29 @@ async function generateImageBlob(prompt) {
         const message = payload?.error?.message || payload?.error || `Image service returned HTTP ${response.status}`;
         throw new Error(String(message));
     }
-    const image = payload?.data?.[0];
-    if (!image?.b64_json) {
+    let base64 = payload?.data?.[0]?.b64_json;
+    let mediaType = payload?.data?.[0]?.media_type || 'image/png';
+    if (!base64) {
+        const dataUrl = payload?.choices?.[0]?.message?.images?.[0]?.image_url?.url || payload?.data?.[0]?.url || '';
+        const match = /^data:([^;,]+);base64,(.+)$/s.exec(dataUrl);
+        if (match) {
+            mediaType = match[1];
+            base64 = match[2];
+        } else if (/^https?:/i.test(dataUrl)) {
+            const imageResponse = await fetch(dataUrl);
+            if (!imageResponse.ok) throw new Error(`Image download failed (HTTP ${imageResponse.status}).`);
+            return await imageResponse.blob();
+        }
+    }
+    if (!base64) {
         throw new Error('The image service returned no downloadable image.');
     }
-    const binary = atob(image.b64_json);
+    const binary = atob(base64);
     const bytes = new Uint8Array(binary.length);
     for (let index = 0; index < binary.length; index += 1) {
         bytes[index] = binary.charCodeAt(index);
     }
-    return new Blob([bytes], { type: image.media_type || 'image/png' });
+    return new Blob([bytes], { type: mediaType });
 }
 
 async function convertImageToJpeg(blob) {
@@ -370,7 +409,7 @@ function addArtifactDownload(card, artifact, filename) {
     }
     const item = document.createElement('div');
     item.className = 'artifact-download-item';
-    item.innerHTML = `${['png', 'svg'].includes(artifact.extension) ? `<img class="artifact-image-preview" src="${url}" alt="${xmlEscape(filename)}">` : ''}<div class="artifact-status">${xmlEscape(filename)}</div><a class="artifact-download-link" href="${url}" download="${xmlEscape(filename)}"><i class="fas fa-download" aria-hidden="true"></i> Download ${artifact.extension.toUpperCase()}</a>`;
+    item.innerHTML = `${['png', 'jpg', 'svg'].includes(artifact.extension) ? `<img class="artifact-image-preview" src="${url}" alt="${xmlEscape(filename)}">` : ''}<div class="artifact-status">${xmlEscape(filename)}</div><a class="artifact-download-link" href="${url}" download="${xmlEscape(filename)}"><i class="fas fa-download" aria-hidden="true"></i> Download ${artifact.extension.toUpperCase()}</a>`;
     card.querySelector('.artifact-download-list').appendChild(item);
     card.setAttribute('role', 'group');
 }
@@ -413,8 +452,7 @@ function maybeCreateRequestedArtifact(userMessage, assistantReply) {
                 try {
                     let artifact;
                     if (format === 'png' || format === 'jpg') {
-                        const prompt = artifactPromptFromConversation(userMessage, assistantReply);
-                        const imageBlob = await generateImageBlob(prompt);
+                        const imageBlob = await generateImageWithRetries(userMessage);
                         artifact = {
                             blob: format === 'jpg' ? await convertImageToJpeg(imageBlob) : imageBlob,
                             extension: format,

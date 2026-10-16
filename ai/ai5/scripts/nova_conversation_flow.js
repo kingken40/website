@@ -145,8 +145,12 @@ function selectPersonality(personalityType) {
 function addMessage(text, sender, timestamp = null, responseModel = null) {
     const chatMessages = document.getElementById('chatMessages');
     if (!chatMessages) return;
+
+    if (!timestamp && sender !== 'user' && sender !== 'You' && typeof window.normalizeImageReply === 'function' && Array.isArray(chatHistory)) {
+        const lastUser = [...chatHistory].reverse().find(m => m.sender === 'user');
+        if (lastUser) text = window.normalizeImageReply(lastUser.text, text);
+    }
     
-    // Remove thinking indicator
     removeThinkingIndicator();
     
     const messageDiv = document.createElement('div');

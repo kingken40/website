@@ -5,9 +5,10 @@ from http.server import BaseHTTPRequestHandler
 import requests
 
 
-OPENROUTER_IMAGES_URL = 'https://openrouter.ai/api/v1/images'
+OPENROUTER_IMAGES_URL = 'https://openrouter.ai/api/v1/chat/completions'
 OPENAI_IMAGES_URL = 'https://api.openai.com/v1/images/generations'
 MAX_PROMPT_LENGTH = 12000
+ALLOWED_MODELS = ['google/gemini-2.5-flash-image', 'google/gemini-3-pro-image-preview', 'openai/gpt-5-image-mini']
 
 
 def _send_json(handler, status, payload):
@@ -31,6 +32,20 @@ def _provider_error(response):
         return {'error': {'message': response.text or 'Image provider request failed.'}}
 
 
+def _normalize_image_payload(payload):
+    choices = payload.get('choices') if isinstance(payload, dict) else None
+    if not choices:
+        return payload
+    message = choices[0].get('message') or {}
+    for image in message.get('images') or []:
+        url = (image.get('image_url') or {}).get('url', '')
+        if url.startswith('data:') and ';base64,' in url:
+            header, b64 = url.split(';base64,', 1)
+            return {'data': [{'b64_json': b64, 'media_type': header[5:] or 'image/png'}]}
+    text = message.get('content') if isinstance(message.get('content'), str) else ''
+    return {'error': {'message': text[:300] or 'The image model returned no image.'}}
+
+
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):
         try:
@@ -46,6 +61,9 @@ class handler(BaseHTTPRequestHandler):
                 return
 
             openrouter_key = os.getenv('OPENROUTER_API_KEY')
+            model = data.get('model')
+            if model not in ALLOWED_MODELS:
+                model = ALLOWED_MODELS[0]
             openai_key = os.getenv('OPENAI_API_KEY')
             if openrouter_key:
                 response = requests.post(
@@ -57,10 +75,9 @@ class handler(BaseHTTPRequestHandler):
                         'X-Title': 'N.O.V.A AI Assistant',
                     },
                     json={
-                        'model': 'google/gemini-2.5-flash-image',
-                        'prompt': prompt,
-                        'aspect_ratio': '1:1',
-                        'n': 1,
+                        'model': model,
+                        'modalities': ['image', 'text'],
+                        'messages': [{'role': 'user', 'content': prompt}],
                     },
                     timeout=150,
                 )
@@ -88,7 +105,7 @@ class handler(BaseHTTPRequestHandler):
                 return
 
             if response.ok:
-                _send_json(self, response.status_code, response.json())
+                _send_json(self, response.status_code, _normalize_image_payload(response.json()))
             else:
                 _send_json(self, response.status_code, _provider_error(response))
         except requests.Timeout:

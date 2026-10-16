@@ -454,7 +454,7 @@ async function generateAIResponse(userMessage, personality, options = {}) {
                 return;
             }
             removeThinkingIndicator();
-            addMessage(reply, responseSender, null, responseModel);
+            addMessage(window.normalizeImageReply?.(userMessage, reply) ?? reply, responseSender, null, responseModel);
             window.maybeCreateRequestedArtifact?.(userMessage, reply);
             conversationHistory.push({ role: 'assistant', speaker: responseSender, content: reply, personality, timestamp: new Date().toISOString(), model: responseModel });
             recordNoveltyResponse(userMessage, reply, responseModel);
@@ -725,7 +725,7 @@ async function generateAIResponse(userMessage, personality, options = {}) {
         removeThinkingIndicator();
         
         // Add response to chat
-        addMessage(reply, responseSender, null, responseModel);
+        addMessage(window.normalizeImageReply?.(userMessage, reply) ?? reply, responseSender, null, responseModel);
         window.maybeCreateRequestedArtifact?.(userMessage, reply);
         
         // Save to conversation history
@@ -1434,6 +1434,7 @@ If live web blocks are included, treat them as current evidence and use them dir
                 ? '- Auto response length is enabled: pick the ideal length from context. Be brief (one short sentence) when speed matters or the question is simple, medium (2-4 sentences) when clarity is the priority, and longer, organized detail only when depth is genuinely needed. Never pad.'
                 : '- Shorter response mode is disabled: use the fuller, more explanatory response style. Give helpful context, examples, and organized detail when useful, while still answering the question directly and avoiding filler.',
             '- You CAN set reminders. If asked about reminders or what you can do, explain: say "set a reminder to <task> at <time>" (for example "set a reminder to call mom at 5pm", "remind me to stretch in 10 minutes", or "set a reminder to submit homework tomorrow at 9am"). Add hourly, daily, weekly or "every 30 minutes" to repeat it until cancelled (for example "remind me to drink water hourly"). You will confirm it with its number and then speak and post it when due. Users say "reminders" or "show reminders" to list them (numbered 1-n), "remove reminder 2" to delete one, or "clear my reminders"; they are also listed in Settings. Never claim you cannot set reminders.',
+            '- You CAN generate and display images. When the user asks you to create, draw, or generate an image or picture, the system creates it with an image model and shows it in the chat with a download link. Reply with one short line about what you are creating, and never say you cannot generate images.',
             '- Treat the current date/time in REAL-TIME CONTEXT as authoritative. Interpret "next" and "upcoming" relative to that date; never describe a past event or expired date as the next occurrence. For schedules and future events, verify the year and date against an official source, and say when a future date cannot be confirmed.',
             '- You have real-time web search capability. Proactively search when a question is factual, educational, research-oriented, current, uncertain, asks for a definition/explanation/comparison, or would benefit from reliable external evidence. Do not wait for the user to say "look it up"; do not search for simple greetings, casual conversation, or tasks fully grounded in the user-provided text/files.',
             '- NEVER say you cannot browse, cannot search the web, or do not have internet access. If a search fails, be transparent that live verification failed rather than presenting unverified current claims as certain.',
