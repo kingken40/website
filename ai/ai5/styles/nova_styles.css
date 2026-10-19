@@ -2299,6 +2299,39 @@ body.no-animations * {
     overflow-wrap: anywhere;
 }
 
+.ai-vision-preview {
+    position: fixed;
+    left: 16px;
+    bottom: 16px;
+    width: 168px;
+    z-index: 900;
+    border: 1px solid rgba(105, 220, 255, 0.6);
+    border-radius: 10px;
+    overflow: hidden;
+    background: #00101f;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+}
+
+.ai-vision-preview[hidden] {
+    display: none;
+}
+
+.ai-vision-preview video {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    transform: scaleX(-1);
+}
+
+.ai-vision-label {
+    display: block;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.72rem;
+    color: #a4eaff;
+    background: rgba(0, 20, 40, 0.9);
+}
+
 .message-content {
     color: #ffffff;
     line-height: 1.5;

@@ -291,14 +291,16 @@ function normalizeAudioTranscript(data) {
     const formattedSegments = segments.map((segment, index) => {
         const start = Number.isFinite(Number(segment.start)) ? Number(segment.start) : null;
         const end = Number.isFinite(Number(segment.end)) ? Number(segment.end) : null;
-        const speaker = String(segment.speaker || segment.speaker_id || '').trim();
+        let speaker = String(segment.speaker || segment.speaker_id || '').trim();
+        if (/^[A-Za-z0-9]$/.test(speaker)) speaker = `Speaker ${speaker.toUpperCase()}`;
+        else if (/^speaker[_ -]?(\d+|[a-z])$/i.test(speaker)) speaker = `Speaker ${speaker.replace(/^speaker[_ -]?/i, '').toUpperCase()}`;
         const timestamp = start === null
             ? ''
             : `[${formatAudioTimestamp(start)}${end === null ? '' : `-${formatAudioTimestamp(end)}`}] `;
         return {
             start,
             end,
-            speaker: speaker || `Speaker ${index + 1}`,
+            speaker,
             text: String(segment.text || '').trim(),
             line: `${timestamp}${speaker ? `${speaker}: ` : ''}${String(segment.text || '').trim()}`.trim()
         };
@@ -307,42 +309,84 @@ function normalizeAudioTranscript(data) {
     return { transcript, segments: formattedSegments };
 }
 
+const LECTURE_MODE_PROTOCOL = `LECTURE MODE PROTOCOL. Your goal is that the user fully understands what was taught. Answer with these sections, in order, using only what the transcript supports:
+1. Overview: course/topic, who is teaching, and the learning goal of the session.
+2. Segment summaries: split the lecture at topic shifts (use timestamps and block markers). For each segment give the time range, a title, and a 2-4 sentence summary.
+3. Key concepts: each important term, definition, rule, or formula, explained in plain language and tied to its segment.
+4. Instructor examples: every example, analogy, demo, or case the instructor used, and what idea it was meant to illustrate.
+5. Confusing or unclear explanations: flag spots where the instructor was vague, skipped steps, contradicted or corrected themselves, rushed, left a question unanswered, or where students sounded confused. Give the timestamp, say why it is unclear, and then give a clearer explanation of your own, labelled as your explanation.
+6. Emphasis and exam cues: points the instructor stressed ("this is important", "remember", "on the exam"), repeated ideas, assignments, and deadlines. Pauses are shown as [pause Ns]; treat long pauses as possible emphasis or thinking time, but you cannot hear tone, so say "appears to" rather than claiming it.
+7. Study guide: a short summary, key terms glossary, a concept outline, 6-10 practice questions with answers, common mistakes, and what to review or ask the instructor.
+Finish by offering to quiz the user, re-explain any segment, or turn the study guide into a PDF.`;
+
 function buildAudioStudyPacket(audioFile, transcriptResult) {
     const transcript = String(transcriptResult?.transcript || '').trim();
-    const segments = Array.isArray(transcriptResult?.segments) ? transcriptResult.segments : [];
-    const labeledTranscript = segments.length ? segments.map(segment => segment.line).join('\n') : transcript;
+    const rawSegments = Array.isArray(transcriptResult?.segments) ? transcriptResult.segments : [];
+
+    // Merge consecutive turns by the same speaker and mark long pauses.
+    const lines = [];
+    let current = null;
+    let previousEnd = null;
+    rawSegments.forEach(segment => {
+        if (segment.blockStart) {
+            if (current) lines.push(current.format());
+            current = null;
+            lines.push(`--- audio block ${segment.blockStart} begins; speaker labels may be reassigned here ---`);
+            previousEnd = null;
+        }
+        const gap = previousEnd !== null && segment.start !== null ? segment.start - previousEnd : 0;
+        const sameSpeaker = current && current.speaker === segment.speaker && gap < 2.5;
+        if (sameSpeaker) {
+            current.text += ` ${segment.text}`;
+            current.end = segment.end ?? current.end;
+        } else {
+            if (current) lines.push(current.format());
+            if (gap >= 4) lines.push(`[pause ${Math.round(gap)}s]`);
+            current = {
+                speaker: segment.speaker,
+                start: segment.start,
+                end: segment.end,
+                text: segment.text,
+                format() {
+                    const stamp = this.start === null ? '' : `[${formatAudioTimestamp(this.start)}${this.end === null ? '' : `-${formatAudioTimestamp(this.end)}`}] `;
+                    return `${stamp}${this.speaker ? `${this.speaker}: ` : ''}${this.text}`.trim();
+                }
+            };
+        }
+        if (segment.end !== null) previousEnd = segment.end;
+    });
+    if (current) lines.push(current.format());
+
+    const labeledTranscript = lines.length ? lines.join('\n') : transcript;
     const isLecture = /\b(lecture|class|professor|instructor|students?|chapter|lesson|seminar|office hours|homework|assignment|exam|quiz|today we|welcome back|any questions|let's begin|take notes)\b/i.test(`${audioFile.name}\n${transcript}`);
-    const speakerCount = new Set(segments.map(segment => segment.speaker).filter(Boolean)).size;
-    const speakerNote = speakerCount > 1
-        ? `Detected ${speakerCount} speaker labels. Preserve them and explain when the professor/instructor is speaking versus a student or other participant.`
-        : 'Speaker diarization was not available in the response; do not invent speaker identities. Use neutral labels when separating turns.';
-    const instructions = isLecture
-        ? [
-            'A recorded lecture/classroom audio file was uploaded.',
-            'Act as the professor and an exceptionally effective tutor for this material.',
-            'First give a concise lecture overview, then identify major concepts, definitions, examples, unresolved questions, and likely exam points.',
-            'When the user asks to learn from it, teach the concepts step by step, check understanding, correct misconceptions, and create practice questions or a study plan.',
-            speakerNote
-        ]
-        : [
-            'An audio recording was uploaded.',
-            'Provide a clear summary, main claims or decisions, action items, and important moments.',
-            'Preserve timestamps and speaker labels when available, and do not guess identities.',
-            speakerNote
-        ];
+    const speakers = [...new Set(rawSegments.map(segment => segment.speaker).filter(Boolean))];
+    const speakerNote = speakers.length > 1
+        ? `Speaker diarization found ${speakers.length} speakers (${speakers.join(', ')}). Keep these labels. From context, say who is likely the instructor, a student, or another participant, labelled as an inference. Never invent real names that are not spoken in the audio.`
+        : 'Speaker diarization was not available or found one speaker; do not invent speakers. Use neutral labels (for example "a student asks") when separating turns.';
 
     return {
         transcript,
         isLecture,
         content: `AUDIO ANALYSIS PACKET
 File: ${audioFile.name}
-${instructions.join('\n')}
+${isLecture ? 'LECTURE MODE: ACTIVE (this looks like a lecture)' : 'LECTURE MODE: STANDBY (switch to ACTIVE if the user says "this is a lecture" or the content is clearly a lecture)'}
+${isLecture ? 'A recorded lecture/classroom audio file was uploaded.' : 'An audio recording was uploaded.'}
+If LECTURE MODE is ACTIVE and the user did not ask something narrower, follow the protocol below. If they ask a specific question, answer it first, using the transcript.
+Otherwise provide a clear summary, main claims or decisions, action items, and important moments. Meetings and interviews: list decisions, owners, and open questions.
+Preserve timestamps and speaker labels, separate what was said from your interpretation, and never invent words, timestamps, or facts.
+${speakerNote}
+
+${LECTURE_MODE_PROTOCOL}
 
 TRANSCRIPT
 ${labeledTranscript || '[No speech was detected.]'}
 
 END AUDIO ANALYSIS PACKET`
     };
+}
+
+function activateLectureMode(packetContent) {
+    return String(packetContent || '').replace(/^LECTURE MODE: STANDBY.*$/m, 'LECTURE MODE: ACTIVE (the user said this is a lecture)');
 }
 
 function encodeMonoWav(audioBuffer, startFrame, frameCount, outputSampleRate = 16000) {
@@ -402,13 +446,31 @@ async function splitAudioForTranscription(audioFile) {
     }
 }
 
+async function getAudioDuration(file) {
+    return new Promise(resolve => {
+        const url = URL.createObjectURL(file);
+        const media = new Audio();
+        const finish = value => {
+            URL.revokeObjectURL(url);
+            resolve(Number.isFinite(value) ? value : 0);
+        };
+        media.preload = 'metadata';
+        media.onloadedmetadata = () => finish(media.duration);
+        media.onerror = () => finish(0);
+        setTimeout(() => finish(0), 8000);
+        media.src = url;
+    });
+}
+
 async function transcribeAudioEnhanced(audioFile) {
     if (!OPENAI_API_KEY || OPENAI_API_KEY === 'YOUR_OPENAI_API_KEY_HERE') {
         throw new Error('OpenAI API key required for audio transcription. Please add it in Settings.');
     }
 
     const maxUploadSize = 25 * 1024 * 1024;
-    const audioChunks = audioFile.size > maxUploadSize
+    // The diarization model rejects long recordings, so split anything over ~20 minutes as well as anything over the size limit.
+    const duration = await getAudioDuration(audioFile);
+    const audioChunks = audioFile.size > maxUploadSize || duration > 20 * 60
         ? await splitAudioForTranscription(audioFile)
         : [{ file: audioFile, offset: 0 }];
 
@@ -437,7 +499,7 @@ async function transcribeAudioEnhanced(audioFile) {
             showNotification(`Transcribing audio segment ${index + 1} of ${audioChunks.length}...`, 12000);
             const result = normalizeAudioTranscript(await request(audioChunks[index].file, model, responseFormat, includeChunking));
             if (result.transcript) combined.transcript += `${combined.transcript ? ' ' : ''}${result.transcript}`;
-            result.segments.forEach(segment => {
+            result.segments.forEach((segment, segmentIndex) => {
                 const start = typeof segment.start === 'number' ? segment.start + audioChunks[index].offset : null;
                 const end = typeof segment.end === 'number' ? segment.end + audioChunks[index].offset : null;
                 const timestamp = start === null ? '' : `[${formatAudioTimestamp(start)}${end === null ? '' : `-${formatAudioTimestamp(end)}`}] `;
@@ -445,6 +507,7 @@ async function transcribeAudioEnhanced(audioFile) {
                     ...segment,
                     start,
                     end,
+                    blockStart: index > 0 && segmentIndex === 0 && segment.speaker ? index + 1 : 0,
                     line: `${timestamp}${segment.speaker ? `${segment.speaker}: ` : ''}${segment.text}`.trim()
                 });
             });
@@ -456,7 +519,8 @@ async function transcribeAudioEnhanced(audioFile) {
         return await transcribeChunks('gpt-4o-transcribe-diarize', 'diarized_json', true);
     } catch (diarizationError) {
         console.warn('🎤 Diarization unavailable; falling back to Whisper:', diarizationError.message);
-        return transcribeChunks('whisper-1', 'text', false);
+        showNotification('Speaker detection was unavailable, so this transcript has timestamps but no speaker labels.', 6000);
+        return transcribeChunks('whisper-1', 'verbose_json', false);
     }
 }
 

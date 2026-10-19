@@ -42,10 +42,13 @@ function sendMessageWithAttachment() {
                 finalMessage = `I've uploaded an image "${name}".${userText ? ' ' + userText : ' Please acknowledge the image upload.'}`;
                 break;
                 
-            case 'audio':
-                fileContent = content.length > 60000 ? content.substring(0, 60000) + '\n\n[Transcript context shortened; ask for a specific timestamp or section for deeper review.]' : content;
+            case 'audio': {
+                const lectureRequested = /\b(this is a lecture|this is my lecture|it'?s a lecture|lecture mode|lecture recording)\b/i.test(userText);
+                const audioContent = lectureRequested && typeof activateLectureMode === 'function' ? activateLectureMode(content) : content;
+                fileContent = audioContent.length > 60000 ? audioContent.substring(0, 60000) + '\n\n[Transcript context shortened; ask for a specific timestamp or section for deeper review.]' : audioContent;
                 finalMessage = `I've uploaded an audio file "${name}". Here is the transcription:\n\n${fileContent}${userText ? '\n\n' + userText : ''}`;
                 break;
+            }
         }
         
         // Clear the file attachment after using it
@@ -525,7 +528,7 @@ async function generateAIResponse(userMessage, personality, options = {}) {
         const requestPayload = {
             model: requestModel,
             messages: messages,
-            max_tokens: options.proactiveEvaluation ? 220 : options.fastResponse ? 512 : provider.maxTokens,
+            max_tokens: options.proactiveEvaluation ? 220 : options.fastResponse ? 512 : /LECTURE MODE: ACTIVE/.test(String(effectiveMessage || '')) ? Math.max(provider.maxTokens, 4096) : provider.maxTokens,
             temperature: options.proactiveEvaluation ? 0.2 : personality === 'brainstorm' ? 0.95 : (resolveActivePersonalityPreset(assistantPresetSelections?.[options.assistant === 'other' ? 'other' : 'nova'], userMessage) ? PERSONALITY_INFLUENCE_LEVELS[getPersonalityInfluence(options.assistant === 'other' ? 'other' : 'nova')].temp : 0.7),
             stream: false
         };
@@ -1349,7 +1352,7 @@ function prepareOpenAIMessages(userMessage, personality, options = {}) {
     if (isAudioBackedRequest) {
         personalityInstructions = isSlimContext
             ? 'Analyze the uploaded audio transcript faithfully. Preserve timestamps and speaker labels when present, summarize the key ideas, and answer the user�s specific question without inventing missing words or identities.'
-            : 'Treat the uploaded audio transcript as a primary source. First understand its setting (lecture, classroom, meeting, interview, or conversation) from the content. Preserve timestamps and speaker labels when present, clearly separate what was said from your interpretation, and never invent speaker identities. For lectures, act as the professor: organize the material into concepts, definitions, examples, misconceptions, exam-relevant points, and a step-by-step tutoring path. Offer a concise summary first, then teach any requested concept with examples and a check-for-understanding. For meetings or interviews, identify decisions, action items, owners, and unresolved questions.';
+            : 'Treat the uploaded audio transcript as a primary source. First understand its setting (lecture, classroom, meeting, interview, or conversation) from the content. Preserve timestamps and speaker labels when present, clearly separate what was said from your interpretation, and never invent speaker identities. When the packet says LECTURE MODE: ACTIVE, follow its LECTURE MODE PROTOCOL section by section so the user truly understands what was taught, then offer to quiz them. For meetings or interviews, identify decisions, action items, owners, and unresolved questions.';
     } else if (personality === 'study' || personality === 'professor') {
         personalityInstructions = isSlimContext
             ? 'Act as an exceptionally efficient tutor: identify the learner goal, explain the key idea step by step, define essential terms, and give a concise check-for-understanding.'
@@ -1530,7 +1533,9 @@ If live web blocks are included, treat them as current evidence and use them dir
         : shortResponseModeEnabled ? shortText
         : autoResponseLengthEnabled ? autoLengthText
         : fullText;
-    const styleReminder = options.proactiveEvaluation
+    const styleReminder = options.visionEvaluation
+        ? `[AI Vision check as ${personaLabel}: look at the attached live camera image. Return exactly NO_ACTION unless something clearly useful is visible: the user looks confused, frustrated, or stuck; they are holding or pointing at something relevant; their posture is clearly poor; or they appear to need help. Otherwise say one brief, kind, natural remark of at most two sentences, such as offering to slow down or fix a posture issue. Describe only what you can actually see, treat expression readings as tentative, never identify who anyone is, and do not infer health, age, or other sensitive traits.]`
+        : options.proactiveEvaluation
         ? `[Auto Mode requirement: answer as ${personaLabel} in a dry, witty, slightly sarcastic Sly tone when it fits (sharp but helpful; no sarcasm for real errors). Return exactly NO_ACTION unless the screen and context genuinely call for you to step in. Otherwise react to what is on the shared screen or what the user is doing, with guidance, a recommendation, or an alert, in one brief, natural remark of at most two sentences. Do not take actions.]`
         : presetConfig
             ? `[Voice requirement for this reply: answer as ${personaLabel} in a clearly "${presetConfig.name}" personality - ${presetConfig.instructions} ${PERSONALITY_INFLUENCE_LEVELS[getPersonalityInfluence(assistantKey)].text} Regardless of how earlier replies sounded.                 ${replyLengthText('Reply with one very short sentence (about 10 words or fewer), only the answer.', 'Answer in one or two short sentences maximum, only what was asked.', 'Give a full, detailed answer.')}]`
@@ -1538,12 +1543,23 @@ If live web blocks are included, treat them as current evidence and use them dir
 
     // Add current user message
     const screenFrame = window.getScreenShareFrame?.(isAvon ? 'other' : 'nova');
+    const cameraFrame = window.getVisionFrame?.();
+    const frameParts = [];
+    let frameNotes = '';
+    if (screenFrame) {
+        frameNotes += '\n\n[The user is sharing their screen; the attached image is their current screen. Use it when relevant.]';
+        frameParts.push({ type: 'image_url', image_url: { url: screenFrame } });
+    }
+    if (cameraFrame) {
+        frameNotes += '\n\n[AI Vision is on: the attached image is a live frame from the user\'s webcam. You can see the user, their hands, what they hold or point at, their surroundings, and their posture. Use it when relevant: notice confusion or engagement and adapt your pacing, name objects or diagrams they show you, and give gentle posture or ergonomic feedback when asked or clearly useful. Describe only what is visible, treat expression readings as tentative, never identify people by their face, and never infer health or other sensitive traits. If the image is dark or blocked, say so.]';
+        frameParts.push({ type: 'image_url', image_url: { url: cameraFrame } });
+    }
     messages.push({
         role: "user",
-        content: screenFrame
+        content: frameParts.length
             ? [
-                { type: 'text', text: `${userMessage}\n\n[The user is sharing their screen; the attached image is their current screen. Use it when relevant.]\n\n${addresseeNote}\n\n${styleReminder}` },
-                { type: 'image_url', image_url: { url: screenFrame } }
+                { type: 'text', text: `${userMessage}${frameNotes}\n\n${addresseeNote}\n\n${styleReminder}` },
+                ...frameParts
             ]
             : `${userMessage}\n\n${addresseeNote ? addresseeNote + '\n\n' : ''}${styleReminder}`
     });

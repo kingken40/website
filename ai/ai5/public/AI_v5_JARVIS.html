@@ -137,6 +137,11 @@
                 <i class="fas fa-eye" aria-hidden="true"></i>
                 <span>Share</span>
             </button>
+            <button class="mobile-ctrl-btn" id="mobileAiVisionBtn"
+                    title="Allow AI5 to see through your camera for visual assistance." aria-label="AI Vision" aria-pressed="false">
+                <i class="fas fa-video" aria-hidden="true"></i>
+                <span>AI Vision</span>
+            </button>
             <button class="mobile-ctrl-btn" id="mobileAutoModeBtn"
                     title="Auto Mode: watch your screen and speak only when useful" aria-label="Auto Mode" aria-pressed="false">
                 <i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i>
@@ -255,6 +260,9 @@
             <div class="chat-controls">
                 <button class="control-btn" id="screenShareBtn" type="button" title="Screen share: let the AI see your screen" aria-pressed="false">
                     <i class="fas fa-eye"></i>
+                </button>
+                <button class="control-btn" id="aiVisionBtn" type="button" title="Allow AI5 to see through your camera for visual assistance." aria-label="AI Vision" aria-pressed="false">
+                    <i class="fas fa-video" aria-hidden="true"></i>
                 </button>
                 <button class="control-btn" id="autoModeBtn" type="button" title="Auto Mode: watch your screen and speak only when useful" aria-label="Auto Mode" aria-pressed="false">
                     <i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i>
@@ -888,6 +896,7 @@
     <script src="../scripts/nova_conversation_flow.js"></script>
     <script src="../scripts/nova_runtime_artifacts.js"></script>
     <script src="../scripts/nova_runtime_ai.js"></script>
+    <script src="../scripts/nova_runtime_vision.js"></script>
     <script src="../scripts/nova_runtime_ui_voice.js"></script>
     <script src="../scripts/nova_runtime_ui_events.js"></script>
     <script src="../scripts/nova_runtime_voice_tools.js"></script>
