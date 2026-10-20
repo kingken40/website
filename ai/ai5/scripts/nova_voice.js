@@ -1873,6 +1873,9 @@ function speakText(text, onEndCallback = null, assistant = 'nova', queueToken = 
         if (isSpeaking) {
             console.log('🔊 Already speaking, canceling previous');
             synthesis.cancel();
+            // Mobile browsers can skip onend after cancel(), which would leave this flag stuck and block all speech.
+            isSpeaking = false;
+            window.isSpeaking = false;
             setTimeout(() => speakText(speechText, finalOnEndCallback, assistant, queueToken), 100);
             return;
         }
@@ -2169,6 +2172,25 @@ window.stopSpeech = stopSpeech;
 window.speakTextFrom = speakTextFrom;
 window.enqueueAssistantSpeech = enqueueAssistantSpeech;
 
+// Mobile browsers only allow speech after a user gesture, and speakText waits ~600ms before
+// speaking. Prime the engine on the first touch/click so later speech is not blocked.
+(function primeSpeechOnFirstGesture() {
+    let primed = false;
+    const prime = () => {
+        if (primed || !window.speechSynthesis) return;
+        primed = true;
+        ['touchend', 'pointerup', 'click', 'keydown'].forEach(evt => document.removeEventListener(evt, prime, true));
+        try {
+            const warmup = new SpeechSynthesisUtterance(' ');
+            warmup.volume = 0;
+            window.speechSynthesis.speak(warmup);
+            window.speechSynthesis.getVoices();
+        } catch (error) {
+            console.warn('Could not prime speech synthesis:', error);
+        }
+    };
+    ['touchend', 'pointerup', 'click', 'keydown'].forEach(evt => document.addEventListener(evt, prime, true));
+})();
 // Voice Sampling and Selection Functions
 function previewVoice(voice, sampleText = "Greetings, sir. This is how I sound. Do you approve of this voice selection?") {
     if (!synthesis) {
