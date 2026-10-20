@@ -2310,6 +2310,25 @@ body.no-animations * {
     overflow: hidden;
     background: #00101f;
     box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.ai-vision-preview:active {
+    cursor: grabbing;
+}
+
+.ai-vision-resize {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 28px;
+    height: 28px;
+    cursor: nwse-resize;
+    touch-action: none;
+    background: linear-gradient(135deg, transparent 50%, rgba(105, 220, 255, 0.85) 50%, rgba(105, 220, 255, 0.85) 58%, transparent 58%, transparent 70%, rgba(105, 220, 255, 0.85) 70%, rgba(105, 220, 255, 0.85) 78%, transparent 78%);
 }
 
 .ai-vision-preview[hidden] {
