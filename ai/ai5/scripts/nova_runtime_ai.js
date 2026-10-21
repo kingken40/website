@@ -419,9 +419,13 @@ async function generateAIResponse(userMessage, personality, options = {}) {
     const responseSender = options.assistant === 'other' ? 'Avon' : 'Nova';
     const slyPhraseReply = getSlyTriggeredReply(userMessage, options.assistant === 'other' ? 'other' : 'nova');
     const avonIdentityRequest = responseSender === 'Avon' && isAvonIdentityRequest(userMessage);
+    const isAreYouUpCheck = !options.proactiveEvaluation &&
+        /^\s*(?:(?:hey|yo)\s+)?(?:n\.?o\.?v\.?a\.?|a\.?v\.?o\.?n\.?)?[\s,:-]*(?:are\s+)?you\s+up\s*[?!.]*\s*$/i.test(String(userMessage || ''));
 
-    if (!options.proactiveEvaluation && (options.fastResponse || isCurrentTimeRequest(userMessage) || avonIdentityRequest || slyPhraseReply)) {
-        const reply = avonIdentityRequest
+    if (!options.proactiveEvaluation && (options.fastResponse || isAreYouUpCheck || isCurrentTimeRequest(userMessage) || avonIdentityRequest || slyPhraseReply)) {
+        const reply = isAreYouUpCheck
+            ? 'For you sir, always.'
+            : avonIdentityRequest
             ? 'I am A.V.O.N. Avon is simply the shorter spoken name for me; it is not a different assistant.'
             : slyPhraseReply || (isCurrentTimeRequest(userMessage)
                 ? getCurrentTimeReply(responseSender)
