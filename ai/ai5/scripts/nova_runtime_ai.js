@@ -419,13 +419,12 @@ async function generateAIResponse(userMessage, personality, options = {}) {
     const responseSender = options.assistant === 'other' ? 'Avon' : 'Nova';
     const slyPhraseReply = getSlyTriggeredReply(userMessage, options.assistant === 'other' ? 'other' : 'nova');
     const avonIdentityRequest = responseSender === 'Avon' && isAvonIdentityRequest(userMessage);
-    const isAreYouUpCheck = !options.proactiveEvaluation &&
-        /^\s*(?:(?:hey|yo)\s+)?(?:n\.?o\.?v\.?a\.?|a\.?v\.?o\.?n\.?)?[\s,:-]*(?:are\s+)?you\s+up\s*[?!.]*\s*$/i.test(String(userMessage || ''));
+    if (!options.proactiveEvaluation && /^\s*(?:(?:hey|yo)\s+)?(?:n\.?o\.?v\.?a\.?|a\.?v\.?o\.?n\.?)?[\s,:-]*(?:are\s+)?you\s+up\s*[?!.]*\s*$/i.test(String(userMessage || ''))) {
+        options = { ...options, youUpCheck: true };
+    }
 
-    if (!options.proactiveEvaluation && (options.fastResponse || isAreYouUpCheck || isCurrentTimeRequest(userMessage) || avonIdentityRequest || slyPhraseReply)) {
-        const reply = isAreYouUpCheck
-            ? 'For you sir, always.'
-            : avonIdentityRequest
+    if (!options.proactiveEvaluation && (options.fastResponse || isCurrentTimeRequest(userMessage) || avonIdentityRequest || slyPhraseReply)) {
+        const reply = avonIdentityRequest
             ? 'I am A.V.O.N. Avon is simply the shorter spoken name for me; it is not a different assistant.'
             : slyPhraseReply || (isCurrentTimeRequest(userMessage)
                 ? getCurrentTimeReply(responseSender)
@@ -1537,13 +1536,17 @@ If live web blocks are included, treat them as current evidence and use them dir
         : shortResponseModeEnabled ? shortText
         : autoResponseLengthEnabled ? autoLengthText
         : fullText;
+    const youUpNote = options.youUpCheck
+        ? ' The user is checking whether you are awake and available ("you up?"). Reply in the loyal, butler-like Jarvis spirit, for example along the lines of "For you, sir, always." Phrase it naturally and vary it; keep it to one short line.'
+        : '';
+    const solutionOfferNote = ' If the user gives you a task or something to keep (store, save, remember, write, plan, organise, send, schedule), do it as far as you actually can, then end with one short, specific offer of next steps, such as "Shall I save this to your Knowledge Base, or prepare it as a downloadable file?". Only offer things this app really supports (Knowledge Base entries the user adds in Settings, downloadable files such as PDF/TXT/DOCX, images, summaries, study guides, reminders in chat). Never claim something was stored or sent unless it actually was. Skip the offer for plain questions and small talk, and keep it to a single sentence even in short-reply modes.';
     const styleReminder = options.visionEvaluation
         ? `[AI Vision check as ${personaLabel}: look at the attached live camera image. Return exactly NO_ACTION unless something clearly useful is visible: the user looks confused, frustrated, or stuck; they are holding or pointing at something relevant; their posture is clearly poor; or they appear to need help. Otherwise say one brief, kind, natural remark of at most two sentences, such as offering to slow down or fix a posture issue. Describe only what you can actually see, treat expression readings as tentative, never identify who anyone is, and do not infer health, age, or other sensitive traits.]`
         : options.proactiveEvaluation
         ? `[Auto Mode requirement: answer as ${personaLabel} in a dry, witty, slightly sarcastic Sly tone when it fits (sharp but helpful; no sarcasm for real errors). Return exactly NO_ACTION unless the screen and context genuinely call for you to step in. Otherwise react to what is on the shared screen or what the user is doing, with guidance, a recommendation, or an alert, in one brief, natural remark of at most two sentences. Do not take actions.]`
         : presetConfig
-            ? `[Voice requirement for this reply: answer as ${personaLabel} in a clearly "${presetConfig.name}" personality - ${presetConfig.instructions} ${PERSONALITY_INFLUENCE_LEVELS[getPersonalityInfluence(assistantKey)].text} Regardless of how earlier replies sounded.                 ${replyLengthText('Reply with one very short sentence (about 10 words or fewer), only the answer.', 'Answer in one or two short sentences maximum, only what was asked.', 'Give a full, detailed answer.')}]`
-            : `[Voice requirement for this reply: answer as ${personaLabel} in your own distinct core persona, not a generic assistant voice. ${replyLengthText('Reply with one very short sentence (about 10 words or fewer), only the answer.', 'Answer in one or two short sentences maximum, only what was asked.', 'Give a full, detailed answer.')}]`;
+            ? `[Voice requirement for this reply: answer as ${personaLabel} in a clearly "${presetConfig.name}" personality - ${presetConfig.instructions} ${PERSONALITY_INFLUENCE_LEVELS[getPersonalityInfluence(assistantKey)].text} Regardless of how earlier replies sounded.                 ${replyLengthText('Reply with one very short sentence (about 10 words or fewer), only the answer.', 'Answer in one or two short sentences maximum, only what was asked.',             'Give a full, detailed answer.')}${youUpNote}${solutionOfferNote}]`
+                        : `[Voice requirement for this reply: answer as ${personaLabel} in your own distinct core persona, not a generic assistant voice. ${replyLengthText('Reply with one very short sentence (about 10 words or fewer), only the answer.', 'Answer in one or two short sentences maximum, only what was asked.', 'Give a full, detailed answer.')}${youUpNote}${solutionOfferNote}]`;
 
     // Add current user message
     const screenFrame = window.getScreenShareFrame?.(isAvon ? 'other' : 'nova');
