@@ -413,13 +413,17 @@ async function generateViaServerProxy(userMessage, personality, options = {}) {
     return { reply, webUsed: shouldUseWeb, model: responseModel };
 }
 
+function isAreYouUpCheck(userMessage) {
+    return /^\s*(?:(?:hey|yo)\s+)?(?:n\.?o\.?v\.?a\.?|a\.?v\.?o\.?n\.?)?[\s,:-]*(?:are\s+)?you\s+up\s*[?!.]*\s*$/i.test(String(userMessage || ''));
+}
+
 // Enhanced AI integration with multi-provider support and improved error handling
 async function generateAIResponse(userMessage, personality, options = {}) {
     console.log('?? Generating AI response for personality:', personality);
     const responseSender = options.assistant === 'other' ? 'Avon' : 'Nova';
     const slyPhraseReply = getSlyTriggeredReply(userMessage, options.assistant === 'other' ? 'other' : 'nova');
     const avonIdentityRequest = responseSender === 'Avon' && isAvonIdentityRequest(userMessage);
-    if (!options.proactiveEvaluation && /^\s*(?:(?:hey|yo)\s+)?(?:n\.?o\.?v\.?a\.?|a\.?v\.?o\.?n\.?)?[\s,:-]*(?:are\s+)?you\s+up\s*[?!.]*\s*$/i.test(String(userMessage || ''))) {
+    if (!options.proactiveEvaluation && isAreYouUpCheck(userMessage)) {
         options = { ...options, youUpCheck: true };
     }
 

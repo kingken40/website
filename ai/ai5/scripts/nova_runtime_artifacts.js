@@ -268,7 +268,7 @@ function artifactPromptFromConversation(userMessage, original = false) {
         : `Create a high-quality image: ${request}`;
 }
 
-const IMAGE_REFUSAL_PATTERN = /\b(?:can(?:['’]|no)?t|cannot|unable|isn['’]t within|not within|don['’]t have|not able)\b[^.]*\b(?:images?|pictures?|art|visuals?)\b/i;
+const IMAGE_REFUSAL_PATTERN = /\b(?:can(?:['’]|no)?t|cannot|unable|isn['’]t within|not within|don['’]t have|not able)\b[^.]*\b(?:images?|pictures?|art|visuals?)\b|\b(?:images?|pictures?|art|visuals?)\b[^.]*\b(?:isn['’]t|is not|aren['’]t|are not|not)\s+(?:within|possible|something i can|available)\b/i;
 
 function normalizeImageReply(userMessage, reply) {
     if (!detectRequestedArtifactFormats(userMessage).some(format => format === 'png' || format === 'jpg')) return reply;
