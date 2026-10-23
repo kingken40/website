@@ -423,6 +423,7 @@ async function generateAIResponse(userMessage, personality, options = {}) {
     const responseSender = options.assistant === 'other' ? 'Avon' : 'Nova';
     const slyPhraseReply = getSlyTriggeredReply(userMessage, options.assistant === 'other' ? 'other' : 'nova');
     const avonIdentityRequest = responseSender === 'Avon' && isAvonIdentityRequest(userMessage);
+    if (!options.proactiveEvaluation) window.applyProactiveSnoozeRequest?.(userMessage);
     if (!options.proactiveEvaluation && isAreYouUpCheck(userMessage)) {
         options = { ...options, youUpCheck: true };
     }

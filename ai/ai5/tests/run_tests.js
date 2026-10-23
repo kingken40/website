@@ -288,6 +288,43 @@ test('Auto Mode loop uses the shared gate and AI Vision does too', () => {
     assert.ok(visionSrc.includes('window.proactiveGate.begin()') && visionSrc.includes('window.proactiveGate.end(spoke)'));
 });
 
+test('parseSnoozeRequest understands quiet and resume requests', () => {
+    assert.strictEqual(flow.parseSnoozeRequest('Nova, be quiet for 10 minutes'), 10 * 60000);
+    assert.strictEqual(flow.parseSnoozeRequest('stop interrupting me for 2 hours'), 2 * 3600000);
+    assert.strictEqual(flow.parseSnoozeRequest('please stop interrupting'), 15 * 60000);
+    assert.strictEqual(flow.parseSnoozeRequest('you can talk again'), 0);
+    assert.strictEqual(flow.parseSnoozeRequest('what is the weather'), null);
+});
+
+test('snoozing blocks the shared gate until it expires or is cancelled', () => {
+    const gate = flow.window.proactiveGate;
+    gate.lastSpokeAt = 0;
+    gate.snooze(60000);
+    assert.strictEqual(gate.canStart(), false);
+    assert.strictEqual(gate.canStart(Date.now() + 61000), true);
+    gate.snooze(0);
+    assert.strictEqual(gate.canStart(), true);
+});
+
+test('describeScreenChangeRegion says where the screen changed', () => {
+    const cols = 32, rows = 18;
+    const blank = new Uint8Array(cols * rows * 3);
+    const withChange = (x0, x1, y0, y1) => {
+        const s = new Uint8Array(blank);
+        for (let y = y0; y < y1; y += 1) for (let x = x0; x < x1; x += 1) s[(y * cols + x) * 3] = 15;
+        return s;
+    };
+    assert.strictEqual(flow.describeScreenChangeRegion(blank, withChange(0, 6, 0, 4)), 'top-left of the screen');
+    assert.strictEqual(flow.describeScreenChangeRegion(blank, withChange(26, 32, 14, 18)), 'bottom-right of the screen');
+    assert.strictEqual(flow.describeScreenChangeRegion(blank, withChange(13, 19, 7, 11)), 'center of the screen');
+    assert.strictEqual(flow.describeScreenChangeRegion(blank, blank), '');
+});
+
+test('Auto Mode has stuck detection and the AI layer applies snooze requests', () => {
+    assert.ok(flowSrc.includes('const stuckCheck'));
+    assert.ok(read('nova_runtime_ai.js').includes('applyProactiveSnoozeRequest'));
+});
+
 // ---------- Run ----------
 let failed = 0;
 for (const { name, fn } of tests) {

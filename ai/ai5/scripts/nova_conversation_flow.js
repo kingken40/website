@@ -976,7 +976,9 @@ window.proactiveGate = window.proactiveGate || {
     busy: false,
     lastSpokeAt: 0,
     MIN_GAP_MS: 20000,
-    canStart(now = Date.now()) { return !this.busy && now - this.lastSpokeAt >= this.MIN_GAP_MS; },
+    snoozeUntil: 0,
+    canStart(now = Date.now()) { return !this.busy && now >= this.snoozeUntil && now - this.lastSpokeAt >= this.MIN_GAP_MS; },
+    snooze(ms) { this.snoozeUntil = ms > 0 ? Date.now() + ms : 0; },
     begin() {
         if (this.busy) return false;
         this.busy = true;
@@ -990,6 +992,52 @@ window.proactiveGate = window.proactiveGate || {
 
 const AUTO_MODE_POLL_MS = 1000;
 const AUTO_MODE_RECENT_REMARKS = 3;
+const AUTO_MODE_STUCK_MS = 75000;
+
+// Voice/text control: "be quiet for 10 minutes", "stop interrupting", "you can talk again".
+// Returns milliseconds to stay quiet, 0 to resume, or null when the message is unrelated.
+function parseSnoozeRequest(message) {
+    const text = String(message || '').toLowerCase();
+    if (/\b(?:you can (?:talk|speak|comment|chime in) again|resume (?:comments|commenting|auto)|start commenting again)\b/.test(text)) return 0;
+    if (!/\b(?:be quiet|quiet mode|stop (?:interrupting|commenting|chiming in)|hold off|snooze|don'?t interrupt|no (?:more )?interruptions)\b/.test(text)) return null;
+    const amount = text.match(/\bfor\s+(\d+)\s*(minute|min|hour|hr)s?\b/);
+    if (!amount) return 15 * 60000;
+    return Number(amount[1]) * (/^h/.test(amount[2]) ? 3600000 : 60000);
+}
+
+window.applyProactiveSnoozeRequest = function (message) {
+    const ms = parseSnoozeRequest(message);
+    if (ms === null) return;
+    window.proactiveGate.snooze(ms);
+    if (typeof showNotification === 'function') {
+        showNotification(ms ? `Auto Mode and AI Vision will stay quiet for ${Math.round(ms / 60000)} min.` : 'Auto Mode and AI Vision can comment again.', 3000);
+    }
+};
+
+// Describes where on the screen the change happened, so the model looks in the right place.
+function describeScreenChangeRegion(previous, current, columns = 32, rows = 18) {
+    if (!previous || !current || previous.length !== current.length) return '';
+    let count = 0;
+    let sumX = 0;
+    let sumY = 0;
+    for (let cell = 0; cell < columns * rows; cell += 1) {
+        const offset = cell * 3;
+        const distance = Math.abs(current[offset] - previous[offset]) +
+            Math.abs(current[offset + 1] - previous[offset + 1]) +
+            Math.abs(current[offset + 2] - previous[offset + 2]);
+        if (distance >= 15) {
+            count += 1;
+            sumX += cell % columns;
+            sumY += Math.floor(cell / columns);
+        }
+    }
+    if (!count) return '';
+    const x = sumX / count / columns;
+    const y = sumY / count / rows;
+    const horizontal = x < 0.33 ? 'left' : x > 0.67 ? 'right' : 'middle';
+    const vertical = y < 0.33 ? 'top' : y > 0.67 ? 'bottom' : 'center';
+    return vertical === 'center' && horizontal === 'middle' ? 'center of the screen' : `${vertical}${horizontal === 'middle' ? '' : `-${horizontal}`} of the screen`;
+}
 
 // Timing adapts to how busy the screen is. `motion` is a moving average of change between polls:
 // high (scrolling, video, fast coding) needs a longer calm period and a bigger change before checking;
@@ -1022,6 +1070,8 @@ async function runAutoModeLoop(runId) {
     let lastEvaluatedSignature = null;
     let lastPolledSignature = null;
     let lastEvaluationAt = 0;
+    let lastChangeAt = Date.now();
+    let lastStuckCheckAt = 0;
     let motion = 0;
     let quietStreak = 0;
     let noActionStreak = 0;
@@ -1057,8 +1107,15 @@ async function runAutoModeLoop(runId) {
         const timing = getAutoModeTiming(motion);
         // Event-based: wait until the screen settles after a change, then react right away.
         if (quietStreak < timing.quietPolls) continue;
+        if (pollRatio >= 0.01) lastChangeAt = Date.now();
         const changeRatio = getScreenChangeRatio(lastEvaluatedSignature, signature);
-        if (changeRatio < timing.minChange) continue;
+        const staticForMs = Date.now() - lastChangeAt;
+        // Stuck check: the screen has sat still while the user was recently active (an error left up, a blocked form).
+        const stuckCheck = changeRatio < timing.minChange &&
+            staticForMs >= AUTO_MODE_STUCK_MS &&
+            Date.now() - lastStuckCheckAt >= AUTO_MODE_STUCK_MS * 2 &&
+            Date.now() - autoModeLastInteractionAt < 300000;
+        if (changeRatio < timing.minChange && !stuckCheck) continue;
 
         const now = Date.now();
         const messageInput = document.getElementById('messageInput');
@@ -1079,14 +1136,18 @@ async function runAutoModeLoop(runId) {
         }
         if (!window.proactiveGate.begin()) continue;
 
+        const changedRegion = stuckCheck ? '' : describeScreenChangeRegion(lastEvaluatedSignature, signature);
         lastEvaluatedSignature = signature;
         lastEvaluationAt = now;
+        if (stuckCheck) lastStuckCheckAt = now;
         autoModeEvaluationInFlight = true;
         let spoke = false;
         try {
-            const changeHint = changeRatio >= 0.4 ? 'The screen changed completely (new page or app).'
-                : changeRatio >= 0.12 ? 'A large part of the screen changed.'
-                : 'A small part of the screen changed.';
+            const changeHint = stuckCheck
+                ? `The screen has not changed for ${Math.round(staticForMs / 1000)} seconds while the user was recently active. Speak only if they look stuck (an error or warning left showing, a failed step, a blocked form, an unanswered dialog) and offer one concrete next step; otherwise reply NO_ACTION.`
+                : (changeRatio >= 0.4 ? 'The screen changed completely (new page or app).'
+                    : changeRatio >= 0.12 ? 'A large part of the screen changed.'
+                    : 'A small part of the screen changed.') + (changedRegion ? ` The change is mostly in the ${changedRegion}.` : '');
             const motionHint = timing.level === 'high' ? 'The screen has been very active, so only mention something important.' : '';
             const repeatHint = recentRemarks.length
                 ? `You already said: ${recentRemarks.map(remark => `"${remark}"`).join('; ')}. Do not repeat or rephrase these.`
