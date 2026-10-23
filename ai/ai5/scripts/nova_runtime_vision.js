@@ -212,6 +212,7 @@ async function runAiVisionLoop(runId) {
         if (now - lastEvaluationAt < 40000 ||
             now - aiVisionLastSpokeAt < 60000 ||
             now - (typeof autoModeLastInteractionAt === 'number' ? autoModeLastInteractionAt : 0) < 3000 ||
+            window.proactiveGate?.canStart() === false ||
             isResponseInFlight ||
             window.isSpeaking ||
             window.voiceInterruptInProgress ||
@@ -225,10 +226,12 @@ async function runAiVisionLoop(runId) {
         const changeRatio = getVisionChangeRatio(lastEvaluatedSignature, signature);
         // Check after a visible change, or at least every two minutes so slow changes like slouching are caught.
         if (changeRatio < 0.12 && now - lastEvaluationAt < 120000) continue;
+        if (!window.proactiveGate.begin()) continue;
 
         lastEvaluatedSignature = signature;
         lastEvaluationAt = now;
         aiVisionInFlight = true;
+        let spoke = false;
         try {
             const assistant = getVisionAssistant();
             const replyResult = await generateAIResponse(AI_VISION_PROMPT, currentPersonality, {
@@ -257,11 +260,13 @@ async function runAiVisionLoop(runId) {
                 model: replyResult.model
             });
             aiVisionLastSpokeAt = Date.now();
+            spoke = true;
             speakAssistantResponse(reply, sender);
         } catch (error) {
             console.error('AI Vision check failed:', error);
         } finally {
             aiVisionInFlight = false;
+            window.proactiveGate.end(spoke);
         }
     }
 }

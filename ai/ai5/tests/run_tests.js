@@ -245,6 +245,49 @@ test('AI Vision preview pinch-resizes with two fingers', () => {
     preview.fire('pointerup', { pointerId: 2 });
 });
 
+// ---------- Auto Mode + screen share timing ----------
+const flowSrc = read('nova_conversation_flow.js');
+const flow = load(slice(flowSrc, 'window.proactiveGate = ', 'async function runAutoModeLoop'));
+
+test('Auto Mode timing adapts to screen motion', () => {
+    const low = flow.getAutoModeTiming(0.005);
+    const high = flow.getAutoModeTiming(0.1);
+    assert.strictEqual(low.level, 'low');
+    assert.strictEqual(high.level, 'high');
+    assert.ok(low.minChange < high.minChange, 'quiet screens react to smaller changes');
+    assert.ok(low.quietPolls < high.quietPolls, 'busy screens must settle longer');
+    assert.ok(low.cooldownMs < high.cooldownMs);
+    assert.strictEqual(flow.getAutoModeTiming(0.03).level, 'medium');
+});
+
+test('shared proactive gate allows one evaluation at a time and spaces remarks', () => {
+    const gate = flow.window.proactiveGate;
+    assert.strictEqual(gate.canStart(), true);
+    assert.strictEqual(gate.begin(), true);
+    assert.strictEqual(gate.begin(), false, 'second feature cannot start while one is running');
+    assert.strictEqual(gate.canStart(), false);
+    gate.end(true);
+    assert.strictEqual(gate.canStart(), false, 'cooldown after speaking');
+    assert.strictEqual(gate.canStart(Date.now() + gate.MIN_GAP_MS + 1), true);
+    gate.lastSpokeAt = 0;
+    gate.begin();
+    gate.end(false);
+    assert.strictEqual(gate.canStart(), true, 'a silent check does not start a cooldown');
+});
+
+test('isRepeatedRemark blocks rephrased repeats but allows new remarks', () => {
+    const recent = ['That error says the variable is undefined on line forty.'];
+    assert.strictEqual(flow.isRepeatedRemark('The error says the variable is undefined on line forty.', recent), true);
+    assert.strictEqual(flow.isRepeatedRemark('Your build finished with no warnings.', recent), false);
+    assert.strictEqual(flow.isRepeatedRemark('anything', []), false);
+});
+
+test('Auto Mode loop uses the shared gate and AI Vision does too', () => {
+    assert.ok(flowSrc.includes('window.proactiveGate.begin()') && flowSrc.includes('window.proactiveGate.end(spoke)'));
+    const visionSrc = read('nova_runtime_vision.js');
+    assert.ok(visionSrc.includes('window.proactiveGate.begin()') && visionSrc.includes('window.proactiveGate.end(spoke)'));
+});
+
 // ---------- Run ----------
 let failed = 0;
 for (const { name, fn } of tests) {

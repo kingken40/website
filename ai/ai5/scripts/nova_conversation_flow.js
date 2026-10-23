@@ -970,14 +970,65 @@ Tone: Sly. Dry, witty and a little sarcastic when the moment fits (for example, 
 If there is nothing worth saying, reply with exactly: NO_ACTION
 Otherwise reply with only one brief, natural spoken remark (at most two sentences).`;
 
+// One shared gate for every proactive feature (Auto Mode, AI Vision) so only one evaluation runs at a time
+// and remarks never cluster: after any of them speaks, all of them wait MIN_GAP_MS.
+window.proactiveGate = window.proactiveGate || {
+    busy: false,
+    lastSpokeAt: 0,
+    MIN_GAP_MS: 20000,
+    canStart(now = Date.now()) { return !this.busy && now - this.lastSpokeAt >= this.MIN_GAP_MS; },
+    begin() {
+        if (this.busy) return false;
+        this.busy = true;
+        return true;
+    },
+    end(spoke) {
+        this.busy = false;
+        if (spoke) this.lastSpokeAt = Date.now();
+    }
+};
+
+const AUTO_MODE_POLL_MS = 1000;
+const AUTO_MODE_RECENT_REMARKS = 3;
+
+// Timing adapts to how busy the screen is. `motion` is a moving average of change between polls:
+// high (scrolling, video, fast coding) needs a longer calm period and a bigger change before checking;
+// low (reading, writing) reacts quickly to small but real changes.
+function getAutoModeTiming(motion) {
+    if (motion >= 0.06) return { level: 'high', minChange: 0.05, quietPolls: 4, cooldownMs: 30000 };
+    if (motion >= 0.02) return { level: 'medium', minChange: 0.025, quietPolls: 2, cooldownMs: 15000 };
+    return { level: 'low', minChange: 0.012, quietPolls: 1, cooldownMs: 8000 };
+}
+
+function autoModeWordSet(text) {
+    return new Set(String(text || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(word => word.length > 3));
+}
+
+// True when a remark mostly repeats something already said.
+function isRepeatedRemark(reply, recentRemarks) {
+    const words = autoModeWordSet(reply);
+    if (!words.size) return false;
+    return recentRemarks.some(previous => {
+        const other = autoModeWordSet(previous);
+        if (!other.size) return false;
+        let shared = 0;
+        words.forEach(word => { if (other.has(word)) shared += 1; });
+        return shared / Math.min(words.size, other.size) >= 0.6;
+    });
+}
+
 async function runAutoModeLoop(runId) {
     const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
     let lastEvaluatedSignature = null;
     let lastPolledSignature = null;
     let lastEvaluationAt = 0;
+    let motion = 0;
+    let quietStreak = 0;
+    let noActionStreak = 0;
+    const recentRemarks = [];
 
     while (autoModeActive && runId === autoModeRunId) {
-        await sleep(3000);
+        await sleep(AUTO_MODE_POLL_MS);
         if (!autoModeActive || runId !== autoModeRunId) return;
 
         const assistant = getAutoModeAssistant();
@@ -985,7 +1036,7 @@ async function runAutoModeLoop(runId) {
             autoModeLastHintAt = Date.now();
             showNotification('Auto Mode is waiting: click Share and pick a screen so it has something to watch.', 3500);
         }
-        if (!assistant || autoModeEvaluationInFlight) continue;
+        if (!assistant) continue;
 
         let signature;
         try {
@@ -996,19 +1047,29 @@ async function runAutoModeLoop(runId) {
             return;
         }
         if (!signature) continue;
-        // Wait for the screen to settle so it steps in after a change, not mid-scroll or mid-animation
-        const stillChanging = getScreenChangeRatio(lastPolledSignature, signature) >= 0.08;
+
+        // Track motion every poll, even while busy, so the timing reflects what the screen is doing now.
+        const pollRatio = getScreenChangeRatio(lastPolledSignature, signature);
         lastPolledSignature = signature;
-        if (stillChanging) continue;
+        motion = motion * 0.8 + pollRatio * 0.2;
+        quietStreak = pollRatio < 0.03 ? quietStreak + 1 : 0;
+
+        const timing = getAutoModeTiming(motion);
+        // Event-based: wait until the screen settles after a change, then react right away.
+        if (quietStreak < timing.quietPolls) continue;
         const changeRatio = getScreenChangeRatio(lastEvaluatedSignature, signature);
-        if (changeRatio < 0.015) continue;
+        if (changeRatio < timing.minChange) continue;
 
         const now = Date.now();
         const messageInput = document.getElementById('messageInput');
         const userIsComposing = Boolean(messageInput?.value.trim());
-        if (now - lastEvaluationAt < 10000 ||
+        // Repeated "nothing to say" answers mean this kind of screen is not worth checking often.
+        const backoff = Math.min(1 + noActionStreak * 0.5, 3);
+        // A brand-new page or app is always worth a look, so it skips the back-off.
+        const bigChange = changeRatio >= 0.4;
+        if (now - lastEvaluationAt < timing.cooldownMs * (bigChange ? 1 : backoff) ||
             now - autoModeLastInteractionAt < 2500 ||
-            now - autoModeLastSpokeAt < 15000 ||
+            !window.proactiveGate.canStart(now) ||
             isResponseInFlight ||
             window.isSpeaking ||
             window.voiceInterruptInProgress ||
@@ -1016,15 +1077,21 @@ async function runAutoModeLoop(runId) {
             userIsComposing) {
             continue;
         }
+        if (!window.proactiveGate.begin()) continue;
 
         lastEvaluatedSignature = signature;
         lastEvaluationAt = now;
         autoModeEvaluationInFlight = true;
+        let spoke = false;
         try {
             const changeHint = changeRatio >= 0.4 ? 'The screen changed completely (new page or app).'
                 : changeRatio >= 0.12 ? 'A large part of the screen changed.'
                 : 'A small part of the screen changed.';
-            const replyResult = await generateAIResponse(`${AUTO_MODE_PROMPT}\n${changeHint}`, currentPersonality, {
+            const motionHint = timing.level === 'high' ? 'The screen has been very active, so only mention something important.' : '';
+            const repeatHint = recentRemarks.length
+                ? `You already said: ${recentRemarks.map(remark => `"${remark}"`).join('; ')}. Do not repeat or rephrase these.`
+                : '';
+            const replyResult = await generateAIResponse(`${AUTO_MODE_PROMPT}\n${changeHint} ${motionHint}\n${repeatHint}`.trim(), currentPersonality, {
                 assistant,
                 modelOverride: assistant === 'other' ? groupChatModel : undefined,
                 groupChat: groupChatEnabled,
@@ -1035,7 +1102,11 @@ async function runAutoModeLoop(runId) {
             if (!autoModeActive || runId !== autoModeRunId) return;
 
             const reply = String(replyResult?.reply || '').trim();
-            if (!reply || /^NO_ACTION(?:\s|[.!:—-]|$)/i.test(reply)) continue;
+            if (!reply || /^NO_ACTION(?:\s|[.!:—-]|$)/i.test(reply)) {
+                noActionStreak += 1;
+                continue;
+            }
+            if (isRepeatedRemark(reply, recentRemarks)) continue;
             if (Date.now() - autoModeLastInteractionAt < 3500 ||
                 isResponseInFlight ||
                 window.isSpeaking ||
@@ -1054,7 +1125,11 @@ async function runAutoModeLoop(runId) {
                 timestamp: new Date().toISOString(),
                 model: replyResult.model
             });
+            noActionStreak = 0;
+            recentRemarks.push(reply);
+            if (recentRemarks.length > AUTO_MODE_RECENT_REMARKS) recentRemarks.shift();
             autoModeLastSpokeAt = Date.now();
+            spoke = true;
             speakAssistantResponse(reply, sender);
         } catch (error) {
             console.error('Auto Mode screen check failed:', error);
@@ -1062,6 +1137,7 @@ async function runAutoModeLoop(runId) {
             return;
         } finally {
             autoModeEvaluationInFlight = false;
+            window.proactiveGate.end(spoke);
         }
     }
 }
