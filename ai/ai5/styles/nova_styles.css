@@ -491,6 +491,12 @@ body {
     gap: 1rem;
 }
 
+@media (min-width: 769px) {
+    .mode-card[data-personality="interview"] {
+        grid-column: 2;
+    }
+}
+
 .mode-card {
     background: linear-gradient(145deg, rgba(0, 34, 68, 0.3), rgba(0, 17, 34, 0.3));
     border: 2px solid rgba(0, 170, 255, 0.2);

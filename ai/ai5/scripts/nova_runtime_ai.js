@@ -1081,7 +1081,7 @@ function shouldInjectKnowledgeBaseContext(message, personality, options = {}) {
         return false;
     }
 
-    if (personality === 'study') return true;
+    if (personality === 'study' || personality === 'interview') return true;
 
     // Always inject KB for identity/self-reference questions so Nova knows its own name
     if (_IDENTITY_QUESTION_RE.test(text)) return true;
@@ -1361,6 +1361,12 @@ function prepareOpenAIMessages(userMessage, personality, options = {}) {
         personalityInstructions = isSlimContext
             ? 'Analyze the uploaded audio transcript faithfully. Preserve timestamps and speaker labels when present, summarize the key ideas, and answer the user�s specific question without inventing missing words or identities.'
             : 'Treat the uploaded audio transcript as a primary source. First understand its setting (lecture, classroom, meeting, interview, or conversation) from the content. Preserve timestamps and speaker labels when present, clearly separate what was said from your interpretation, and never invent speaker identities. When the packet says LECTURE MODE: ACTIVE, follow its LECTURE MODE PROTOCOL section by section so the user truly understands what was taught, then offer to quiz them. For meetings or interviews, identify decisions, action items, owners, and unresolved questions.';
+    } else if (personality === 'interview') {
+        personalityInstructions = `You are a realistic job interviewer and interview coach running a mock interview.
+Setup: if the job title, company, job description, or interview type (behavioral, technical, coding, general) is missing, ask for it briefly before starting. Use any resume or background the user provided (including Knowledge Base content) to personalize questions.
+Interview flow: ask exactly ONE question at a time and wait for the answer. Naturally follow up on the user's answers like a real interviewer. For coding questions, state the problem clearly and discuss approach, complexity and edge cases.
+After each answer give concise feedback: what was strong, what to improve, and when helpful a stronger sample version of the answer (for behavioral answers, check STAR structure). Then ask the next question.
+Keep a mental tally of performance. When the user says they are finished or asks for a summary, give an overall assessment with strengths, weaknesses, a rating, and specific areas to practice.`;
     } else if (personality === 'study' || personality === 'professor') {
         personalityInstructions = isSlimContext
             ? 'Act as an exceptionally efficient tutor: identify the learner goal, explain the key idea step by step, define essential terms, and give a concise check-for-understanding.'

@@ -590,6 +590,12 @@ const personalities = {
         greeting: 'Study Guide mode activated. Upload your Knowledge Base in Settings and I\'ll help you master it.',
         style: 'expert academic assignment helper and study coach',
         responsePrefix: ''
+    },
+    interview: {
+        name: 'Job Interview',
+        greeting: 'Job Interview mode activated. Tell me the job title, company, interview type (behavioral, technical, coding or general), and paste the job description or your resume if you have them. Then we\'ll begin.',
+        style: 'realistic, professional interviewer and supportive interview coach',
+        responsePrefix: ''
     }
 };
 
@@ -606,6 +612,7 @@ function normalizePersonalityKey(personalityType) {
     if (normalized === 'analyst') return 'analyst';
     if (normalized === 'brainstorm') return 'brainstorm';
     if (normalized === 'study') return 'study';
+    if (normalized === 'interview') return 'interview';
 
     return personalities[value] ? value : 'Nova';
 }
