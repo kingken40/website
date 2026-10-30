@@ -429,7 +429,7 @@ function cancelEdit(messageId) {
     console.log('❌ Edit cancelled:', messageId);
 }
 
-function processUserMessage(userMessage) {
+function processUserMessage(userMessage, displayMessage = null) {
     window.noteAutoModeUserActivity?.();
     console.log('💭 ==========================================');
     console.log('💭 processUserMessage CALLED');
@@ -508,7 +508,7 @@ function processUserMessage(userMessage) {
         updateModelForMessage(userMessage);
         
         // Add user message to chat
-        addMessage(userMessage, 'user');
+        addMessage(displayMessage || userMessage, 'user');
         
         const voiceTarget = window.activeVoiceAssistant || null;
         const explicitTarget = getExplicitGroupMessageTarget(userMessage);

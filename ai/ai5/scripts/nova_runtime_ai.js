@@ -61,8 +61,8 @@ function sendMessageWithAttachment() {
             currentChatFiles = Array.isArray(currentChatFiles) ? currentChatFiles : [];
             currentChatFiles.push(uploadedFile);
         }
-        processUserMessage(finalMessage);
-    }
+        processUserMessage(finalMessage, uploadedFile ? `📎 ${uploadedFile.name}${userText ? '\n' + userText : ''}` : null);
+           }
 }
 
 // Display file chip in the input area

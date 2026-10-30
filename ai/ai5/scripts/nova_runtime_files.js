@@ -113,7 +113,27 @@ async function handleFileUpload(event, type) {
 
 // Handle text file upload
 async function handleTextFile(file) {
-    const text = await file.text();
+    let text;
+    if (/\.docx$/i.test(file.name)) {
+        if (typeof mammoth === 'undefined') {
+            await new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js';
+                script.onload = resolve;
+                script.onerror = () => reject(new Error('Could not load the Word document reader.'));
+                document.head.appendChild(script);
+            });
+        }
+        const result = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
+        text = result.value;
+    } else if (/\.(doc|docm|odt|rtf|xlsx?|pptx?)$/i.test(file.name)) {
+        throw new Error('This file format is not supported. Use .docx, .txt, .md, .json, .csv or PDF.');
+    } else {
+        text = await file.text();
+        if (text.includes('\uFFFD') || text.includes('\u0000')) {
+            throw new Error('This file is binary and cannot be read as text.');
+        }
+    }
     console.log('📄 Text file loaded:', file.name, '| Length:', text.length);
     
     // Store file attachment
