@@ -593,7 +593,7 @@ const personalities = {
     },
     interview: {
         name: 'Job Interview',
-        greeting: 'Job Interview mode activated. Tell me the job title, company, interview type (behavioral, technical, coding or general), and paste the job description or your resume if you have them. Then we\'ll begin.',
+        greeting: 'Job Interview mode activated. Paste an Indeed, LinkedIn, or Handshake job link and I\'ll read it, confirm the details with you, and start the interview. You can also type the job title, company, and interview type (behavioral, technical, coding or general) yourself. Say "my jobs" to resume a saved interview.',
         style: 'realistic, professional interviewer and supportive interview coach',
         responsePrefix: ''
     }

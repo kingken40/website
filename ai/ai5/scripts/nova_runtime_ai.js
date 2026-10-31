@@ -310,7 +310,7 @@ async function generateViaServerProxy(userMessage, personality, options = {}) {
     const requestPayload = {
         model: options.modelOverride || currentModel,
         messages: messages,
-        max_tokens: options.proactiveEvaluation ? 220 : options.fastResponse ? 512 : 4096,
+        max_tokens: options.proactiveEvaluation ? (options.maxTokens || 220) : options.fastResponse ? 512 : 4096,
         temperature: options.proactiveEvaluation
             ? 0.2
             : personality === 'brainstorm'
@@ -536,7 +536,7 @@ async function generateAIResponse(userMessage, personality, options = {}) {
         const requestPayload = {
             model: requestModel,
             messages: messages,
-            max_tokens: options.proactiveEvaluation ? 220 : options.fastResponse ? 512 : /LECTURE MODE: ACTIVE/.test(String(effectiveMessage || '')) ? Math.max(provider.maxTokens, 4096) : provider.maxTokens,
+            max_tokens: options.proactiveEvaluation ? (options.maxTokens || 220) : options.fastResponse ? 512 : /LECTURE MODE: ACTIVE/.test(String(effectiveMessage || '')) ? Math.max(provider.maxTokens, 4096) : provider.maxTokens,
             temperature: options.proactiveEvaluation ? 0.2 : personality === 'brainstorm' ? 0.95 : (resolveActivePersonalityPreset(assistantPresetSelections?.[options.assistant === 'other' ? 'other' : 'nova'], userMessage) ? PERSONALITY_INFLUENCE_LEVELS[getPersonalityInfluence(options.assistant === 'other' ? 'other' : 'nova')].temp : 0.7),
             stream: false
         };
@@ -1366,7 +1366,8 @@ function prepareOpenAIMessages(userMessage, personality, options = {}) {
 Setup: if the job title, company, job description, or interview type (behavioral, technical, coding, general) is missing, ask for it briefly before starting. Use any resume or background the user provided (including Knowledge Base content) to personalize questions.
 Interview flow: ask exactly ONE question at a time and wait for the answer. Naturally follow up on the user's answers like a real interviewer. For coding questions, state the problem clearly and discuss approach, complexity and edge cases.
 After each answer give concise feedback: what was strong, what to improve, and when helpful a stronger sample version of the answer (for behavioral answers, check STAR structure). Then ask the next question.
-Keep a mental tally of performance. When the user says they are finished or asks for a summary, give an overall assessment with strengths, weaknesses, a rating, and specific areas to practice.`;
+Keep a mental tally of performance. When the user says they are finished or asks for a summary, give an overall assessment with strengths, weaknesses, a rating, and specific areas to practice.
+If a SAVED JOB INTERVIEW block is present, it holds the confirmed job details, the interview type, the questions already asked, and recent progress. Stay consistent with it, never repeat a question already asked, and adapt immediately if the user corrects any detail.${window.getInterviewJobContext?.() ? '\n' + window.getInterviewJobContext() : ''}`;
     } else if (personality === 'study' || personality === 'professor') {
         personalityInstructions = isSlimContext
             ? 'Act as an exceptionally efficient tutor: identify the learner goal, explain the key idea step by step, define essential terms, and give a concise check-for-understanding.'
@@ -1551,7 +1552,9 @@ If live web blocks are included, treat them as current evidence and use them dir
         ? ' The user is checking whether you are awake and available ("you up?"). Reply in the loyal, butler-like Jarvis spirit, for example along the lines of "For you, sir, always." Phrase it naturally and vary it; keep it to one short line.'
         : '';
     const solutionOfferNote = ' If the user gives you a task or something to keep (store, save, remember, write, plan, organise, send, schedule), do it as far as you actually can, then end with one short, specific offer of next steps, such as "Shall I save this to your Knowledge Base, or prepare it as a downloadable file?". Only offer things this app really supports (Knowledge Base entries the user adds in Settings, downloadable files such as PDF/TXT/DOCX, images, summaries, study guides, reminders in chat). Never claim something was stored or sent unless it actually was. Skip the offer for plain questions and small talk, and keep it to a single sentence even in short-reply modes.';
-    const styleReminder = options.visionEvaluation
+    const styleReminder = options.rawTask
+        ? '[Follow the task above exactly and return only the requested output, with no persona, greeting, or extra remarks.]'
+        : options.visionEvaluation
         ? `[AI Vision check as ${personaLabel}: look at the attached live camera image. Return exactly NO_ACTION unless something clearly useful is visible: the user looks confused, frustrated, or stuck; they are holding or pointing at something relevant; their posture is clearly poor; or they appear to need help. Otherwise say one brief, kind, natural remark of at most two sentences, such as offering to slow down or fix a posture issue. Describe only what you can actually see, treat expression readings as tentative, never identify who anyone is, and do not infer health, age, or other sensitive traits.]`
         : options.proactiveEvaluation
         ? `[Auto Mode requirement: answer as ${personaLabel} in a dry, witty, slightly sarcastic Sly tone when it fits (sharp but helpful; no sarcasm for real errors). Return exactly NO_ACTION unless the screen and context genuinely call for you to step in. Otherwise react to what is on the shared screen or what the user is doing, with guidance, a recommendation, or an alert, in one brief, natural remark of at most two sentences. Do not take actions.]`

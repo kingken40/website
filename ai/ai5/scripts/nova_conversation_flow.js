@@ -431,6 +431,11 @@ function cancelEdit(messageId) {
 
 function processUserMessage(userMessage, displayMessage = null) {
     window.noteAutoModeUserActivity?.();
+    try {
+        if (window.handleInterviewJobMessage?.(userMessage)) return;
+    } catch (jobError) {
+        console.warn('Job interview handler failed:', jobError);
+    }
     console.log('💭 ==========================================');
     console.log('💭 processUserMessage CALLED');
     console.log('💭 Message:', userMessage);
@@ -508,7 +513,7 @@ function processUserMessage(userMessage, displayMessage = null) {
         updateModelForMessage(userMessage);
         
         // Add user message to chat
-        addMessage(displayMessage || userMessage, 'user');
+        if (displayMessage !== '') addMessage(displayMessage || userMessage, 'user');
         
         const voiceTarget = window.activeVoiceAssistant || null;
         const explicitTarget = getExplicitGroupMessageTarget(userMessage);
