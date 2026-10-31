@@ -64,6 +64,28 @@ function setupFileUploadListeners() {
     });
     
     console.log('✅ File upload listeners setup complete');
+
+    if (!window.novaImagePasteBound) {
+        window.novaImagePasteBound = true;
+        document.addEventListener('paste', (e) => {
+            const items = Array.from(e.clipboardData?.items || []);
+            const imageItem = items.find(item => item.kind === 'file' && item.type.startsWith('image/'));
+            if (!imageItem) return;
+            const active = document.activeElement;
+            const typingElsewhere = active && /^(INPUT|TEXTAREA)$/.test(active.tagName) && active.id !== 'messageInput' && active.id !== 'mobileMessageInput';
+            if (typingElsewhere) return;
+            const blob = imageItem.getAsFile();
+            if (!blob) return;
+            e.preventDefault();
+            const ext = (blob.type.split('/')[1] || 'png').replace('jpeg', 'jpg');
+            const file = new File([blob], blob.name && blob.name !== 'image.png' ? blob.name : `pasted-image-${Date.now()}.${ext}`, { type: blob.type });
+            if (file.size > FILE_SIZE_LIMITS.image) {
+                showNotification(`Image too large! Maximum size: ${(FILE_SIZE_LIMITS.image / 1024 / 1024).toFixed(0)}MB`, 5000);
+                return;
+            }
+            handleImageFile(file).catch(error => showNotification('Error processing image: ' + error.message, 5000));
+        });
+    }
 }
 
 // Handle file upload
