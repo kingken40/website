@@ -133,7 +133,6 @@
     <script>
     async function submitFeedback(payload) {
     const attempts = [
-        ['/api/submit_feedback', payload],
         ['https://formsubmit.co/ajax/805b320faf399a3d82df58510491be73', {
             name: payload.name || 'Anonymous',
             email: payload.email,
