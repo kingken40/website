@@ -1,4 +1,4 @@
-<!-- Game Page -->
+﻿<!-- Game Page -->
 <!DOCTYPE html>
 <html lang="en">
     <head>
@@ -318,33 +318,52 @@
                  * Opens the feedback modal for the given project.
                  * @param {string} project The name of the project to get feedback on.
                  */
-                function openFeedback(project) {
+                async function submitFeedback(payload) {
+    const response = await fetch('https://formsubmit.co/ajax/805b320faf399a3d82df58510491be73', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({
+            name: payload.name || 'Anonymous',
+            email: payload.email,
+            message: payload.message,
+            project: payload.project,
+            _subject: 'Website feedback: ' + payload.project,
+            _replyto: payload.email,
+            _template: 'table',
+            _captcha: 'false'
+        })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (response.ok && String(data.success) === 'true') return true;
+    throw new Error(data.message || ('Request failed (' + response.status + ')'));
+}
+
+function openFeedback(project) {
                     document.getElementById('feedbackProjectTitle').innerText = `Feedback for "${project}"`;
                     document.getElementById('feedbackModal').style.display = 'flex';
                     document.getElementById('feedbackStatus').innerText = '';
-                    document.getElementById('feedbackForm').onsubmit = function(e) {
+                    document.getElementById('feedbackForm').onsubmit = async function(e) {
                         e.preventDefault();
                         const name = document.getElementById('feedbackName').value;
                         const email = document.getElementById('feedbackEmail').value;
                         const message = document.getElementById('feedbackMessage').value;
-                        fetch('http://127.0.0.1:5000/submit_feedback', {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({
+
+                        try {
+                            const sent = await submitFeedback({
                                 project: project,
                                 name: name,
                                 email: email,
                                 message: message
-                            })
-                        })
-                        .then(res => res.json())
-                        .then(data => {
-                            document.getElementById('feedbackStatus').innerText = data.success ? "Thank you for your feedback!" : "Error submitting feedback.";
-                            if (data.success) setTimeout(closeFeedback, 1500);
-                        })
-                        .catch(() => {
-                            document.getElementById('feedbackStatus').innerText = "Error submitting feedback.";
-                        });
+                            });
+
+                            document.getElementById('feedbackStatus').innerText = sent
+                                ? 'Thank you for your feedback!'
+                                : 'Error submitting feedback.';
+                            if (sent) setTimeout(closeFeedback, 1500);
+                        } catch (error) {
+                            document.getElementById('feedbackStatus').innerText = 'Error submitting feedback: ' + (error.message || 'unknown error');
+                            console.error('Feedback submission failed:', error);
+                        }
                     };
                 }
                 // This JavaScript function hides the feedback modal and resets the feedback form when called.
