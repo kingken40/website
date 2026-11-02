@@ -1070,6 +1070,115 @@ function isRepeatedRemark(reply, recentRemarks) {
     });
 }
 
+const AUTO_MODE_CHECKIN_PROMPT = `AUTO MODE IDLE EVALUATION
+The user has not typed, spoken, or clicked for a while. This is an evaluation, not an automatic response: first decide whether they are still engaged.
+If you can see their screen or camera, judge what they are doing. If they appear engaged (reading, watching a video, writing, coding, studying, working through something), stay quiet and reply with exactly: NO_ACTION
+If they show no meaningful engagement (a static or idle screen, an unattended page, nothing in progress, or you cannot see anything), check in with one brief, natural spoken remark: a relevant question about what they are working on, an offer of help, or a question about whether Auto Mode or Screen Share still needs to stay on.
+Do not repeat or rephrase anything already said, do not claim to have taken actions, and if another assistant spoke last, complement rather than echo them.
+Reply with only NO_ACTION or one remark of at most two sentences.`;
+
+const AUTO_MODE_CHECKIN_IDLE_MS = 90000;
+const AUTO_MODE_CHECKIN_GAP_MS = 120000;
+const AUTO_MODE_CHECKIN_RECHECK_MS = 30000;
+const AUTO_MODE_MAX_UNANSWERED = 2;
+
+function countTrailingAssistantTurns() {
+    let count = 0;
+    for (let index = conversationHistory.length - 1; index >= 0; index -= 1) {
+        if (conversationHistory[index]?.role !== 'assistant') break;
+        count += 1;
+    }
+    return count;
+}
+
+function getAutoModeConversationAssistant() {
+    const allowed = groupChatEnabled
+        ? mutedGroupAssistant === 'nova' ? ['nova'] : mutedGroupAssistant === 'other' ? ['other'] : ['nova', 'other']
+        : [window.activeVoiceAssistant === 'other' ? 'other' : 'nova'];
+    if (allowed.length === 1) return allowed[0];
+    const last = getLastAssistantMessage();
+    return last && last.sender !== 'Avon' ? 'other' : 'nova';
+}
+
+// Lets an assistant start or continue a conversation when the user is idle. Returns true if it spoke.
+async function runAutoModeCheckIn(runId, state) {
+    const now = Date.now();
+    const messageInput = document.getElementById('messageInput');
+    const idleSince = Math.max(autoModeLastInteractionAt, state.startedAt);
+    if (document.hidden ||
+        now - idleSince < AUTO_MODE_CHECKIN_IDLE_MS ||
+        now < state.nextEvaluationAt ||
+        countTrailingAssistantTurns() >= AUTO_MODE_MAX_UNANSWERED ||
+        isResponseInFlight ||
+        window.isSpeaking ||
+        window.voiceInterruptInProgress ||
+        window.speechSynthesis?.speaking ||
+        messageInput?.value.trim() ||
+        !window.proactiveGate.canStart(now)) {
+        return false;
+    }
+
+    // Visible screen activity within the idle window means they are watching or working: keep monitoring.
+    if (window.getScreenShareTarget?.() && now - state.lastScreenChangeAt < AUTO_MODE_CHECKIN_IDLE_MS) {
+        state.nextEvaluationAt = now + AUTO_MODE_CHECKIN_RECHECK_MS;
+        return false;
+    }
+    if (!window.proactiveGate.begin()) return false;
+
+    state.nextEvaluationAt = now + AUTO_MODE_CHECKIN_GAP_MS;
+    autoModeEvaluationInFlight = true;
+    let spoke = false;
+    try {
+        const assistant = getAutoModeConversationAssistant();
+        const repeatHint = state.recentRemarks.length
+            ? `You already said: ${state.recentRemarks.map(remark => `"${remark}"`).join('; ')}. Do not repeat or rephrase these.`
+            : '';
+        const replyResult = await generateAIResponse(`${AUTO_MODE_CHECKIN_PROMPT}\n${repeatHint}`.trim(), currentPersonality, {
+            assistant,
+            modelOverride: assistant === 'other' ? groupChatModel : undefined,
+            groupChat: groupChatEnabled,
+            individualChat: !groupChatEnabled || mutedGroupAssistant !== 'both',
+            skipUserHistory: true,
+            proactiveEvaluation: true
+        });
+        if (!autoModeActive || runId !== autoModeRunId) return false;
+
+        const reply = String(replyResult?.reply || '').trim();
+        if (!reply || /^NO_ACTION(?:\s|[.!:—-]|$)/i.test(reply)) {
+            state.noActionStreak += 1;
+            return false;
+        }
+        if (isRepeatedRemark(reply, state.recentRemarks) ||
+            Date.now() - autoModeLastInteractionAt < AUTO_MODE_CHECKIN_IDLE_MS ||
+            isResponseInFlight || window.isSpeaking || window.voiceInterruptInProgress || window.speechSynthesis?.speaking) {
+            return false;
+        }
+
+        const sender = assistant === 'other' ? 'Avon' : 'Nova';
+        addMessage(reply, sender, null, replyResult.model);
+        conversationHistory.push({
+            role: 'assistant',
+            speaker: sender,
+            content: reply,
+            personality: currentPersonality,
+            timestamp: new Date().toISOString(),
+            model: replyResult.model
+        });
+        state.noActionStreak = 0;
+        state.recentRemarks.push(reply);
+        if (state.recentRemarks.length > AUTO_MODE_RECENT_REMARKS) state.recentRemarks.shift();
+        autoModeLastSpokeAt = Date.now();
+        spoke = true;
+        speakAssistantResponse(reply, sender);
+    } catch (error) {
+        console.error('Auto Mode check-in failed:', error);
+    } finally {
+        autoModeEvaluationInFlight = false;
+        window.proactiveGate.end(spoke);
+    }
+    return spoke;
+}
+
 async function runAutoModeLoop(runId) {
     const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
     let lastEvaluatedSignature = null;
@@ -1081,15 +1190,19 @@ async function runAutoModeLoop(runId) {
     let quietStreak = 0;
     let noActionStreak = 0;
     const recentRemarks = [];
+    const checkInState = { startedAt: Date.now(), nextEvaluationAt: 0, lastScreenChangeAt: Date.now(), noActionStreak: 0, recentRemarks };
 
     while (autoModeActive && runId === autoModeRunId) {
         await sleep(AUTO_MODE_POLL_MS);
         if (!autoModeActive || runId !== autoModeRunId) return;
 
+        if (await runAutoModeCheckIn(runId, checkInState)) continue;
+        if (!autoModeActive || runId !== autoModeRunId) return;
+
         const assistant = getAutoModeAssistant();
-        if (!assistant && !window.getScreenShareTarget?.() && Date.now() - autoModeLastHintAt > 30000) {
+        if (!assistant && !window.getScreenShareTarget?.() && !window.isAiVisionActive?.() && Date.now() - autoModeLastHintAt > 30000) {
             autoModeLastHintAt = Date.now();
-            showNotification('Auto Mode is waiting: click Share and pick a screen so it has something to watch.', 3500);
+            showNotification('Auto Mode is on: share your screen or turn on AI Vision to give it more to react to.', 3500);
         }
         if (!assistant) continue;
 
@@ -1106,6 +1219,7 @@ async function runAutoModeLoop(runId) {
         // Track motion every poll, even while busy, so the timing reflects what the screen is doing now.
         const pollRatio = getScreenChangeRatio(lastPolledSignature, signature);
         lastPolledSignature = signature;
+        if (pollRatio >= 0.01) checkInState.lastScreenChangeAt = Date.now();
         motion = motion * 0.8 + pollRatio * 0.2;
         quietStreak = pollRatio < 0.03 ? quietStreak + 1 : 0;
 
@@ -1214,7 +1328,7 @@ function toggleAutoMode() {
     autoModeActive = true;
     autoModeRunId += 1;
     setAutoModeUi(true);
-    showNotification('Auto Mode on. Share your screen for proactive, screen-aware help.', 3500);
+    showNotification('Auto Mode on. Your assistants may speak first; share your screen or turn on AI Vision for more context.', 3500);
     runAutoModeLoop(autoModeRunId);
 }
 
@@ -1361,19 +1475,34 @@ function parseReminderTime(text, now = new Date()) {
         return { due: now.getTime() + amount * unitMs[match[2][0].toLowerCase()] };
     }
     const tomorrow = /\btomorrow\b/i.test(text);
-    match = text.match(/\b(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*([ap])\.?m\.?(?![a-z])/i) || text.match(/\bat\s+(\d{1,2})(?::(\d{2}))?\b/i);
+    const named = text.match(/\b(noon|midnight)\b/i);
+    match = named
+        ? (named[1].toLowerCase() === 'noon' ? [named[0], '12', '0', 'p'] : [named[0], '12', '0', 'a'])
+        : text.match(/\b(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*([ap])\.?m\.?(?![a-z])/i) ||
+          text.match(/\bat\s+(\d{1,2})(?::(\d{2}))?\b/i) ||
+          text.match(/\b(\d{1,2}):(\d{2})\b/);
     if (!match) return null;
-    let hour = parseInt(match[1], 10);
+    const hour = parseInt(match[1], 10);
     const minute = parseInt(match[2] || '0', 10);
     const meridiem = (match[3] || '').toLowerCase();
-    if (minute > 59 || hour > 23 || (meridiem && hour > 12)) return null;
-    if (meridiem === 'p' && hour < 12) hour += 12;
-    if (meridiem === 'a' && hour === 12) hour = 0;
-    const due = new Date(now);
-    due.setHours(hour, minute, 0, 0);
-    if (tomorrow) due.setDate(due.getDate() + 1);
-    if (due <= now) due.setDate(due.getDate() + 1);
-    return { due: due.getTime() };
+    if (minute > 59 || hour > 23 || (meridiem && (hour > 12 || hour < 1))) return null;
+
+    // Without am/pm, an hour from 1 to 12 means whichever of AM or PM comes next.
+    let hours;
+    if (meridiem) hours = [meridiem === 'p' ? (hour % 12) + 12 : hour % 12];
+    else if (hour >= 1 && hour <= 12) hours = [hour % 12, (hour % 12) + 12];
+    else hours = [hour];
+    const base = new Date(now);
+    if (tomorrow) base.setDate(base.getDate() + 1);
+    for (let dayOffset = 0; dayOffset < 3; dayOffset += 1) {
+        for (const h of hours) {
+            const candidate = new Date(base);
+            candidate.setDate(candidate.getDate() + dayOffset);
+            candidate.setHours(h, minute, 0, 0);
+            if (candidate > now) return { due: candidate.getTime() };
+        }
+    }
+    return null;
 }
 
 const REMINDER_INTERVALS = { minute: 60000, hour: 3600000, day: 86400000, week: 604800000 };
@@ -1403,6 +1532,8 @@ function parseReminderRequest(message) {
         .replace(/\bin\s+(?:an?|\d+(?:\.\d+)?)\s*(?:seconds?|secs?|minutes?|mins?|hours?|hrs?|days?)\b/i, ' ')
         .replace(/\b(?:at\s+)?\d{1,2}(?::\d{2})?\s*[ap]\.?m\.?(?![a-z])/i, ' ')
         .replace(/\bat\s+\d{1,2}(?::\d{2})?\b/i, ' ')
+        .replace(/\b(?:at\s+)?\d{1,2}:\d{2}\b/i, ' ')
+        .replace(/\b(?:at\s+)?(?:noon|midnight)\b/i, ' ')
         .replace(/\btomorrow\b/i, ' ')
         .replace(/^(?:(?:hey|yo)\s+)?(?:n\.?\s*o\.?\s*v\.?\s*a\.?|a\.?\s*v\.?\s*o\.?\s*n\.?)[,:\s-]*/i, '')
         .replace(/\b(?:please\s+)?(?:can|could|would)\s+you\b/ig, ' ')
@@ -1499,8 +1630,43 @@ function handleReminderRequest(userMessage, assistant) {
         return true;
     }
     const parsed = parseReminderRequest(text);
-    if (!parsed) return false;
-    reminders.push({ id: Date.now() + Math.random(), task: parsed.task, due: parsed.due, interval: parsed.interval, label: parsed.label, assistant: assistant === 'other' ? 'other' : 'nova' });
+    if (parsed) return addReminderAndReply(text, parsed, assistant);
+
+    // Follow-ups that refer to the previous reminder: "Me again at 1:20 PM", "Reschedule it for 1:30 PM".
+    if (lastReminder && text.length <= 100) {
+        const time = parseReminderTime(text);
+        const rescheduling = /\b(?:re-?schedule|move|change|push|postpone|delay|update|set|make)\b.*\b(?:it|that|reminder)\b|\b(?:re-?schedule|postpone)\b/i.test(text);
+        const again = /\b(?:me\s+again|remind\s+me\s+again|again)\b/i.test(text);
+        if (time && (rescheduling || again)) {
+            const pending = rescheduling ? reminders.find(r => r.id === lastReminder.id) : null;
+            if (pending) {
+                pending.due = time.due;
+                saveReminders();
+                replyAsAssistant(text, `Done. Reminder ${reminders.indexOf(pending) + 1} (${pending.task}) is moved to ${formatReminderTime(time.due)}.`, assistant);
+                return true;
+            }
+            return addReminderAndReply(text, { task: lastReminder.task, due: time.due, interval: 0, label: '' }, assistant);
+        }
+    }
+
+    // Reports that a reminder never arrived get a factual answer from the real reminder list.
+    if (/\b(?:didn'?t|did\s+not|wasn'?t|was\s+not|never|haven'?t|have\s+not|hasn'?t|not)\b[^.?!]*\bremind(?:ed|er)?\b/i.test(text) && text.length <= 120) {
+        replyAsAssistant(text, reminders.length
+            ? `Here is what is actually scheduled right now:\n${formatReminderList()}\nIf one looks wrong, tell me "reschedule it for <time>".`
+            : `Nothing is scheduled right now.${lastReminder ? ` The last reminder was "${lastReminder.task}"; to set it again, say "remind me to ${lastReminder.task} at <time>".` : ' Say "set a reminder to <task> at <time>" and I will set one.'}`, assistant);
+        return true;
+    }
+    return false;
+}
+
+let lastReminder = null;
+try { lastReminder = JSON.parse(localStorage.getItem('nova_last_reminder') || 'null'); } catch (e) { lastReminder = null; }
+
+function addReminderAndReply(text, parsed, assistant) {
+    const reminder = { id: Date.now() + Math.random(), task: parsed.task, due: parsed.due, interval: parsed.interval, label: parsed.label, assistant: assistant === 'other' ? 'other' : 'nova' };
+    reminders.push(reminder);
+    lastReminder = { id: reminder.id, task: reminder.task };
+    localStorage.setItem('nova_last_reminder', JSON.stringify(lastReminder));
     saveReminders();
     if (window.Notification && Notification.permission === 'default' && !systemNotificationsEnabled) {
         showNotification('Tip: turn on Notifications in Settings to get reminders when this tab is in the background.', 4500);

@@ -564,6 +564,28 @@ li strong {
   background-color: #218838;
 }
 
+/* "FIXED!" flag on the bottom-right corner of feedback buttons */
+.feedback-btn.feedback-fixed {
+  position: relative;
+}
+
+.feedback-btn.feedback-fixed::after {
+  content: "(FIXED!)";
+  position: absolute;
+  right: -6px;
+  bottom: -8px;
+  background: #d32f2f;
+  color: #fff;
+  font-size: 10px;
+  font-weight: bold;
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: 8px;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+
 /* Button group for multiple buttons */
 .button-group {
   display: flex;
