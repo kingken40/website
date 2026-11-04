@@ -792,20 +792,21 @@ function stopScreenShare(message) {
     screenShareStream = null;
     if (screenShareVideo) screenShareVideo.srcObject = null;
     screenShareVideo = null;
+    window.clearAutoModeVisualMemory?.('screen');
     setScreenShareUi(false);
     if (message) showNotification(message, 2200);
 }
 
 // Returns a JPEG data URL of the current shared screen, or null when not sharing.
-window.getScreenShareFrame = function (assistant) {
+window.getScreenShareFrame = function (assistant, maxWidth = 1280, quality = 0.6) {
     if (assistant && screenShareTarget !== 'both' && screenShareTarget !== assistant) return null;
     if (!screenShareStream || !screenShareVideo || !screenShareVideo.videoWidth) return null;
-    const scale = Math.min(1, 1280 / screenShareVideo.videoWidth);
+    const scale = Math.min(1, maxWidth / screenShareVideo.videoWidth);
     const canvas = document.createElement('canvas');
     canvas.width = Math.round(screenShareVideo.videoWidth * scale);
     canvas.height = Math.round(screenShareVideo.videoHeight * scale);
     canvas.getContext('2d').drawImage(screenShareVideo, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL('image/jpeg', 0.6);
+    return canvas.toDataURL('image/jpeg', quality);
 };
 
 window.getScreenShareSignature = function (assistant) {
@@ -858,6 +859,7 @@ async function toggleScreenShare(chosenTarget) {
     screenShareVideo.playsInline = true;
     screenShareVideo.srcObject = screenShareStream;
     await screenShareVideo.play().catch(() => {});
+    watchAutoModeVideoFrames(screenShareVideo);
     screenShareStream.getVideoTracks()[0]?.addEventListener('ended', () => stopScreenShare('Screen sharing ended.'));
     setScreenShareUi(true);
     showNotification('Screen sharing on: the AI can now see your screen. Use a vision-capable model.', 3500);
@@ -875,7 +877,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// Auto Mode checks meaningful changes in a shared screen and speaks only when useful.
+// Auto Mode coordinates screen, camera, and recent conversation context.
 let autoModeActive = false;
 let autoModeRunId = 0;
 let autoModeLastInteractionAt = 0;
@@ -884,6 +886,78 @@ let autoModeEvaluationInFlight = false;
 let autoModeLastHintAt = 0;
 let autoPilotActive = false;
 let autoPilotRunId = 0;
+let autoModeWakeResolver = null;
+let autoModeLastVideoWakeAt = 0;
+let autoModeVisualMemory = [];
+
+function watchAutoModeVideoFrames(video) {
+    if (!video?.requestVideoFrameCallback) return;
+    const onFrame = () => {
+        if (video === screenShareVideo || video === window.aiVisionVideo) {
+            window.notifyAutoModeVisualFrame?.();
+            video.requestVideoFrameCallback(onFrame);
+        }
+    };
+    video.requestVideoFrameCallback(onFrame);
+}
+
+function notifyAutoModeVisualFrame() {
+    const now = Date.now();
+    if (now - autoModeLastVideoWakeAt < AUTO_MODE_POLL_MS) return;
+    autoModeLastVideoWakeAt = now;
+    if (autoModeWakeResolver) autoModeWakeResolver();
+}
+window.notifyAutoModeVisualFrame = notifyAutoModeVisualFrame;
+window.watchAutoModeVideoFrames = watchAutoModeVideoFrames;
+
+function waitForAutoModeSample(timeoutMs) {
+    return new Promise(resolve => {
+        let settled = false;
+        const finish = () => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            if (autoModeWakeResolver === finish) autoModeWakeResolver = null;
+            resolve();
+        };
+        const timer = setTimeout(finish, timeoutMs);
+        autoModeWakeResolver = finish;
+    });
+}
+
+function pruneAutoModeVisualMemory(now = Date.now()) {
+    autoModeVisualMemory = autoModeVisualMemory.filter(item => now - item.at <= 180000).slice(-3);
+}
+
+function rememberAutoModeVisualContext(assistant) {
+    const item = {
+        at: Date.now(),
+        screen: window.getScreenShareFrame?.(assistant, 320, 0.4) || null,
+        camera: window.getVisionFrame?.(320, 0.4) || null
+    };
+    if (item.screen || item.camera) {
+        autoModeVisualMemory.push(item);
+        pruneAutoModeVisualMemory(item.at);
+    }
+}
+
+window.getAutoModeVisualContext = function (assistant) {
+    pruneAutoModeVisualMemory();
+    return autoModeVisualMemory.slice(-2).map(item => ({
+        secondsAgo: Math.max(1, Math.round((Date.now() - item.at) / 1000)),
+        screen: window.getScreenShareTarget?.() && item.screen ? item.screen : null,
+        camera: window.isAiVisionActive?.() && item.camera ? item.camera : null
+    })).filter(item => item.screen || item.camera);
+};
+
+window.clearAutoModeVisualMemory = function (source) {
+    if (!source) {
+        autoModeVisualMemory = [];
+        return;
+    }
+    autoModeVisualMemory.forEach(item => { item[source] = null; });
+    autoModeVisualMemory = autoModeVisualMemory.filter(item => item.screen || item.camera);
+};
 
 function setAutoModeUi(active) {
     ['autoModeBtn', 'mobileAutoModeBtn'].forEach(id => {
@@ -892,8 +966,8 @@ function setAutoModeUi(active) {
         btn.classList.toggle('active', active);
         btn.setAttribute('aria-pressed', String(active));
         btn.title = active
-            ? 'Auto Mode is on: proactively notice useful changes on your shared screen'
-            : 'Auto Mode: proactively notice useful changes on your shared screen';
+            ? 'Auto Mode is on: proactively consider your shared screen, camera, and recent conversation'
+            : 'Auto Mode: proactively consider your shared screen, camera, and recent conversation';
     });
 }
 
@@ -901,6 +975,7 @@ function stopAutoMode(message) {
     if (!autoModeActive) return;
     autoModeActive = false;
     autoModeRunId += 1;
+    window.clearAutoModeVisualMemory?.();
     setAutoModeUi(false);
     if (message) showNotification(message, 2200);
 }
@@ -940,8 +1015,9 @@ function getAutoModeAssistant() {
                 : ['nova', 'other']
         : [window.activeVoiceAssistant === 'other' ? 'other' : 'nova'];
     const shareTarget = window.getScreenShareTarget?.();
-    if (!shareTarget) return null;
-    const visible = shareTarget === 'both' ? allowed : allowed.filter(assistant => assistant === shareTarget);
+    const hasCamera = Boolean(window.isAiVisionActive?.());
+    if (!shareTarget && !hasCamera) return null;
+    const visible = !shareTarget || shareTarget === 'both' ? allowed : allowed.filter(assistant => assistant === shareTarget);
     if (!visible.length) return null;
     if (visible.length === 1) return visible[0];
 
@@ -966,14 +1042,12 @@ function getScreenChangeRatio(previous, current) {
     return changedPixels / totalPixels;
 }
 
-const AUTO_MODE_PROMPT = `AUTO MODE SCREEN CHECK
-You and the user are sharing their screen live. You have the lead: step in on your own, without being spoken to, but only when the context genuinely calls for it.
-Study the latest shared-screen image together with the recent conversation. Work out what the user is doing (reading, writing, coding, designing, shopping, researching, watching, troubleshooting) and what just changed.
-Speak up when it would truly help: an error or warning, a mistake or risky step, a finished or failed result, a decision point where a recommendation helps, something relevant to their earlier request, or a smart shortcut for what they're doing. Give concrete guidance, a recommendation, or an alert.
-Stay quiet for ordinary browsing, scrolling, tiny changes, things you already mentioned, or anything you cannot actually see. Never guess at hidden content. Do not click, search, submit, or claim to have taken actions.
-Tone: Sly. Dry, witty and a little sarcastic when the moment fits (for example, a gentle jab at an obvious mistake), but sharp and useful first; drop the sarcasm for real errors or anything serious.
-If there is nothing worth saying, reply with exactly: NO_ACTION
-Otherwise reply with only one brief, natural spoken remark (at most two sentences).`;
+const AUTO_MODE_PROMPT = `UNIFIED AUTO MODE CHECK
+Use all context currently available: the shared screen (digital activity), webcam (physical context), recent visual frames (what changed recently), and recent conversation or speech transcripts (what the user said and asked). Do not assume a source is available unless its image or context is attached.
+First infer the user's activity only as far as the evidence supports: reading, coding, watching, working, studying, troubleshooting, stuck, or inactive. A static screen alone does not mean the user is inactive; reading, watching, and focused work often look still. Treat visible motion as possible video or ordinary work, not automatically a request for help.
+Speak only when a specific observation is timely and useful: a relevant error or warning, a likely blocked step, a meaningful result, a decision point, or a concise suggestion tied to the user's goal. Ask a short, relevant question when it helps. Otherwise stay quiet, especially while the user appears focused.
+Use recent frames to understand transitions and avoid repeating or contradicting earlier observations. Refer only to what is actually visible or said; treat uncertain interpretations as uncertain. Never click, search, submit, take actions, or claim to have done so.
+Return exactly NO_ACTION when an interruption is not justified. Otherwise return one brief, natural spoken remark of at most two sentences. Be warm, clear, and unobtrusive; use dry wit only when appropriate.`;
 
 // One shared gate for every proactive feature (Auto Mode, AI Vision) so only one evaluation runs at a time
 // and remarks never cluster: after any of them speaks, all of them wait MIN_GAP_MS.
@@ -1071,16 +1145,29 @@ function isRepeatedRemark(reply, recentRemarks) {
 }
 
 const AUTO_MODE_CHECKIN_PROMPT = `AUTO MODE IDLE EVALUATION
-The user has not typed, spoken, or clicked for a while. This is an evaluation, not an automatic response: first decide whether they are still engaged.
-If you can see their screen or camera, judge what they are doing. If they appear engaged (reading, watching a video, writing, coding, studying, working through something), stay quiet and reply with exactly: NO_ACTION
-If they show no meaningful engagement (a static or idle screen, an unattended page, nothing in progress, or you cannot see anything), check in with one brief, natural spoken remark: a relevant question about what they are working on, an offer of help, or a question about whether Auto Mode or Screen Share still needs to stay on.
+The user has had no keyboard, mouse, touch, or voice interaction for at least 90 seconds, and available screen or camera context has not meaningfully changed during that idle period. This is the scheduled check-in moment: say one brief, friendly, relevant sentence asking whether they would like help or want to continue. Do not return NO_ACTION just because the screen is static or the user's state is uncertain.
+If recent context clearly shows they are actively watching or engaged despite no input, make the check-in gentle and easy to ignore rather than commenting on their activity.
 Do not repeat or rephrase anything already said, do not claim to have taken actions, and if another assistant spoke last, complement rather than echo them.
-Reply with only NO_ACTION or one remark of at most two sentences.`;
+Reply with only one natural remark of at most two sentences.`;
 
 const AUTO_MODE_CHECKIN_IDLE_MS = 90000;
 const AUTO_MODE_CHECKIN_GAP_MS = 120000;
 const AUTO_MODE_CHECKIN_RECHECK_MS = 30000;
 const AUTO_MODE_MAX_UNANSWERED = 2;
+const AUTO_MODE_IDLE_CHECKIN_FALLBACK = "It's been quiet for a little while. Would you like a hand with anything?";
+
+function resolveAutoModeCheckInReply(reply) {
+    const text = String(reply || '').trim();
+    return !text || /^NO_ACTION(?:\s|[.!:—-]|$)/i.test(text)
+        ? AUTO_MODE_IDLE_CHECKIN_FALLBACK
+        : text;
+}
+
+// Check-ins the user has not responded to since; user input resets it.
+function getUnansweredCheckIns(state) {
+    if (autoModeLastInteractionAt > state.lastSpokeAt) state.unanswered = 0;
+    return state.unanswered;
+}
 
 function countTrailingAssistantTurns() {
     let count = 0;
@@ -1100,16 +1187,32 @@ function getAutoModeConversationAssistant() {
     return last && last.sender !== 'Avon' ? 'other' : 'nova';
 }
 
+// Coming back to the tab after a while away is a natural moment for a short, relevant remark.
+const AUTO_MODE_WELCOME_BACK_MS = 180000;
+let autoModeAwayStartedAt = 0;
+let autoModeWelcomeBackAwayMs = 0;
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        autoModeAwayStartedAt = Date.now();
+        return;
+    }
+    const away = autoModeAwayStartedAt ? Date.now() - autoModeAwayStartedAt : 0;
+    autoModeAwayStartedAt = 0;
+    if (autoModeActive && away >= AUTO_MODE_WELCOME_BACK_MS) autoModeWelcomeBackAwayMs = away;
+});
+
 // Lets an assistant start or continue a conversation when the user is idle. Returns true if it spoke.
 async function runAutoModeCheckIn(runId, state) {
     const now = Date.now();
     const messageInput = document.getElementById('messageInput');
     const idleSince = Math.max(autoModeLastInteractionAt, state.startedAt);
+    const welcomeBackMs = autoModeWelcomeBackAwayMs;
     if (document.hidden ||
-        now - idleSince < AUTO_MODE_CHECKIN_IDLE_MS ||
-        now < state.nextEvaluationAt ||
-        countTrailingAssistantTurns() >= AUTO_MODE_MAX_UNANSWERED ||
+        (!welcomeBackMs && now - idleSince < AUTO_MODE_CHECKIN_IDLE_MS) ||
+        (!welcomeBackMs && now < state.nextEvaluationAt) ||
+        getUnansweredCheckIns(state) >= AUTO_MODE_MAX_UNANSWERED ||
         isResponseInFlight ||
+        window.isListening ||
         window.isSpeaking ||
         window.voiceInterruptInProgress ||
         window.speechSynthesis?.speaking ||
@@ -1119,13 +1222,20 @@ async function runAutoModeCheckIn(runId, state) {
     }
 
     // Visible screen activity within the idle window means they are watching or working: keep monitoring.
-    if (window.getScreenShareTarget?.() && now - state.lastScreenChangeAt < AUTO_MODE_CHECKIN_IDLE_MS) {
+    if (!welcomeBackMs && (window.getScreenShareTarget?.() || window.isAiVisionActive?.()) &&
+        now - state.lastVisualChangeAt < AUTO_MODE_CHECKIN_IDLE_MS) {
         state.nextEvaluationAt = now + AUTO_MODE_CHECKIN_RECHECK_MS;
         return false;
     }
     if (!window.proactiveGate.begin()) return false;
 
+    autoModeWelcomeBackAwayMs = 0;
     state.nextEvaluationAt = now + AUTO_MODE_CHECKIN_GAP_MS;
+    const welcomeBackHint = welcomeBackMs
+        ? `The user just returned to this page after about ${Math.max(1, Math.round(welcomeBackMs / 60000))} minutes away. Greet them naturally in a few words, then pick up a relevant open thread from the conversation or what you can see, or offer a useful next step. If there is truly nothing to add, reply NO_ACTION.`
+        : `Facts: no keyboard, mouse, touch or voice input for ${Math.round((now - idleSince) / 1000)} seconds${window.getScreenShareTarget?.() || window.isAiVisionActive?.() ? `; available visual context has shown no meaningful change for ${Math.round((now - state.lastVisualChangeAt) / 1000)} seconds` : ''}. Do not treat silence or a static image as proof the user is disengaged.`;
+    state.evaluationStartedAt = now;
+    console.log('Auto Mode idle check-in evaluating', { idleSeconds: Math.round((now - idleSince) / 1000), welcomeBack: Boolean(welcomeBackMs) });
     autoModeEvaluationInFlight = true;
     let spoke = false;
     try {
@@ -1133,23 +1243,27 @@ async function runAutoModeCheckIn(runId, state) {
         const repeatHint = state.recentRemarks.length
             ? `You already said: ${state.recentRemarks.map(remark => `"${remark}"`).join('; ')}. Do not repeat or rephrase these.`
             : '';
-        const replyResult = await generateAIResponse(`${AUTO_MODE_CHECKIN_PROMPT}\n${repeatHint}`.trim(), currentPersonality, {
-            assistant,
-            modelOverride: assistant === 'other' ? groupChatModel : undefined,
-            groupChat: groupChatEnabled,
-            individualChat: !groupChatEnabled || mutedGroupAssistant !== 'both',
-            skipUserHistory: true,
-            proactiveEvaluation: true
-        });
+        let replyResult;
+        try {
+            replyResult = await generateAIResponse(`${AUTO_MODE_CHECKIN_PROMPT}\n${welcomeBackHint}\n${repeatHint}`.trim(), currentPersonality, {
+                assistant,
+                modelOverride: assistant === 'other' ? groupChatModel : undefined,
+                groupChat: groupChatEnabled,
+                individualChat: !groupChatEnabled || mutedGroupAssistant !== 'both',
+                skipUserHistory: true,
+                proactiveEvaluation: true,
+                idleCheckIn: true,
+                autoModeEvaluation: true
+            });
+        } catch (error) {
+            console.error('Auto Mode idle check-in generation failed; using a brief fallback:', error);
+            replyResult = { reply: AUTO_MODE_IDLE_CHECKIN_FALLBACK };
+        }
         if (!autoModeActive || runId !== autoModeRunId) return false;
 
-        const reply = String(replyResult?.reply || '').trim();
-        if (!reply || /^NO_ACTION(?:\s|[.!:—-]|$)/i.test(reply)) {
-            state.noActionStreak += 1;
-            return false;
-        }
+        const reply = resolveAutoModeCheckInReply(replyResult?.reply);
         if (isRepeatedRemark(reply, state.recentRemarks) ||
-            Date.now() - autoModeLastInteractionAt < AUTO_MODE_CHECKIN_IDLE_MS ||
+            autoModeLastInteractionAt > state.evaluationStartedAt ||
             isResponseInFlight || window.isSpeaking || window.voiceInterruptInProgress || window.speechSynthesis?.speaking) {
             return false;
         }
@@ -1165,6 +1279,8 @@ async function runAutoModeCheckIn(runId, state) {
             model: replyResult.model
         });
         state.noActionStreak = 0;
+        state.unanswered += 1;
+        state.lastSpokeAt = Date.now();
         state.recentRemarks.push(reply);
         if (state.recentRemarks.length > AUTO_MODE_RECENT_REMARKS) state.recentRemarks.shift();
         autoModeLastSpokeAt = Date.now();
@@ -1180,24 +1296,29 @@ async function runAutoModeCheckIn(runId, state) {
 }
 
 async function runAutoModeLoop(runId) {
-    const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-    let lastEvaluatedSignature = null;
-    let lastPolledSignature = null;
+    let lastEvaluatedScreen = null;
+    let lastPolledScreen = null;
+    let lastEvaluatedCamera = null;
+    let lastPolledCamera = null;
     let lastEvaluationAt = 0;
     let lastChangeAt = Date.now();
+    let lastCameraEvaluationAt = 0;
     let lastStuckCheckAt = 0;
-    let motion = 0;
-    let quietStreak = 0;
+    let screenMotion = 0;
+    let cameraMotion = 0;
+    let screenQuietStreak = 0;
+    let cameraQuietStreak = 0;
     let noActionStreak = 0;
     const recentRemarks = [];
-    const checkInState = { startedAt: Date.now(), nextEvaluationAt: 0, lastScreenChangeAt: Date.now(), noActionStreak: 0, recentRemarks };
+    const checkInState = { startedAt: Date.now(), nextEvaluationAt: 0, lastVisualChangeAt: Date.now(), unanswered: 0, lastSpokeAt: 0, evaluationStartedAt: 0, noActionStreak: 0, recentRemarks };
 
     while (autoModeActive && runId === autoModeRunId) {
-        await sleep(AUTO_MODE_POLL_MS);
+        await waitForAutoModeSample(AUTO_MODE_POLL_MS);
         if (!autoModeActive || runId !== autoModeRunId) return;
 
         if (await runAutoModeCheckIn(runId, checkInState)) continue;
         if (!autoModeActive || runId !== autoModeRunId) return;
+        if (document.hidden) continue;
 
         const assistant = getAutoModeAssistant();
         if (!assistant && !window.getScreenShareTarget?.() && !window.isAiVisionActive?.() && Date.now() - autoModeLastHintAt > 30000) {
@@ -1206,47 +1327,67 @@ async function runAutoModeLoop(runId) {
         }
         if (!assistant) continue;
 
-        let signature;
+        let screenSignature = null;
+        let cameraSignature = null;
         try {
-            signature = window.getScreenShareSignature?.(assistant);
+            if (window.getScreenShareTarget?.()) screenSignature = window.getScreenShareSignature?.(assistant);
+            if (window.isAiVisionActive?.()) cameraSignature = window.getVisionSignature?.();
         } catch (error) {
-            console.error('Auto Mode could not inspect the shared screen:', error);
+            console.error('Auto Mode could not inspect visual context:', error);
             stopAutoMode(`Auto Mode paused: ${error.message}`);
             return;
         }
-        if (!signature) continue;
+        if (!screenSignature && !cameraSignature) continue;
 
-        // Track motion every poll, even while busy, so the timing reflects what the screen is doing now.
-        const pollRatio = getScreenChangeRatio(lastPolledSignature, signature);
-        lastPolledSignature = signature;
-        if (pollRatio >= 0.01) checkInState.lastScreenChangeAt = Date.now();
-        motion = motion * 0.8 + pollRatio * 0.2;
-        quietStreak = pollRatio < 0.03 ? quietStreak + 1 : 0;
+        const now = Date.now();
+        const screenPollRatio = screenSignature ? getScreenChangeRatio(lastPolledScreen, screenSignature) : 0;
+        const cameraPollRatio = cameraSignature ? getScreenChangeRatio(lastPolledCamera, cameraSignature) : 0;
+        lastPolledScreen = screenSignature;
+        lastPolledCamera = cameraSignature;
+        if (screenPollRatio >= 0.03 || cameraPollRatio >= 0.03) checkInState.lastVisualChangeAt = now;
+        screenMotion = screenMotion * 0.8 + screenPollRatio * 0.2;
+        cameraMotion = cameraMotion * 0.8 + cameraPollRatio * 0.2;
+        screenQuietStreak = screenPollRatio < 0.03 ? screenQuietStreak + 1 : 0;
+        cameraQuietStreak = cameraPollRatio < 0.03 ? cameraQuietStreak + 1 : 0;
 
-        const timing = getAutoModeTiming(motion);
-        // Event-based: wait until the screen settles after a change, then react right away.
-        if (quietStreak < timing.quietPolls) continue;
-        if (pollRatio >= 0.01) lastChangeAt = Date.now();
-        const changeRatio = getScreenChangeRatio(lastEvaluatedSignature, signature);
-        const staticForMs = Date.now() - lastChangeAt;
+        const timing = getAutoModeTiming(Math.max(screenMotion, cameraMotion));
+        const screenChangeRatio = screenSignature ? getScreenChangeRatio(lastEvaluatedScreen, screenSignature) : 0;
+        const cameraChangeRatio = cameraSignature ? getScreenChangeRatio(lastEvaluatedCamera, cameraSignature) : 0;
+        const initialScreenReviewDue = Boolean(screenSignature && !lastEvaluatedScreen &&
+            now - checkInState.startedAt >= AUTO_MODE_POLL_MS);
+        const initialCameraReviewDue = Boolean(cameraSignature && !lastEvaluatedCamera &&
+            now - checkInState.startedAt >= AUTO_MODE_POLL_MS);
+        const activeMotionReviewDue = Boolean(screenSignature && lastEvaluationAt > 0 &&
+            screenMotion >= 0.06 &&
+            now - lastEvaluationAt >= 60000 &&
+            screenChangeRatio >= 0.12);
+        // Use video-frame callbacks to wake this loop on fresh media; compare pixels only after activity settles.
+        const screenSettled = Boolean(screenSignature &&
+            (screenQuietStreak >= timing.quietPolls || initialScreenReviewDue || activeMotionReviewDue));
+        const cameraSettled = Boolean(cameraSignature && (cameraQuietStreak >= 2 || initialCameraReviewDue));
+        if (screenPollRatio >= 0.01) lastChangeAt = now;
+        const staticForMs = now - lastChangeAt;
         // Stuck check: the screen has sat still while the user was recently active (an error left up, a blocked form).
-        const stuckCheck = changeRatio < timing.minChange &&
+        const stuckCheck = screenSettled && screenChangeRatio < timing.minChange &&
             staticForMs >= AUTO_MODE_STUCK_MS &&
             Date.now() - lastStuckCheckAt >= AUTO_MODE_STUCK_MS * 2 &&
             Date.now() - autoModeLastInteractionAt < 300000;
-        if (changeRatio < timing.minChange && !stuckCheck) continue;
+        const screenChanged = screenSettled && screenChangeRatio >= timing.minChange;
+        const cameraChanged = cameraSettled && cameraChangeRatio >= 0.12;
+        const slowCameraCheck = cameraSignature && now - lastCameraEvaluationAt >= 120000;
+        if (!screenChanged && !cameraChanged && !stuckCheck && !slowCameraCheck) continue;
 
-        const now = Date.now();
         const messageInput = document.getElementById('messageInput');
         const userIsComposing = Boolean(messageInput?.value.trim());
         // Repeated "nothing to say" answers mean this kind of screen is not worth checking often.
         const backoff = Math.min(1 + noActionStreak * 0.5, 3);
         // A brand-new page or app is always worth a look, so it skips the back-off.
-        const bigChange = changeRatio >= 0.4;
+        const bigChange = screenChangeRatio >= 0.4 || cameraChangeRatio >= 0.4;
         if (now - lastEvaluationAt < timing.cooldownMs * (bigChange ? 1 : backoff) ||
             now - autoModeLastInteractionAt < 2500 ||
             !window.proactiveGate.canStart(now) ||
             isResponseInFlight ||
+            window.isListening ||
             window.isSpeaking ||
             window.voiceInterruptInProgress ||
             window.speechSynthesis?.speaking ||
@@ -1255,19 +1396,28 @@ async function runAutoModeLoop(runId) {
         }
         if (!window.proactiveGate.begin()) continue;
 
-        const changedRegion = stuckCheck ? '' : describeScreenChangeRegion(lastEvaluatedSignature, signature);
-        lastEvaluatedSignature = signature;
+        const changedRegion = stuckCheck || !screenChanged ? '' : describeScreenChangeRegion(lastEvaluatedScreen, screenSignature);
+        lastEvaluatedScreen = screenSignature;
+        lastEvaluatedCamera = cameraSignature;
         lastEvaluationAt = now;
+        if (cameraSignature) lastCameraEvaluationAt = now;
         if (stuckCheck) lastStuckCheckAt = now;
         autoModeEvaluationInFlight = true;
         let spoke = false;
         try {
-            const changeHint = stuckCheck
-                ? `The screen has not changed for ${Math.round(staticForMs / 1000)} seconds while the user was recently active. Speak only if they look stuck (an error or warning left showing, a failed step, a blocked form, an unanswered dialog) and offer one concrete next step; otherwise reply NO_ACTION.`
-                : (changeRatio >= 0.4 ? 'The screen changed completely (new page or app).'
-                    : changeRatio >= 0.12 ? 'A large part of the screen changed.'
-                    : 'A small part of the screen changed.') + (changedRegion ? ` The change is mostly in the ${changedRegion}.` : '');
-            const motionHint = timing.level === 'high' ? 'The screen has been very active, so only mention something important.' : '';
+            const changeHints = [];
+            if (screenChanged) {
+                changeHints.push(`The shared screen changed ${screenChangeRatio >= 0.4 ? 'substantially' : 'in a smaller area'}${changedRegion ? `, mostly in the ${changedRegion}` : ''}.`);
+            }
+            if (cameraChanged) changeHints.push('The camera view changed meaningfully.');
+            if (slowCameraCheck && !cameraChanged) changeHints.push('Recheck the current camera view for a slow change in posture or whether the user appears to need help.');
+            if (stuckCheck) {
+                changeHints.push(`The shared screen has been static for ${Math.round(staticForMs / 1000)} seconds despite recent user activity. Only call out a visible error, warning, failed step, or blocked form, and offer one concrete next step.`);
+            }
+            const changeHint = changeHints.join(' ');
+            const motionHint = activeMotionReviewDue
+                ? 'The screen has remained active since the last review. Distinguish watching or ordinary work from a meaningful issue; do not interrupt normal activity.'
+                : timing.level === 'high' ? 'Visual activity is high; wait for a meaningful, settled moment and do not interrupt ordinary motion.' : '';
             const repeatHint = recentRemarks.length
                 ? `You already said: ${recentRemarks.map(remark => `"${remark}"`).join('; ')}. Do not repeat or rephrase these.`
                 : '';
@@ -1277,9 +1427,11 @@ async function runAutoModeLoop(runId) {
                 groupChat: groupChatEnabled,
                 individualChat: !groupChatEnabled || mutedGroupAssistant !== 'both',
                 skipUserHistory: true,
-                proactiveEvaluation: true
+                proactiveEvaluation: true,
+                autoModeEvaluation: true
             });
             if (!autoModeActive || runId !== autoModeRunId) return;
+            rememberAutoModeVisualContext(assistant);
 
             const reply = String(replyResult?.reply || '').trim();
             if (!reply || /^NO_ACTION(?:\s|[.!:—-]|$)/i.test(reply)) {
@@ -1289,6 +1441,7 @@ async function runAutoModeLoop(runId) {
             if (isRepeatedRemark(reply, recentRemarks)) continue;
             if (Date.now() - autoModeLastInteractionAt < 3500 ||
                 isResponseInFlight ||
+                window.isListening ||
                 window.isSpeaking ||
                 window.voiceInterruptInProgress ||
                 window.speechSynthesis?.speaking) {
@@ -1312,7 +1465,7 @@ async function runAutoModeLoop(runId) {
             spoke = true;
             speakAssistantResponse(reply, sender);
         } catch (error) {
-            console.error('Auto Mode screen check failed:', error);
+            console.error('Auto Mode visual check failed:', error);
             stopAutoMode(`Auto Mode paused: ${error.message}`);
             return;
         } finally {
@@ -1421,16 +1574,17 @@ async function handleInterrupt(userMessage) {
         timestamp: new Date().toISOString()
     });
     
-    // Get the last Nova message to understand context
-    const lastNovaMessage = getLastNovaMessageText();
-    
+    const lastAssistantMessage = getLastAssistantMessage();
+    const previousReply = lastAssistantMessage?.text || window.lastSpeechText || 'No previous assistant reply is available.';
+    const previousSpeaker = lastAssistantMessage?.sender === 'Avon' ? 'A.V.O.N.' : 'N.O.V.A.';
+
     // Build context-aware prompt that understands natural conversation flow
     const interruptPrompt = `The user has interrupted your previous response mid-way. They are now saying or asking:
 
 "${userMessage}"
 
-Here's what you were discussing before they interrupted:
-${lastNovaMessage}
+${previousSpeaker} was saying:
+${previousReply}
 
 Now respond to their new input naturally. Determine if they are:
 1. Asking a clarification or follow-up to what you were saying

@@ -117,13 +117,16 @@ function reconcileSpeechOutputState() {
     const bridgeAudioActive = currentBridgeAudio &&
         !currentBridgeAudio.paused &&
         !currentBridgeAudio.ended;
+    const packAudioActive = currentPackAudio &&
+        !currentPackAudio.paused &&
+        !currentPackAudio.ended;
 
-    if ((isSpeaking || isSpeechOutputActive) && !browserSpeechActive && !bridgeAudioActive) {
+    if ((isSpeaking || isSpeechOutputActive) && !browserSpeechActive && !bridgeAudioActive && !packAudioActive) {
         console.warn('🔊 Clearing stale speech output state');
         clearSpeechOutputState();
         return false;
     }
-    return !!(browserSpeechActive || bridgeAudioActive);
+    return !!(browserSpeechActive || bridgeAudioActive || packAudioActive);
 }
 
 async function playViaLocalVoiceBridge(text, onEndCallback) {
@@ -225,7 +228,7 @@ const avonWakePhraseCompactPatterns = avonWakePhrases.map((phrase) => phrase.rep
 let wakeListeningTimeout = null;
 let restartPending = false; // Prevent multiple restart attempts
 let isSpeechOutputActive = false; // Track if Nova is currently speaking
-let interruptListeningEnabled = false; // Prefer explicit R barge-in to avoid hearing its own TTS
+let interruptListeningEnabled = localStorage.getItem('nova_interrupts_enabled') !== 'false';
 let activeSpeechOutputText = '';
 let speechInterruptTriggered = false;
 let lastSpeechInterruptAt = 0;
@@ -265,7 +268,7 @@ function rememberSpokenText(text) {
 
 function isSpeechOutputBusy() {
     // speechSynthesis.speaking is not checked: iOS can leave it stuck true, which would block the mic forever
-    return !!(isSpeechOutputActive || isSpeaking);
+    return !!(isSpeechOutputActive || isSpeaking || (currentPackAudio && !currentPackAudio.paused && !currentPackAudio.ended));
 }
 
 // True while the mic could still be hearing the assistant's own voice.
@@ -317,6 +320,17 @@ function countTranscriptWords(text) {
     const normalized = normalizeVoiceTranscript(text);
     if (!normalized) return 0;
     return normalized.split(' ').filter(Boolean).length;
+}
+
+function getSpeechInterruptCandidate(finalTranscript, interimTranscript) {
+    const finalText = String(finalTranscript || '').trim();
+    const interimText = String(interimTranscript || '').trim();
+    const finalWords = countTranscriptWords(finalText);
+    const interimWords = countTranscriptWords(interimText);
+    const shortInterrupt = /^(?:stop|wait|pause|no|actually|hold on|hang on|one second|that's enough|that is enough)$/i;
+    if (finalText && (finalWords >= 2 || shortInterrupt.test(finalText))) return finalText;
+    if (interimText && (interimWords >= 3 || shortInterrupt.test(interimText))) return interimText;
+    return '';
 }
 
 function isWakePhraseOnlyTranscript(normalizedTranscript) {
@@ -414,23 +428,14 @@ function processSpeechInterruptCandidate(finalTranscript, interimTranscript) {
     if (now - lastSpeechInterruptAt < 1200) {
         return;
     }
-    // The first moments of speech are when the mic hears the assistant's own opening words
-    if (now - lastSpeechStartedAt < 1500) {
+    // Ignore the opening audio tail, when recognition is most likely to hear the assistant.
+    if (now - lastSpeechStartedAt < 500) {
         return;
     }
 
-    const normalizedFinal = normalizeVoiceTranscript(finalTranscript);
-    const normalizedInterim = normalizeVoiceTranscript(interimTranscript);
-    let candidate = '';
-    let rawCandidate = '';
-
-    if (normalizedFinal && countTranscriptWords(normalizedFinal) >= 3) {
-        candidate = normalizedFinal;
-        rawCandidate = String(finalTranscript || '').trim();
-    } else if (normalizedInterim && countTranscriptWords(normalizedInterim) >= 4) {
-        candidate = normalizedInterim;
-        rawCandidate = String(interimTranscript || '').trim();
-    }
+    const finalCandidate = getSpeechInterruptCandidate(finalTranscript, '');
+    const rawCandidate = getSpeechInterruptCandidate(finalTranscript, interimTranscript);
+    const candidate = normalizeVoiceTranscript(rawCandidate);
 
     if (!candidate || isWakePhraseOnlyTranscript(candidate) || isLikelySpeechEcho(candidate)) {
         return;
@@ -450,7 +455,11 @@ function processSpeechInterruptCandidate(finalTranscript, interimTranscript) {
     alwaysListeningTurnActive = false;
 
     // Keep the mic open and hear the user out; submit once they pause
-    interruptCapture = { finalText: normalizedFinal ? String(finalTranscript).trim() : '', interimText: normalizedFinal ? '' : String(interimTranscript).trim(), timer: null };
+    interruptCapture = {
+        finalText: finalCandidate ? String(finalTranscript).trim() : '',
+        interimText: finalCandidate ? '' : rawCandidate,
+        timer: null
+    };
     updateVoiceStatus('Listening...');
     scheduleInterruptSubmit();
 }
@@ -461,14 +470,7 @@ const INTERRUPT_PAUSE_MS = 1400;
 // Settings switch: let the user speak over the assistant to interrupt it
 document.addEventListener('DOMContentLoaded', () => {
     const toggle = document.getElementById('interruptsEnabled');
-    // The mic is always off while the assistant speaks, so barge-in is permanently disabled
-    localStorage.setItem('nova_interrupts_enabled', 'false');
-    interruptListeningEnabled = false;
-    window.interruptListeningEnabled = false;
-    if (!toggle) return;
-    toggle.checked = false;
-    toggle.closest('.setting-group')?.style.setProperty('display', 'none');
-    return;
+    window.interruptListeningEnabled = interruptListeningEnabled;
     const apply = (on) => {
         interruptListeningEnabled = on;
         window.interruptListeningEnabled = on;
@@ -477,8 +479,10 @@ document.addEventListener('DOMContentLoaded', () => {
             stopSpeechInterruptListening(true);
         }
     };
-    toggle.checked = localStorage.getItem('nova_interrupts_enabled') === 'true';
-    apply(toggle.checked);
+    const stored = localStorage.getItem('nova_interrupts_enabled');
+    apply(stored !== 'false');
+    if (!toggle) return;
+    toggle.checked = interruptListeningEnabled;
     toggle.addEventListener('change', () => {
         localStorage.setItem('nova_interrupts_enabled', String(toggle.checked));
         apply(toggle.checked);
@@ -496,15 +500,19 @@ function finishInterruptCapture() {
     const text = joinTranscriptParts(interruptCapture.finalText, interruptCapture.interimText).trim();
     clearTimeout(interruptCapture.timer);
     interruptCapture = null;
-    window.voiceInterruptInProgress = false;
     speechInterruptTriggered = false;
     if (recognition) {
         isListening = false;
         window.isListening = false;
         try { recognition.abort(); } catch (e) {}
     }
-    if (text && !isLikelySpeechEcho(normalizeVoiceTranscript(text))) submitVoiceTranscript(text);
-    else if (text) console.log('🛑 Discarded interrupt capture that matched assistant speech:', text);
+    if (text && !isLikelySpeechEcho(normalizeVoiceTranscript(text))) {
+        window.voiceInterruptInProgress = true;
+        submitVoiceTranscript(text);
+    } else {
+        window.voiceInterruptInProgress = false;
+        if (text) console.log('🛑 Discarded interrupt capture that matched assistant speech:', text);
+    }
 }
 
 // Returns true when the result was consumed as part of an in-progress interrupt
@@ -973,10 +981,13 @@ function setupSpeechRecognition() {
             }
         }
 
-        // The mic is treated as OFF while the assistant speaks (and briefly after), so it never hears itself
-        if (isMicMutedForSpeech()) return;
+        if (speechInterruptListeningMode) {
+            if (isSpeechOutputActive) processSpeechInterruptCandidate(finalTranscript, interimTranscript);
+            return;
+        }
 
         if (handleInterruptCaptureResult(finalTranscript, interimTranscript)) return;
+        if (isMicMutedForSpeech()) return;
         if (isAssistantEchoTranscript(finalTranscript)) finalTranscript = '';
         if (isAssistantEchoTranscript(interimTranscript)) interimTranscript = '';
         if (!finalTranscript && !interimTranscript) return;
@@ -1406,6 +1417,11 @@ function processVoiceCommand(transcript) {
     console.log('🗣️ ==========================================');
     console.log('🗣️ PROCESSING VOICE COMMAND:', transcript);
     console.log('🗣️ ==========================================');
+
+    if (window.voiceInterruptInProgress && typeof window.processUserMessage === 'function') {
+        window.processUserMessage(transcript);
+        return;
+    }
     
     try {
         const command = transcript.toLowerCase().trim();
@@ -2124,6 +2140,11 @@ function stopSpeech() {
         currentBridgeAudio.currentTime = 0;
         currentBridgeAudio = null;
     }
+    if (currentPackAudio) {
+        currentPackAudio.pause();
+        currentPackAudio.currentTime = 0;
+        currentPackAudio = null;
+    }
     if (synthesis) {
         synthesis.cancel();
     }
@@ -2132,6 +2153,11 @@ function stopSpeech() {
 }
 
 function pauseSpeech() {
+    if (currentPackAudio) {
+        currentPackAudio.pause();
+        updateSpeakingUI(true);
+        return;
+    }
     if (currentBridgeAudio) {
         currentBridgeAudio.pause();
     }
@@ -2142,6 +2168,12 @@ function pauseSpeech() {
 }
 
 function resumeSpeech() {
+    if (currentPackAudio && currentPackAudio.paused) {
+        currentPackAudio.play().catch(error => {
+            console.warn('Could not resume JARVIS voice-pack playback:', error);
+        });
+        return;
+    }
     if (currentBridgeAudio) {
         currentBridgeAudio.play().catch(error => {
             console.warn('Could not resume local voice playback:', error);

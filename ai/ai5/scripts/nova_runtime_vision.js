@@ -1,12 +1,9 @@
 // AI Vision: lets the assistants see through the user's camera.
-// While on, the latest camera frame is attached to each AI request, and an
-// optional proactive check lets the assistant speak up when something useful is visible.
+// While on, the latest camera frame is attached to each AI request. When Auto Mode is also on,
+// a proactive check lets the assistant speak up first when something useful is visible.
 
 let aiVisionStream = null;
 let aiVisionVideo = null;
-let aiVisionRunId = 0;
-let aiVisionLastSpokeAt = 0;
-let aiVisionInFlight = false;
 
 const AI_VISION_HOVER_TEXT = 'Allow AI5 to see through your camera for visual assistance.';
 const AI_VISION_FRAME_WIDTH = 640;
@@ -26,11 +23,12 @@ function setAiVisionUi(active) {
 }
 
 function stopAiVision(message) {
-    aiVisionRunId += 1;
     if (aiVisionStream) aiVisionStream.getTracks().forEach(track => track.stop());
     aiVisionStream = null;
     if (aiVisionVideo) aiVisionVideo.srcObject = null;
     aiVisionVideo = null;
+    window.aiVisionVideo = null;
+    window.clearAutoModeVisualMemory?.('camera');
     const previewVideo = document.getElementById('aiVisionPreviewVideo');
     if (previewVideo) previewVideo.srcObject = null;
     setAiVisionUi(false);
@@ -139,15 +137,15 @@ function isAiVisionReady() {
 window.isAiVisionActive = () => Boolean(aiVisionStream);
 
 // Returns a JPEG data URL of the current camera view, or null when AI Vision is off.
-window.getVisionFrame = function () {
+window.getVisionFrame = function (maxWidth = AI_VISION_FRAME_WIDTH, quality = 0.7) {
     if (!isAiVisionReady()) return null;
-    const scale = Math.min(1, AI_VISION_FRAME_WIDTH / aiVisionVideo.videoWidth);
+    const scale = Math.min(1, maxWidth / aiVisionVideo.videoWidth);
     const canvas = document.createElement('canvas');
     canvas.width = Math.round(aiVisionVideo.videoWidth * scale);
     canvas.height = Math.round(aiVisionVideo.videoHeight * scale);
     // Frames are sent as captured (not mirrored); only the on-screen preview is mirrored.
     canvas.getContext('2d').drawImage(aiVisionVideo, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL('image/jpeg', 0.7);
+    return canvas.toDataURL('image/jpeg', quality);
 };
 
 function getVisionSignature() {
@@ -167,109 +165,7 @@ function getVisionSignature() {
     }
     return signature;
 }
-
-function getVisionChangeRatio(previous, current) {
-    if (!previous || !current || previous.length !== current.length) return 1;
-    let changed = 0;
-    const total = current.length / 3;
-    for (let pixel = 0; pixel < total; pixel += 1) {
-        const offset = pixel * 3;
-        const distance = Math.abs(current[offset] - previous[offset]) +
-            Math.abs(current[offset + 1] - previous[offset + 1]) +
-            Math.abs(current[offset + 2] - previous[offset + 2]);
-        if (distance >= 15) changed += 1;
-    }
-    return changed / total;
-}
-
-function getVisionAssistant() {
-    const allowed = groupChatEnabled
-        ? mutedGroupAssistant === 'nova' ? ['nova'] : mutedGroupAssistant === 'other' ? ['other'] : ['nova', 'other']
-        : [window.activeVoiceAssistant === 'other' ? 'other' : 'nova'];
-    if (allowed.length === 1) return allowed[0];
-    const last = typeof getLastAssistantMessage === 'function' ? getLastAssistantMessage() : null;
-    return last && last.sender !== 'Avon' ? 'other' : 'nova';
-}
-
-const AI_VISION_PROMPT = `AI VISION CHECK
-You can see the user through their webcam right now. Decide whether to say something on your own.
-Speak only when it would clearly help: they look confused, frustrated, or stuck (offer to slow down or explain differently); they are holding, pointing at, or showing something you can identify (say what it is and how it helps); their posture is clearly poor (a short ergonomic tip); or they seem to need help.
-Stay quiet for ordinary, neutral moments, and do not repeat anything you already said.
-If nothing is worth saying, reply with exactly: NO_ACTION`;
-
-async function runAiVisionLoop(runId) {
-    const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-    let lastEvaluatedSignature = null;
-    let lastEvaluationAt = 0;
-
-    while (aiVisionStream && runId === aiVisionRunId) {
-        await sleep(5000);
-        if (!aiVisionStream || runId !== aiVisionRunId) return;
-        if (aiVisionInFlight || document.hidden) continue;
-
-        const now = Date.now();
-        const messageInput = document.getElementById('messageInput');
-        if (now - lastEvaluationAt < 40000 ||
-            now - aiVisionLastSpokeAt < 60000 ||
-            now - (typeof autoModeLastInteractionAt === 'number' ? autoModeLastInteractionAt : 0) < 3000 ||
-            window.proactiveGate?.canStart() === false ||
-            isResponseInFlight ||
-            window.isSpeaking ||
-            window.voiceInterruptInProgress ||
-            window.speechSynthesis?.speaking ||
-            messageInput?.value.trim()) {
-            continue;
-        }
-
-        const signature = getVisionSignature();
-        if (!signature) continue;
-        const changeRatio = getVisionChangeRatio(lastEvaluatedSignature, signature);
-        // Check after a visible change, or at least every two minutes so slow changes like slouching are caught.
-        if (changeRatio < 0.12 && now - lastEvaluationAt < 120000) continue;
-        if (!window.proactiveGate.begin()) continue;
-
-        lastEvaluatedSignature = signature;
-        lastEvaluationAt = now;
-        aiVisionInFlight = true;
-        let spoke = false;
-        try {
-            const assistant = getVisionAssistant();
-            const replyResult = await generateAIResponse(AI_VISION_PROMPT, currentPersonality, {
-                assistant,
-                modelOverride: assistant === 'other' ? groupChatModel : undefined,
-                groupChat: groupChatEnabled,
-                individualChat: !groupChatEnabled || mutedGroupAssistant !== 'both',
-                skipUserHistory: true,
-                proactiveEvaluation: true,
-                visionEvaluation: true
-            });
-            if (!aiVisionStream || runId !== aiVisionRunId) return;
-
-            const reply = String(replyResult?.reply || '').trim();
-            if (!reply || /^NO_ACTION(?:\s|[.!:—-]|$)/i.test(reply)) continue;
-            if (isResponseInFlight || window.isSpeaking || window.speechSynthesis?.speaking || messageInput?.value.trim()) continue;
-
-            const sender = assistant === 'other' ? 'Avon' : 'Nova';
-            addMessage(reply, sender, null, replyResult.model);
-            conversationHistory.push({
-                role: 'assistant',
-                speaker: sender,
-                content: reply,
-                personality: currentPersonality,
-                timestamp: new Date().toISOString(),
-                model: replyResult.model
-            });
-            aiVisionLastSpokeAt = Date.now();
-            spoke = true;
-            speakAssistantResponse(reply, sender);
-        } catch (error) {
-            console.error('AI Vision check failed:', error);
-        } finally {
-            aiVisionInFlight = false;
-            window.proactiveGate.end(spoke);
-        }
-    }
-}
+window.getVisionSignature = getVisionSignature;
 
 async function toggleAiVision() {
     if (aiVisionStream) return stopAiVision('AI Vision off. The camera is no longer in use.');
@@ -293,7 +189,9 @@ async function toggleAiVision() {
     aiVisionVideo.muted = true;
     aiVisionVideo.playsInline = true;
     aiVisionVideo.srcObject = aiVisionStream;
+    window.aiVisionVideo = aiVisionVideo;
     await aiVisionVideo.play().catch(() => {});
+    window.watchAutoModeVideoFrames?.(aiVisionVideo);
 
     ensureAiVisionPreview();
     const previewVideo = document.getElementById('aiVisionPreviewVideo');
@@ -304,8 +202,6 @@ async function toggleAiVision() {
     aiVisionStream.getVideoTracks()[0]?.addEventListener('ended', () => stopAiVision('AI Vision ended: the camera was disconnected.'));
     setAiVisionUi(true);
     showNotification('AI Vision on: camera frames are sent to the AI model with your messages. Use a vision-capable model.', 4500);
-    aiVisionRunId += 1;
-    runAiVisionLoop(aiVisionRunId);
 }
 
 document.addEventListener('DOMContentLoaded', () => {

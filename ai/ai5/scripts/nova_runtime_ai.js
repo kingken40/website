@@ -1554,10 +1554,10 @@ If live web blocks are included, treat them as current evidence and use them dir
     const solutionOfferNote = ' If the user gives you a task or something to keep (store, save, remember, write, plan, organise, send, schedule), do it as far as you actually can, then end with one short, specific offer of next steps, such as "Shall I save this to your Knowledge Base, or prepare it as a downloadable file?". Only offer things this app really supports (Knowledge Base entries the user adds in Settings, downloadable files such as PDF/TXT/DOCX, images, summaries, study guides, reminders in chat). Never claim something was stored or sent unless it actually was. Skip the offer for plain questions and small talk, and keep it to a single sentence even in short-reply modes.';
     const styleReminder = options.rawTask
         ? '[Follow the task above exactly and return only the requested output, with no persona, greeting, or extra remarks.]'
-        : options.visionEvaluation
-        ? `[AI Vision check as ${personaLabel}: look at the attached live camera image. Return exactly NO_ACTION unless something clearly useful is visible: the user looks confused, frustrated, or stuck; they are holding or pointing at something relevant; their posture is clearly poor; or they appear to need help. Otherwise say one brief, kind, natural remark of at most two sentences, such as offering to slow down or fix a posture issue. Describe only what you can actually see, treat expression readings as tentative, never identify who anyone is, and do not infer health, age, or other sensitive traits.]`
+        : options.proactiveEvaluation && options.idleCheckIn
+        ? `[Auto Mode idle check-in as ${personaLabel}: this request is only made after at least 90 seconds without user interaction or meaningful visual change. Give one gentle, friendly, relevant check-in of at most two sentences. Do not return NO_ACTION just because the screen is static or the user's state is uncertain. Avoid claiming they are inactive or describing unseen activity. Do not take actions.]`
         : options.proactiveEvaluation
-        ? `[Auto Mode requirement: answer as ${personaLabel} in a dry, witty, slightly sarcastic Sly tone when it fits (sharp but helpful; no sarcasm for real errors). Return exactly NO_ACTION unless the screen and context genuinely call for you to step in. Otherwise react to what is on the shared screen or what the user is doing, with guidance, a recommendation, or an alert, in one brief, natural remark of at most two sentences. Do not take actions.]`
+        ? `[Unified Auto Mode as ${personaLabel}: consider the current screen and camera images, any labeled recent visual images, and recent conversation or speech transcripts together. Infer whether the user is reading, coding, watching, working, stuck, or inactive only when supported by evidence. Do not treat a still screen or silence as inactivity. Avoid interrupting focused activity; return exactly NO_ACTION unless a specific, timely observation or question would genuinely help. If speaking, make one brief, natural remark of at most two sentences. Never claim to take actions.]`
         : presetConfig
             ? `[Voice requirement for this reply: answer as ${personaLabel} in a clearly "${presetConfig.name}" personality - ${presetConfig.instructions} ${PERSONALITY_INFLUENCE_LEVELS[getPersonalityInfluence(assistantKey)].text} Regardless of how earlier replies sounded.                 ${replyLengthText('Reply with one very short sentence (about 10 words or fewer), only the answer.', 'Answer in one or two short sentences maximum, only what was asked.',             'Give a full, detailed answer.')}${youUpNote}${solutionOfferNote}]`
                         : `[Voice requirement for this reply: answer as ${personaLabel} in your own distinct core persona, not a generic assistant voice. ${replyLengthText('Reply with one very short sentence (about 10 words or fewer), only the answer.', 'Answer in one or two short sentences maximum, only what was asked.', 'Give a full, detailed answer.')}${youUpNote}${solutionOfferNote}]`;
@@ -1565,6 +1565,9 @@ If live web blocks are included, treat them as current evidence and use them dir
     // Add current user message
     const screenFrame = window.getScreenShareFrame?.(isAvon ? 'other' : 'nova');
     const cameraFrame = window.getVisionFrame?.();
+    const recentVisualFrames = options.autoModeEvaluation
+        ? window.getAutoModeVisualContext?.(isAvon ? 'other' : 'nova') || []
+        : [];
     const frameParts = [];
     let frameNotes = '';
     if (screenFrame) {
@@ -1575,6 +1578,16 @@ If live web blocks are included, treat them as current evidence and use them dir
         frameNotes += '\n\n[AI Vision is on: the attached image is a live frame from the user\'s webcam. You can see the user, their hands, what they hold or point at, their surroundings, and their posture. Use it when relevant: notice confusion or engagement and adapt your pacing, name objects or diagrams they show you, and give gentle posture or ergonomic feedback when asked or clearly useful. Describe only what is visible, treat expression readings as tentative, never identify people by their face, and never infer health or other sensitive traits. If the image is dark or blocked, say so.]';
         frameParts.push({ type: 'image_url', image_url: { url: cameraFrame } });
     }
+    recentVisualFrames.forEach((frame, index) => {
+        if (frame.screen) {
+            frameNotes += `\n\n[Recent screen frame ${index + 1}, captured about ${frame.secondsAgo} seconds ago. Compare with the current screen to understand what changed.]`;
+            frameParts.push({ type: 'image_url', image_url: { url: frame.screen } });
+        }
+        if (frame.camera) {
+            frameNotes += `\n\n[Recent camera frame ${index + 1}, captured about ${frame.secondsAgo} seconds ago. Compare with the current camera view only when relevant.]`;
+            frameParts.push({ type: 'image_url', image_url: { url: frame.camera } });
+        }
+    });
     messages.push({
         role: "user",
         content: frameParts.length

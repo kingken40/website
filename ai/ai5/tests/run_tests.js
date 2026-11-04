@@ -195,6 +195,7 @@ test('AI Vision is off by default and returns no frame', () => {
     const { windowStub } = loadVision();
     assert.strictEqual(windowStub.isAiVisionActive(), false);
     assert.strictEqual(windowStub.getVisionFrame(), null);
+    assert.strictEqual(typeof windowStub.getVisionSignature, 'function');
 });
 
 test('AI Vision hover text matches the spec', () => {
@@ -247,7 +248,11 @@ test('AI Vision preview pinch-resizes with two fingers', () => {
 
 // ---------- Auto Mode + screen share timing ----------
 const flowSrc = read('nova_conversation_flow.js');
-const flow = load(slice(flowSrc, 'window.proactiveGate = ', 'async function runAutoModeLoop'));
+const flow = load(slice(flowSrc, '// Auto Mode coordinates screen', 'async function runAutoModeLoop'), {
+    document: { addEventListener() {} },
+    setTimeout,
+    clearTimeout
+});
 
 test('Auto Mode timing adapts to screen motion', () => {
     const low = flow.getAutoModeTiming(0.005);
@@ -282,10 +287,59 @@ test('isRepeatedRemark blocks rephrased repeats but allows new remarks', () => {
     assert.strictEqual(flow.isRepeatedRemark('anything', []), false);
 });
 
-test('Auto Mode loop uses the shared gate and AI Vision does too', () => {
+test('Auto Mode coordinates screen and camera through one proactive gate', () => {
     assert.ok(flowSrc.includes('window.proactiveGate.begin()') && flowSrc.includes('window.proactiveGate.end(spoke)'));
+    assert.ok(flowSrc.includes('window.getScreenShareSignature?.(assistant)'));
+    assert.ok(flowSrc.includes('window.getVisionSignature?.()'));
     const visionSrc = read('nova_runtime_vision.js');
-    assert.ok(visionSrc.includes('window.proactiveGate.begin()') && visionSrc.includes('window.proactiveGate.end(spoke)'));
+    assert.ok(!visionSrc.includes('runAiVisionLoop'), 'camera vision should not launch a separate evaluator');
+    assert.ok(visionSrc.includes('window.watchAutoModeVideoFrames?.(aiVisionVideo)'));
+    assert.ok(flowSrc.includes('reading, coding, watching, working, studying, troubleshooting, stuck, or inactive'));
+});
+
+test('Auto Mode prompt treats stillness as ambiguous and retains recent visual context', () => {
+    assert.ok(flowSrc.includes('A static screen alone does not mean the user is inactive'));
+    assert.ok(flowSrc.includes('autoModeVisualMemory.slice(-2)'));
+    assert.ok(flowSrc.includes('window.getAutoModeVisualContext ='));
+    assert.ok(flowSrc.includes('activeMotionReviewDue'));
+    assert.ok(read('nova_runtime_ai.js').includes('options.autoModeEvaluation'));
+});
+
+test('90-second idle check-in always produces a spoken prompt, including NO_ACTION or failed model responses', () => {
+    assert.ok(flowSrc.includes('const AUTO_MODE_CHECKIN_IDLE_MS = 90000'));
+    assert.strictEqual(
+        flow.resolveAutoModeCheckInReply('NO_ACTION'),
+        "It's been quiet for a little while. Would you like a hand with anything?"
+    );
+    assert.strictEqual(
+        flow.resolveAutoModeCheckInReply(''),
+        "It's been quiet for a little while. Would you like a hand with anything?"
+    );
+    assert.strictEqual(flow.resolveAutoModeCheckInReply('Would you like to continue?'), 'Would you like to continue?');
+    assert.ok(flowSrc.includes('using a brief fallback'));
+    assert.ok(read('nova_runtime_ai.js').includes('Do not return NO_ACTION just because the screen is static'));
+});
+
+test('Auto Mode keeps only a short in-memory window of recent visual frames', () => {
+    flow.window.getScreenShareTarget = () => 'both';
+    flow.window.isAiVisionActive = () => true;
+    flow.window.getScreenShareFrame = (_assistant, width) => `screen-${width}`;
+    flow.window.getVisionFrame = width => `camera-${width}`;
+    flow.rememberAutoModeVisualContext('nova');
+    flow.rememberAutoModeVisualContext('nova');
+    flow.rememberAutoModeVisualContext('nova');
+    const recent = flow.window.getAutoModeVisualContext('nova');
+    assert.strictEqual(recent.length, 2);
+    assert.strictEqual(recent[0].screen, 'screen-320');
+    assert.strictEqual(recent[0].camera, 'camera-320');
+    flow.window.clearAutoModeVisualMemory();
+    assert.strictEqual(flow.window.getAutoModeVisualContext('nova').length, 0);
+});
+
+test('video frame callbacks can wake Auto Mode without waiting for its fallback poll', async () => {
+    const sample = flow.waitForAutoModeSample(1000);
+    flow.notifyAutoModeVisualFrame();
+    await sample;
 });
 
 test('parseSnoozeRequest understands quiet and resume requests', () => {
@@ -325,16 +379,52 @@ test('Auto Mode has stuck detection and the AI layer applies snooze requests', (
     assert.ok(read('nova_runtime_ai.js').includes('applyProactiveSnoozeRequest'));
 });
 
+// ---------- Natural voice interruption ----------
+const voiceHelpers = load(slice(read('nova_voice.js'), 'function normalizeVoiceTranscript', 'function isWakePhraseOnlyTranscript'));
+
+test('voice interruption captures natural short stop phrases and complete thoughts', () => {
+    assert.strictEqual(voiceHelpers.getSpeechInterruptCandidate('wait', ''), 'wait');
+    assert.strictEqual(voiceHelpers.getSpeechInterruptCandidate('stop', ''), 'stop');
+    assert.strictEqual(voiceHelpers.getSpeechInterruptCandidate('', 'hold on'), 'hold on');
+    assert.strictEqual(voiceHelpers.getSpeechInterruptCandidate('', 'hello there'), '');
+    assert.strictEqual(voiceHelpers.getSpeechInterruptCandidate('Can you explain that again?', ''), 'Can you explain that again?');
+});
+
+test('voice recognition checks for interruption before applying the speech echo mute', () => {
+    const voiceSrc = read('nova_voice.js');
+    const resultHandler = voiceSrc.indexOf('recognition.onresult = function(event)');
+    const interruptCheck = voiceSrc.indexOf('if (speechInterruptListeningMode) {', resultHandler);
+    const echoMute = voiceSrc.indexOf('if (isMicMutedForSpeech()) return;', interruptCheck);
+    assert.ok(interruptCheck >= 0 && echoMute > interruptCheck);
+    assert.ok(!voiceSrc.includes("localStorage.setItem('nova_interrupts_enabled', 'false')"));
+    const stopSpeechSource = slice(voiceSrc, 'function stopSpeech()', 'function pauseSpeech()');
+    assert.ok(stopSpeechSource.includes('currentPackAudio.pause()'), 'voice-pack audio stops on interruption');
+    ['AI_v5_nova.html', 'AI_v5_JARVIS.html', 'AI_v5_JARVIS_CLEAN.html'].forEach(page => {
+        const html = fs.readFileSync(path.join(__dirname, '..', 'public', page), 'utf8');
+        assert.ok(html.includes('id="interruptsEnabled"'), `${page} exposes the interruption setting`);
+    });
+    const flowSource = read('nova_conversation_flow.js');
+    assert.ok(flowSource.includes('const lastAssistantMessage = getLastAssistantMessage();'));
+    assert.ok(!flowSource.includes('getLastNovaMessageText()'), 'interruption must not call a missing history helper');
+});
+
 // ---------- Run ----------
-let failed = 0;
-for (const { name, fn } of tests) {
-    try {
-        fn();
-        console.log(`  ok   ${name}`);
-    } catch (error) {
-        failed += 1;
-        console.log(`  FAIL ${name}\n       ${error.message.split('\n')[0]}`);
+async function runTests() {
+    let failed = 0;
+    for (const { name, fn } of tests) {
+        try {
+            await fn();
+            console.log(`  ok   ${name}`);
+        } catch (error) {
+            failed += 1;
+            console.log(`  FAIL ${name}\n       ${error.message.split('\n')[0]}`);
+        }
     }
+    console.log(`\n${tests.length - failed}/${tests.length} passed`);
+    process.exit(failed ? 1 : 0);
 }
-console.log(`\n${tests.length - failed}/${tests.length} passed`);
-process.exit(failed ? 1 : 0);
+
+runTests().catch(error => {
+    console.error(error);
+    process.exit(1);
+});
