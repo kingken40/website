@@ -329,7 +329,7 @@ function getSpeechInterruptCandidate(finalTranscript, interimTranscript) {
     const interimWords = countTranscriptWords(interimText);
     const shortInterrupt = /^(?:stop|wait|pause|no|actually|hold on|hang on|one second|that's enough|that is enough)$/i;
     if (finalText && (finalWords >= 2 || shortInterrupt.test(finalText))) return finalText;
-    if (interimText && (interimWords >= 3 || shortInterrupt.test(interimText))) return interimText;
+    if (interimText && (interimWords >= 2 || shortInterrupt.test(interimText))) return interimText;
     return '';
 }
 
@@ -466,6 +466,16 @@ function processSpeechInterruptCandidate(finalTranscript, interimTranscript) {
 
 let interruptCapture = null;
 const INTERRUPT_PAUSE_MS = 1400;
+
+// Settings switch: direct mode (no fluff), read by the AI request builder
+document.addEventListener('DOMContentLoaded', () => {
+    const toggle = document.getElementById('directModeEnabled');
+    if (!toggle) return;
+    toggle.checked = localStorage.getItem('nova_direct_mode') === 'true';
+    toggle.addEventListener('change', () => {
+        localStorage.setItem('nova_direct_mode', String(toggle.checked));
+    });
+});
 
 // Settings switch: let the user speak over the assistant to interrupt it
 document.addEventListener('DOMContentLoaded', () => {
@@ -987,6 +997,11 @@ function setupSpeechRecognition() {
         }
 
         if (handleInterruptCaptureResult(finalTranscript, interimTranscript)) return;
+        // Always-listening keeps the mic open while the assistant talks; speaking over it must cut it off
+        if (interruptListeningEnabled && isSpeechOutputBusy()) {
+            processSpeechInterruptCandidate(finalTranscript, interimTranscript);
+            return;
+        }
         if (isMicMutedForSpeech()) return;
         if (isAssistantEchoTranscript(finalTranscript)) finalTranscript = '';
         if (isAssistantEchoTranscript(interimTranscript)) interimTranscript = '';

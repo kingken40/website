@@ -386,7 +386,8 @@ test('voice interruption captures natural short stop phrases and complete though
     assert.strictEqual(voiceHelpers.getSpeechInterruptCandidate('wait', ''), 'wait');
     assert.strictEqual(voiceHelpers.getSpeechInterruptCandidate('stop', ''), 'stop');
     assert.strictEqual(voiceHelpers.getSpeechInterruptCandidate('', 'hold on'), 'hold on');
-    assert.strictEqual(voiceHelpers.getSpeechInterruptCandidate('', 'hello there'), '');
+    assert.strictEqual(voiceHelpers.getSpeechInterruptCandidate('', 'hello there'), 'hello there');
+    assert.strictEqual(voiceHelpers.getSpeechInterruptCandidate('', 'hello'), '');
     assert.strictEqual(voiceHelpers.getSpeechInterruptCandidate('Can you explain that again?', ''), 'Can you explain that again?');
 });
 
@@ -406,6 +407,17 @@ test('voice recognition checks for interruption before applying the speech echo 
     const flowSource = read('nova_conversation_flow.js');
     assert.ok(flowSource.includes('const lastAssistantMessage = getLastAssistantMessage();'));
     assert.ok(!flowSource.includes('getLastNovaMessageText()'), 'interruption must not call a missing history helper');
+});
+
+test('Direct mode setting is exposed and applied to replies', () => {
+    ['AI_v5_nova.html', 'AI_v5_JARVIS.html', 'AI_v5_JARVIS_CLEAN.html'].forEach(page => {
+        const html = fs.readFileSync(path.join(__dirname, '..', 'public', page), 'utf8');
+        assert.ok(html.includes('id="directModeEnabled"'), `${page} exposes direct mode`);
+    });
+    assert.ok(read('nova_voice.js').includes("'nova_direct_mode'"));
+    const aiSrc = read('nova_runtime_ai.js');
+    assert.ok(aiSrc.includes("localStorage.getItem('nova_direct_mode') === 'true'"));
+    assert.ok(aiSrc.includes('${directModeNote}]'));
 });
 
 // ---------- Run ----------
