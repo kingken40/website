@@ -22,6 +22,7 @@ let wakeWordEnabled = false; // Wake word is turned off; continuous listening (R
 let isWakeWordSession = false; // Track if current interaction is from wake word
 let alwaysListeningHotkeyMode = false; // R+T toggled continuous listening
 let alwaysListeningTurnActive = false;
+let alwaysListeningTurnStartedAt = 0;
 let currentVoiceSettings = {
     rate: 0.9,   // Measured, articulate pace - sophisticated yet natural
     pitch: 0.9,  // Mid-range British tone - authoritative without being too deep (like Paul Bettany)
@@ -266,6 +267,10 @@ function rememberSpokenText(text) {
     }
 }
 
+// True only while the user is actually mid-utterance; an open always-listening mic alone is not speech
+window.isUserMidSpeech = () => !!(interruptCapture || pendingTranscript || lastInterimTranscript || groqRecordingActive);
+window.isSpeechOutputBusy = () => isSpeechOutputBusy();
+
 function isSpeechOutputBusy() {
     // speechSynthesis.speaking is not checked: iOS can leave it stuck true, which would block the mic forever
     return !!(isSpeechOutputActive || isSpeaking || (currentPackAudio && !currentPackAudio.paused && !currentPackAudio.ended));
@@ -466,6 +471,117 @@ function processSpeechInterruptCandidate(finalTranscript, interimTranscript) {
 
 let interruptCapture = null;
 const INTERRUPT_PAUSE_MS = 1400;
+const BARGE_IN_NO_SPEECH_MS = 6000;
+const BARGE_IN_SUSTAIN_MS = 200;
+const BARGE_IN_MIN_LEVEL = 0.015;
+
+// Detects the user's voice by volume rather than by transcript. Browser speech recognition mostly
+// hears the assistant itself while it talks, so transcripts alone rarely reveal a real interruption.
+// A mic stream with echo cancellation removes most of the assistant's own voice, so a sustained
+// loud signal is the user talking over it.
+let bargeInMonitor = null;
+
+async function startVoiceBargeInMonitor() {
+    if (bargeInMonitor || !interruptListeningEnabled) return;
+    if (!navigator.mediaDevices?.getUserMedia) return;
+    const monitor = { stopped: false, stream: null, context: null, timer: null };
+    bargeInMonitor = monitor;
+    try {
+        monitor.stream = await navigator.mediaDevices.getUserMedia({
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false, channelCount: 1 }
+        });
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (monitor.stopped || !AudioContextClass) { stopVoiceBargeInMonitor(monitor); return; }
+        monitor.context = new AudioContextClass();
+        if (monitor.context.state === 'suspended') monitor.context.resume().catch(() => {});
+        const analyser = monitor.context.createAnalyser();
+        analyser.fftSize = 1024;
+        monitor.context.createMediaStreamSource(monitor.stream).connect(analyser);
+        console.log('🎤 Voice barge-in monitor listening');
+        const samples = new Float32Array(analyser.fftSize);
+        let baseline = 0;
+        let loudSince = 0;
+        monitor.timer = setInterval(() => {
+            if (!interruptListeningEnabled || !isSpeechOutputBusy() || interruptCapture) {
+                if (!isSpeechOutputBusy() && !interruptCapture) stopVoiceBargeInMonitor(monitor);
+                loudSince = 0;
+                return;
+            }
+            analyser.getFloatTimeDomainData(samples);
+            let sum = 0;
+            for (let i = 0; i < samples.length; i++) sum += samples[i] * samples[i];
+            const level = Math.sqrt(sum / samples.length);
+            const threshold = Math.max(BARGE_IN_MIN_LEVEL, baseline * 2);
+            const now = Date.now();
+            if (level > threshold && now - lastSpeechStartedAt > 700) {
+                if (!loudSince) loudSince = now;
+                if (now - loudSince >= BARGE_IN_SUSTAIN_MS) {
+                    loudSince = 0;
+                    triggerVoiceBargeIn();
+                }
+            } else {
+                loudSince = 0;
+                baseline = baseline ? baseline * 0.97 + level * 0.03 : level;
+            }
+        }, 40);
+    } catch (error) {
+        console.warn('🎤 Voice barge-in monitor unavailable:', error.message);
+        stopVoiceBargeInMonitor(monitor);
+    }
+}
+
+function stopVoiceBargeInMonitor(monitor = bargeInMonitor) {
+    if (!monitor) return;
+    monitor.stopped = true;
+    if (monitor.timer) clearInterval(monitor.timer);
+    monitor.stream?.getTracks().forEach(track => track.stop());
+    try { monitor.context?.close(); } catch (e) {}
+    if (bargeInMonitor === monitor) bargeInMonitor = null;
+}
+
+function triggerVoiceBargeIn() {
+    const now = Date.now();
+    if (!interruptListeningEnabled || speechInterruptTriggered || interruptCapture) return;
+    if (now - lastSpeechInterruptAt < 1200) return;
+    speechInterruptTriggered = true;
+    lastSpeechInterruptAt = now;
+    console.log('🛑 Voice barge-in detected by volume');
+    showVoiceNotification('Interrupt detected — listening...', 1500);
+    window.voiceInterruptInProgress = true;
+
+    speechInterruptListeningMode = false;
+    // Release the extra mic stream so it can't compete with speech recognition
+    stopVoiceBargeInMonitor();
+    stopSpeech();
+    pendingTranscript = '';
+    lastInterimTranscript = '';
+    alwaysListeningTurnActive = false;
+    interruptCapture = { finalText: '', interimText: '', timer: null };
+    // If nothing intelligible follows, release the interruption instead of hanging
+    interruptCapture.timer = setTimeout(finishInterruptCapture, BARGE_IN_NO_SPEECH_MS);
+    updateVoiceStatus('Listening...');
+
+    // stopSpeech can tear down recognition, so always restart it fresh to capture the user's words
+    if (recognition) {
+        isListening = false;
+        window.isListening = false;
+        try { recognition.abort(); } catch (e) {}
+        setTimeout(() => {
+            if (!interruptCapture || isListening) return;
+            try {
+                isListening = true;
+                window.isListening = true;
+                recognition.continuous = true;
+                recognition.interimResults = true;
+                recognition.start();
+            } catch (error) {
+                console.warn('🎤 Could not start recognition after barge-in:', error.message);
+                isListening = false;
+                window.isListening = false;
+            }
+        }, 250);
+    }
+}
 
 // Settings switch: direct mode (no fluff), read by the AI request builder
 document.addEventListener('DOMContentLoaded', () => {
@@ -486,6 +602,7 @@ document.addEventListener('DOMContentLoaded', () => {
         window.interruptListeningEnabled = on;
         if (!on) {
             if (interruptCapture) finishInterruptCapture();
+            stopVoiceBargeInMonitor();
             stopSpeechInterruptListening(true);
         }
     };
@@ -2363,6 +2480,7 @@ function updateVoiceUI(listening) {
 function updateSpeakingUI(speaking) {
     if (!speaking) lastSpeechEndedAt = Date.now();
     else if (lastSpeechStartedAt <= lastSpeechEndedAt) lastSpeechStartedAt = Date.now();
+    if (speaking) startVoiceBargeInMonitor();
     const arcReactor = document.querySelector('.arc-reactor');
     const arcCore = document.querySelector('.arc-core');
     
@@ -3368,7 +3486,7 @@ async function toggleAlwaysListeningMode() {
         return;
     }
 
-    if (!isVoiceSupported) {
+    if (!hasUsableVoiceRecognition()) {
         showVoiceNotification('Voice recognition not supported in this browser', 3000);
         return;
     }
@@ -3416,6 +3534,10 @@ function startAlwaysListeningWatchdog() {
             alwaysListeningWatchdog = null;
             return;
         }
+        if (alwaysListeningTurnActive && !isListening && Date.now() - alwaysListeningTurnStartedAt > 4000) {
+            startAlwaysListeningTurn();
+            return;
+        }
         if (isListening || alwaysListeningTurnActive || isSpeechOutputBusy() || isWithinEchoTail()) return;
         if (document.querySelector('.thinking-indicator')) return;
         if (groqRecordingActive || hotkeyActive || interruptCapture) return;
@@ -3425,7 +3547,7 @@ function startAlwaysListeningWatchdog() {
 }
 
 function startAlwaysListeningTurn() {
-    if (!alwaysListeningHotkeyMode || !recognition || !hasVoicePermission || !isVoiceSupported) {
+    if (!alwaysListeningHotkeyMode || !recognition || !hasVoicePermission || !hasUsableVoiceRecognition()) {
         return;
     }
 
@@ -3439,12 +3561,21 @@ function startAlwaysListeningTurn() {
     }
 
     if (isListening || alwaysListeningTurnActive) {
+        // A turn flagged active while the recognizer is not running is stale; recover instead of staying deaf
+        if (!isListening && alwaysListeningTurnActive && Date.now() - alwaysListeningTurnStartedAt > 4000) {
+            console.warn('🎙️ Recovering stale always-listening turn');
+            alwaysListeningTurnActive = false;
+            try { recognition.abort(); } catch (e) {}
+            setTimeout(() => { if (alwaysListeningHotkeyMode) startAlwaysListeningTurn(); }, 250);
+        }
         return;
     }
 
     pendingTranscript = '';
     lastInterimTranscript = '';
     alwaysListeningTurnActive = true;
+    alwaysListeningTurnStartedAt = Date.now();
+    speechInterruptListeningMode = false;
     isWakeWordSession = true;
     window.isWakeWordSession = true;
     updateVoiceStatus(getAlwaysListeningStatus());
@@ -3452,9 +3583,12 @@ function startAlwaysListeningTurn() {
         recognition.continuous = false;
         recognition.interimResults = true;
         recognition.start();
+        console.log('🎙️ Always-listening turn started');
     } catch (error) {
         console.error('🎙️ Failed to start always-listening turn:', error);
         alwaysListeningTurnActive = false;
+        // A previous session may still be shutting down; clear it before retrying
+        try { recognition.abort(); } catch (e) {}
         setTimeout(() => {
             if (alwaysListeningHotkeyMode) startAlwaysListeningTurn();
         }, 600);

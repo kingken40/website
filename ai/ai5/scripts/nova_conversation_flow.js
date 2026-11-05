@@ -790,7 +790,10 @@ function stopScreenShare(message) {
         screenShareStream.getTracks().forEach(track => track.stop());
     }
     screenShareStream = null;
-    if (screenShareVideo) screenShareVideo.srcObject = null;
+    if (screenShareVideo) {
+        screenShareVideo.srcObject = null;
+        screenShareVideo.remove();
+    }
     screenShareVideo = null;
     window.clearAutoModeVisualMemory?.('screen');
     setScreenShareUi(false);
@@ -858,7 +861,18 @@ async function toggleScreenShare(chosenTarget) {
     screenShareVideo.muted = true;
     screenShareVideo.playsInline = true;
     screenShareVideo.srcObject = screenShareStream;
+    // Kept in the DOM (invisible) so browsers keep decoding frames while the user works in another window
+    screenShareVideo.style.cssText = 'position:fixed;left:-9999px;top:0;width:320px;height:180px;opacity:0;pointer-events:none;';
+    document.body.appendChild(screenShareVideo);
     await screenShareVideo.play().catch(() => {});
+    if (!screenShareVideo.videoWidth) {
+        await new Promise(resolve => {
+            const done = () => resolve();
+            screenShareVideo.addEventListener('loadeddata', done, { once: true });
+            setTimeout(done, 2500);
+        });
+        await screenShareVideo.play().catch(() => {});
+    }
     watchAutoModeVideoFrames(screenShareVideo);
     screenShareStream.getVideoTracks()[0]?.addEventListener('ended', () => stopScreenShare('Screen sharing ended.'));
     setScreenShareUi(true);
@@ -1212,18 +1226,20 @@ async function runAutoModeCheckIn(runId, state) {
         (!welcomeBackMs && now < state.nextEvaluationAt) ||
         getUnansweredCheckIns(state) >= AUTO_MODE_MAX_UNANSWERED ||
         isResponseInFlight ||
-        window.isListening ||
+        window.isUserMidSpeech?.() ||
+        window.isSpeechOutputBusy?.() ||
         window.isSpeaking ||
         window.voiceInterruptInProgress ||
-        window.speechSynthesis?.speaking ||
         messageInput?.value.trim() ||
         !window.proactiveGate.canStart(now)) {
         return false;
     }
 
-    // Visible screen activity within the idle window means they are watching or working: keep monitoring.
+    // Visible screen activity within the idle window means they are watching or working: keep monitoring,
+    // but only for one extra window so a constantly changing screen can't block check-ins forever.
     if (!welcomeBackMs && (window.getScreenShareTarget?.() || window.isAiVisionActive?.()) &&
-        now - state.lastVisualChangeAt < AUTO_MODE_CHECKIN_IDLE_MS) {
+        now - state.lastVisualChangeAt < AUTO_MODE_CHECKIN_IDLE_MS &&
+        now - idleSince < AUTO_MODE_CHECKIN_IDLE_MS * 2) {
         state.nextEvaluationAt = now + AUTO_MODE_CHECKIN_RECHECK_MS;
         return false;
     }
@@ -1264,7 +1280,7 @@ async function runAutoModeCheckIn(runId, state) {
         const reply = resolveAutoModeCheckInReply(replyResult?.reply);
         if (isRepeatedRemark(reply, state.recentRemarks) ||
             autoModeLastInteractionAt > state.evaluationStartedAt ||
-            isResponseInFlight || window.isSpeaking || window.voiceInterruptInProgress || window.speechSynthesis?.speaking) {
+            isResponseInFlight || window.isSpeaking || window.voiceInterruptInProgress) {
             return false;
         }
 

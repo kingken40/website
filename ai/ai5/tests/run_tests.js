@@ -409,6 +409,23 @@ test('voice recognition checks for interruption before applying the speech echo 
     assert.ok(!flowSource.includes('getLastNovaMessageText()'), 'interruption must not call a missing history helper');
 });
 
+test('volume-based barge-in stops speech without relying on transcripts', () => {
+    const voiceSrc = read('nova_voice.js');
+    const body = voiceSrc.slice(voiceSrc.indexOf('function triggerVoiceBargeIn()'));
+    assert.ok(voiceSrc.includes('echoCancellation: true') && voiceSrc.includes('createAnalyser()'));
+    assert.ok(body.slice(0, 1600).includes('stopSpeech();'), 'barge-in stops speech');
+    assert.ok(voiceSrc.slice(voiceSrc.indexOf('function updateSpeakingUI(speaking)')).slice(0, 400).includes('startVoiceBargeInMonitor()'));
+});
+
+test('screen share attaches a frame and tells the model it can see it', () => {
+    const aiSrc = read('nova_runtime_ai.js');
+    assert.ok(aiSrc.includes('You CAN see the user\\\'s shared screen'));
+    assert.ok(aiSrc.includes('the attached image IS their current screen'));
+    assert.ok(aiSrc.includes('Screen sharing is on but no frame could be captured'));
+    const flow = read('nova_conversation_flow.js');
+    assert.ok(flow.includes('document.body.appendChild(screenShareVideo)'));
+});
+
 test('Direct mode setting is exposed and applied to replies', () => {
     ['AI_v5_nova.html', 'AI_v5_JARVIS.html', 'AI_v5_JARVIS_CLEAN.html'].forEach(page => {
         const html = fs.readFileSync(path.join(__dirname, '..', 'public', page), 'utf8');

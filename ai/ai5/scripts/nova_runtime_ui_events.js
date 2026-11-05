@@ -1,4 +1,4 @@
-﻿// Runtime UI events + initialization module
+// Runtime UI events + initialization module
 // Extracted from nova_runtime_features.js.
 
 function setupEventListeners() {
