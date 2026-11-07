@@ -90,7 +90,18 @@
 
         <!-- Call controls -->
         <div class="mobile-call-controls" role="toolbar" aria-label="Call controls">
-            <button class="mobile-ctrl-btn" id="mobileMuteBtn"
+            <button class="mobile-ctrl-btn" id="mobilePassiveIncomeBtn" type="button" hidden
+                    title="Passive Income dashboard" aria-label="Passive Income"
+                    onclick="document.getElementById('passiveIncomeBtn')?.click();">
+                <svg viewBox="0 0 24 24" width="1.2em" height="1.2em" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M14.4 9.3c-.4-.8-1.3-1.3-2.4-1.3-1.4 0-2.4.7-2.4 1.8 0 2.5 4.9 1.2 4.9 3.8 0 1.1-1.1 1.9-2.5 1.9-1.2 0-2.2-.5-2.6-1.4M12 6.5V8m0 8v1.5"/></svg>
+                <span>Income</span>
+            </button>
+            <button class="mobile-ctrl-btn" id="mobileAutoApplyBtn" type="button" hidden
+                    title="Auto-Apply: automatically apply to jobs that match your profile" aria-label="Auto-Apply"
+                    onclick="document.getElementById('autoApplyBtn')?.click();">
+                <svg viewBox="0 0 24 24" width="1.2em" height="1.2em" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7"/><rect x="3" y="7" width="18" height="13" rx="2.5"/><path d="M13.2 9.6 9.6 14.2h2.5l-.9 3.6 3.7-4.7h-2.6z" fill="currentColor" stroke-width="1"/></svg>
+                <span>Auto-Apply</span>
+            </button>            <button class="mobile-ctrl-btn" id="mobileMuteBtn"
                     title="Mute microphone" aria-label="Mute microphone" aria-pressed="false">
                 <i class="fas fa-microphone" aria-hidden="true"></i>
                 <span>Mute</span>
@@ -919,6 +930,9 @@
     <script src="../scripts/nova_page_ui.js"></script>
     <script src="../scripts/nova_page_mobile_call.js"></script>
     <script src="../scripts/nova_job_interview.js"></script>
+    <script src="../scripts/nova_secret_unlock.js"></script>
+    <script src="../scripts/nova_auto_apply.js"></script>
+    <script src="../scripts/nova_passive_income.js"></script>
     <!-- ===== END MOBILE INIT ===== -->
 </body>
 </html>

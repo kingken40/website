@@ -7,19 +7,8177 @@
 
 ## Current Status
 - Current Phase: Set-up/Maintenance
-- Last Updated: 2026-08-14T02:28:38.433Z
+- Last Updated: 2026-11-01T20:29:30.812Z
 
 ## Project Structure
 
-- 44 js files
-- 904 py files
+- 841 py files
+- 91 js files
+- 6 tsx files
+- 26 ts files
 - 35 h files
-- 3 tsx files
-- 13 ts files
 - 1 c files
 
 
 ## Dependencies
+
+## Project Directory Structure
+
+- 📂 __pycache__/
+  - 📄 dev_server.cpython-312.pyc
+- 📂 ai/
+  - 📂 ai1/
+    - 📂 public/
+      - 📄 ai.html
+    - 📂 scripts/
+      - 📄 ai.js
+    - 📂 styles/
+      - 📄 styles_ai.css
+    - 📄 Ai.html
+  - 📂 ai2/
+    - 📂 public/
+      - 📄 ai2.html
+    - 📂 scripts/
+      - 📄 ai2.js
+    - 📂 styles/
+      - 📄 styles_ai2.css
+    - 📄 Ai2_ORGANIZED_BACKUP.html
+    - 📄 Ai2_WORKING_BACKUP.html
+  - 📂 ai3/
+    - 📂 public/
+      - 📄 AI_v3.html
+    - 📂 scripts/
+      - 📄 ai_v3_main.js
+    - 📂 styles/
+      - 📄 ai_v3_styles.css
+    - 📄 AI_v3_ORGANIZED_BACKUP.html
+    - 📄 AI_v3.html
+    - 📄 app.py
+    - 📄 requirements.txt
+  - 📂 ai4/
+    - 📂 public/
+      - 📄 AI_v4.html
+    - 📂 scripts/
+      - 📄 ai_v4_main.js
+    - 📂 styles/
+      - 📄 ai_v4_styles.css
+    - 📄 AI_v4_ORGANIZED_BACKUP.html
+    - 📄 AI_v4.html
+  - 📂 ai5/
+    - 📂 ai5 files/
+      - 📂 public/
+        ...
+      - 📄 Check_JARVIS_Voices.bat
+    - 📂 JARVIS/
+      - 📂 CFX_UI_J.A.R.V.I.S/
+        ...
+      - 📂 GHV4_UI_J.A.R.V.I.S/
+        ...
+      - 📂 ProffieOS_V2_Voicepack_J.A.R.V.I.S/
+        ...
+      - 📂 SN4_UI_J.A.R.V.I.S/
+        ...
+      - 📂 Xeno2_UI_J.A.R.V.I.S/
+        ...
+      - 📂 Xeno3_UI_J.A.R.V.I.S/
+        ...
+      - 📄 boot.wav
+    - 📂 Jarvis-main/
+      - 📂 __pycache__/
+        ...
+      - 📂 Audio/
+        ...
+      - 📄 Jarvis RGB Effects Plugin Profile
+      - 📄 jarvis.py
+      - 📄 phrases.txt
+      - 📄 speaker_sample.wav
+      - 📄 Start_Voice_Bridge.bat
+      - 📄 voice_bridge.py
+    - 📂 public/
+      - 📄 AI_v5_JARVIS_CLEAN.html
+      - 📄 AI_v5_JARVIS.html
+      - 📄 AI_v5_nova.html
+      - 📄 nova_sw.js
+      - 📄 nova.webmanifest
+    - 📂 scripts/
+      - 📄 nova_conversation_flow.js
+      - 📄 nova_integration.js
+      - 📄 nova_job_interview.js
+      - 📄 nova_kb_store.js
+      - 📄 nova_main.js
+      - 📄 nova_page_mobile_call.js
+      - 📄 nova_page_ui.js
+      - 📄 nova_page_voice_fix.js
+      - 📄 nova_runtime_ai.js
+      - 📄 nova_runtime_artifacts.js
+      - 📄 nova_runtime_chat.js
+      - 📄 nova_runtime_files.js
+      - 📄 nova_runtime_ui_events.js
+      - 📄 nova_runtime_ui_voice.js
+      - 📄 nova_runtime_vision.js
+      - 📄 nova_runtime_voice_tools.js
+      - 📄 nova_voice_before_interrupt.js
+      - 📄 nova_voice.js
+    - 📂 styles/
+      - 📄 nova_styles.css
+    - 📂 tests/
+      - 📄 run_tests.js
+    - 📄 voice_checker.html
+  - 📂 ai6/
+    - 📂 JARVIS-AI/
+      - 📂 Backend/
+        ...
+      - 📂 Data/
+        ...
+      - 📂 Frontend/
+        ...
+      - 📄 LICENSE
+      - 📄 Main.py
+      - 📄 Requirements.txt
+- 📂 api/
+  - 📂 __pycache__/
+    - 📄 images.cpython-312.pyc
+    - 📄 models.cpython-312.pyc
+    - 📄 submit_feedback.cpython-312.pyc
+  - 📄 chat.py
+  - 📄 images.py
+  - 📄 models.py
+- 📂 app/
+  - 📄 pages.html
+  - 📄 pages.js
+- 📂 docs/
+  - 📄 KennethO-Resume-Software-Engineer.pdf
+- 📂 extracted-weather/
+  - 📂 WeatherForecast-main/
+    - 📂 public/
+      - 📄 file.svg
+      - 📄 globe.svg
+      - 📄 next.svg
+      - 📄 vercel.svg
+      - 📄 window.svg
+    - 📂 src/
+      - 📂 app/
+        ...
+    - 📄 eslint.config.mjs
+    - 📄 next.config.mjs
+- 📂 Images/
+  - 📄 main.JPG
+- 📂 lesson_plan_generator/
+  - 📂 prompt/
+    - 📄 lesson_plan_prompt.txt
+  - 📂 public/
+    - 📄 app.py
+    - 📄 lesson_plan.docx
+    - 📄 lesson_planner_p1_backup_6_25_2025.html
+    - 📄 lesson_planner_p1.html
+    - 📄 lesson_planner_p2_backup_6_25_2025.html
+    - 📄 lesson_planner_p2.html
+  - 📂 src/
+    - 📄 core.py
+    - 📄 lesson_planner_p1.js
+    - 📄 lesson_planner_p2.js
+    - 📄 tools.py
+  - 📂 styles/
+    - 📄 style_p1.css
+    - 📄 style_p2.css
+  - 📄 Lesson Plan Generator.docx
+  - 📄 requirements.txt
+- 📂 presentation_generator/
+  - 📂 public/
+    - 📄 pg_p1.html
+    - 📄 pg_p2_smart.html
+    - 📄 pg_p2.html
+    - 📄 pg_p3.html
+  - 📂 src/
+    - 📄 pg_p1.js
+    - 📄 pg_p2.js
+    - 📄 pg_p3.js
+  - 📂 styles/
+    - 📄 style_p1.css
+    - 📄 style_p2.css
+- 📂 public/
+- 📂 RandomFact/
+  - 📄 randfact.html
+  - 📄 randfact2.html
+  - 📄 scripts.js
+  - 📄 scripts2.js
+  - 📄 style3_2.css
+  - 📄 style3.css
+- 📂 RealityAI_Lesson_Planner/
+  - 📂 public/
+    - 📄 app.py
+    - 📄 lesson_plan.docx
+    - 📄 lesson_planner_p1_backup_6_25_2025.html
+    - 📄 lesson_planner_p1.html
+    - 📄 lesson_planner_p2_backup_6_25_2025.html
+    - 📄 lesson_planner_p2.html
+  - 📂 src/
+    - 📄 core.py
+    - 📄 tools.py
+  - 📄 requirements.txt
+- 📂 RealityAI_Rubric_Generator/
+  - 📂 __pycache__/
+    - 📄 __init__.cpython-312.pyc
+    - 📄 core.cpython-312.pyc
+    - 📄 test_core.cpython-312-pytest-7.4.4.pyc
+    - 📄 test_tools.cpython-312-pytest-7.4.4.pyc
+    - 📄 tools.cpython-312.pyc
+  - 📂 public/
+    - 📄 rubric_gen_p1.html
+    - 📄 rubric_template_p2.html
+  - 📂 src/
+    - 📂 export/
+      - 📄 toDocsx.ts
+      - 📄 toPdf.ts
+    - 📂 logic/
+      - 📄 buildRubric.ts
+      - 📄 fetchUrlText.ts
+      - 📄 parseUpload.ts
+    - 📂 types/
+      - 📄 cheerio.d.ts
+      - 📄 html-to-docx.d.ts
+      - 📄 html2canvas.d.ts
+      - 📄 jspdf.d.ts
+      - 📄 mammoth.d.ts
+      - 📄 papaparse.d.ts
+      - 📄 pdfjs-dist.d.ts
+      - 📄 pptx-parser.d.ts
+    - 📂 ui/
+      - 📄 RubricForm.tsx
+    - 📄 App.tsx
+    - 📄 i18n.js
+    - 📄 main.tsx
+    - 📄 rubric.js
+  - 📂 test-results/
+  - 📂 tests/
+    - 📄 rubric_generation.test.js
+  - 📄 __init__.py
+  - 📄 core.py
+  - 📄 instructions
+  - 📄 test_core.py
+  - 📄 test_tools.py
+  - 📄 tools.py
+- 📂 Rubriks Cube/
+  - 📂 public/
+  - 📂 scripts/
+  - 📂 styles/
+- 📂 TicTacToe/
+  - 📄 tictactoe.css
+  - 📄 tictactoe.html
+  - 📄 tictactoe.js
+- 📂 ToughLuckv7/
+  - 📂 __pycache__/
+    - 📄 ToughLuckGameplay.cpython-312.pyc
+    - 📄 ToughLuckResults.cpython-312.pyc
+    - 📄 ToughLuckStart.cpython-312.pyc
+  - 📂 game-server/
+    - 📂 templates/
+      - 📄 index.html
+      - 📄 UserGameplay.html
+      - 📄 UserGUI.html
+      - 📄 UserResults.html
+      - 📄 UserStart.html
+    - 📄 app.py
+    - 📄 feedback.txt
+    - 📄 server.js
+  - 📂 public/
+    - 📄 game-logic.js
+    - 📄 UserGameplay.html
+    - 📄 UserGUI.html
+    - 📄 UserResults.html
+    - 📄 UserStart.html
+  - 📂 src/
+    - 📂 __pycache__/
+      - 📄 ToughLuckGameplay.cpython-312.pyc
+      - 📄 ToughLuckResults.cpython-312.pyc
+      - 📄 ToughLuckStart.cpython-312.pyc
+    - 📄 TLIntro.py
+    - 📄 ToughLuckGameplay.py
+    - 📄 ToughLuckGameplayUpdated.py
+    - 📄 ToughLuckResults.py
+    - 📄 ToughLuckStart.py
+  - 📄 test_game.html
+- 📂 website-mirror/
+  - 📂 hooks/
+    - 📄 applypatch-msg.sample
+    - 📄 commit-msg.sample
+    - 📄 fsmonitor-watchman.sample
+    - 📄 post-update.sample
+    - 📄 pre-applypatch.sample
+    - 📄 pre-commit.sample
+    - 📄 pre-merge-commit.sample
+    - 📄 pre-push.sample
+    - 📄 pre-rebase.sample
+    - 📄 pre-receive.sample
+    - 📄 prepare-commit-msg.sample
+    - 📄 push-to-checkout.sample
+    - 📄 sendemail-validate.sample
+    - 📄 update.sample
+  - 📂 info/
+    - 📄 exclude
+    - 📄 refs
+  - 📂 objects/
+    - 📂 info/
+      - 📄 commit-graph
+      - 📄 packs
+    - 📂 pack/
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.bitmap
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.idx
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.pack
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.rev
+  - 📂 refs/
+    - 📂 heads/
+    - 📂 tags/
+  - 📄 config
+  - 📄 description
+  - 📄 HEAD
+  - 📄 packed-refs
+- 📂 website-recovery/
+  - 📂 app/
+    - 📄 pages.html
+    - 📄 pages.js
+  - 📂 docs/
+    - 📄 Kenneth-Okwu-Full-Stack Developer I.pdf
+  - 📂 Images/
+    - 📄 main.JPG
+  - 📂 lesson_plan_generator/
+  - 📂 RandomFact/
+    - 📄 randfact.html
+    - 📄 randfact2.html
+    - 📄 scripts.js
+    - 📄 scripts2.js
+    - 📄 style3_2.css
+    - 📄 style3.css
+  - 📂 RealityAI_Lesson_Planner/
+    - 📂 public/
+      - 📄 app.py
+      - 📄 lesson_plan.docx
+      - 📄 lesson_planner_p1_backup_6_25_2025.html
+      - 📄 lesson_planner_p1.html
+      - 📄 lesson_planner_p2_backup_6_25_2025.html
+      - 📄 lesson_planner_p2.html
+    - 📂 src/
+      - 📄 core.py
+      - 📄 tools.py
+    - 📄 requirements.txt
+  - 📂 RealityAI_Rubric_Generator/
+  - 📂 ToughLuckv7/
+    - 📂 __pycache__/
+      - 📄 ToughLuckGameplay.cpython-312.pyc
+      - 📄 ToughLuckResults.cpython-312.pyc
+      - 📄 ToughLuckStart.cpython-312.pyc
+    - 📂 game-server/
+      - 📂 templates/
+        ...
+      - 📄 app.py
+      - 📄 feedback.txt
+      - 📄 server.js
+    - 📂 src/
+      - 📂 __pycache__/
+        ...
+      - 📄 TLIntro.py
+      - 📄 ToughLuckGameplay.py
+      - 📄 ToughLuckGameplayUpdated.py
+      - 📄 ToughLuckResults.py
+      - 📄 ToughLuckStart.py
+    - 📄 test_game.html
+  - 📂 WeatherForcaster/
+    - 📂 pages/
+      - 📄 index.js
+    - 📂 public/
+      - 📄 WF_p1.html
+    - 📂 src/
+      - 📄 App.js
+      - 📄 WeatherPage.js
+    - 📂 styles/
+      - 📄 styles.css
+  - 📂 website-mirror/
+    - 📂 hooks/
+      - 📄 applypatch-msg.sample
+      - 📄 commit-msg.sample
+      - 📄 fsmonitor-watchman.sample
+      - 📄 post-update.sample
+      - 📄 pre-applypatch.sample
+      - 📄 pre-commit.sample
+      - 📄 pre-merge-commit.sample
+      - 📄 pre-push.sample
+      - 📄 pre-rebase.sample
+      - 📄 pre-receive.sample
+      - 📄 prepare-commit-msg.sample
+      - 📄 push-to-checkout.sample
+      - 📄 sendemail-validate.sample
+      - 📄 update.sample
+    - 📂 info/
+      - 📄 exclude
+      - 📄 refs
+    - 📂 objects/
+      - 📂 info/
+        ...
+      - 📂 pack/
+        ...
+    - 📄 config
+    - 📄 description
+    - 📄 HEAD
+    - 📄 packed-refs
+  - 📂 xweatherforcast/
+  - 📄 Contact.html
+  - 📄 Games.html
+  - 📄 Home.html
+  - 📄 navbar.html
+  - 📄 Projects.html
+  - 📄 style.css
+  - 📄 style.css-Nova
+  - 📄 style2.css
+- 📄 AI_Development_Guide_Simple_Version.docx
+- 📄 AI_Development_Guide_v1_and_v2.docx
+- 📄 AI5_Creation_Documentation.docx
+- 📄 Contact.html
+- 📄 dev_server.py
+- 📄 Games.html
+- 📄 index.html
+- 📄 MyProject_ws.code-workspace
+- 📄 navbar.html
+- 📄 portfolio.css
+- 📄 portfolio.js
+- 📄 Projects.html
+- 📄 requirements.txt
+- 📄 style.css
+- 📄 style.css-Nova
+- 📄 style2.css
+
+
+## PY Dependencies
+
+### \dev_server.py
+Dependencies:
+- os
+- http.server
+- SimpleHTTPRequestHandler,
+- urllib.parse
+- urlparse
+- api.chat
+- handler
+- api.models
+
+### \ai\ai6\JARVIS-AI\Main.py
+Dependencies:
+- Frontend.GUI
+- (
+- Backend.Model
+- FirstLayerDMM
+- Backend.RealtimeSearchEngine
+- RealtimeSearchEngine
+- Backend.Automation
+- Automation
+- Backend.SpeechToText
+- SpeechRecognition
+- Backend.Chatbot
+- Chatbot
+- Backend.TextToSpeech
+- TextToSpeech
+- Backend.screen_analysis
+- analyze_once
+- Backend.CameraAnalysis
+- dotenv
+- dotenv_values
+- asyncio
+- run
+- time
+- sleep
+- subprocess
+- os
+- threading
+- json
+
+### \ToughLuckv7\src\ToughLuckStart.py
+Dependencies:
+- sys
+- timeit
+- random
+- ToughLuckGameplay
+- start
+
+### \ToughLuckv7\src\ToughLuckResults.py
+Dependencies:
+- sys
+- ToughLuckStart
+
+### \ToughLuckv7\src\ToughLuckGameplayUpdated.py
+Dependencies:
+- sys
+- timeit
+- random
+- ToughLuckResults
+- results,
+- flask
+- jsonify
+
+## JS Dependencies
+
+### \TicTacToe\tictactoe.js
+No dependencies found
+
+### \app\pages.js
+No dependencies found
+
+### \ToughLuckv7\public\game-logic.js
+No dependencies found
+
+### \ToughLuckv7\game-server\server.js
+Dependencies:
+- express
+- cors
+
+### \lesson_plan_generator\src\lesson_planner_p2.js
+No dependencies found
+
+## TSX Dependencies
+
+### \RealityAI_Rubric_Generator\src\ui\RubricForm.tsx
+Dependencies:
+- react
+- ../logic/parseUpload
+- ../logic/fetchUrlText
+- ../logic/buildRubric
+- ../export/toPdf
+- ../export/toDocsx
+
+### \RealityAI_Rubric_Generator\src\main.tsx
+Dependencies:
+- react
+- react-dom/client
+- ./App
+
+### \RealityAI_Rubric_Generator\src\App.tsx
+Dependencies:
+- react
+- ./ui/RubricForm
+
+### \.vercel\cache\models_py\RealityAI_Rubric_Generator\src\ui\RubricForm.tsx
+Dependencies:
+- react
+- ../logic/parseUpload
+- ../logic/fetchUrlText
+- ../logic/buildRubric
+- ../export/toPdf
+- ../export/toDocsx
+
+### \.vercel\cache\models_py\RealityAI_Rubric_Generator\src\main.tsx
+Dependencies:
+- react
+- react-dom/client
+- ./App
+
+## TS Dependencies
+
+### \RealityAI_Rubric_Generator\src\types\pptx-parser.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\pdfjs-dist.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\papaparse.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\mammoth.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\jspdf.d.ts
+No dependencies found
+
+## H Dependencies
+
+### \ai\ai6\JARVIS-AI\.venv\Lib\site-packages\cffi\_embedding.h
+Dependencies:
+- _cffi_errors.h
+
+### \ai\ai6\JARVIS-AI\.venv\Lib\site-packages\cffi\_cffi_include.h
+Dependencies:
+- Python.h
+- stddef.h
+- parse_c_type.h
+
+### \ai\ai6\JARVIS-AI\.venv\Lib\site-packages\cffi\_cffi_errors.h
+No dependencies found
+
+### \ai\ai6\JARVIS-AI\.venv\Lib\site-packages\cffi\parse_c_type.h
+No dependencies found
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\_surface.h
+Dependencies:
+- _pygame.h
+- surface.h
+
+## C Dependencies
+
+### \ai\ai6\JARVIS-AI\.venv\Lib\site-packages\zope\interface\_zope_interface_coptimizations.c
+Dependencies:
+- Python.h
+- structmember.h
+
+
+
+## Project Directory Structure
+
+- 📂 __pycache__/
+  - 📄 dev_server.cpython-312.pyc
+- 📂 ai/
+  - 📂 ai1/
+    - 📂 public/
+      - 📄 ai.html
+    - 📂 scripts/
+      - 📄 ai.js
+    - 📂 styles/
+      - 📄 styles_ai.css
+    - 📄 Ai.html
+  - 📂 ai2/
+    - 📂 public/
+      - 📄 ai2.html
+    - 📂 scripts/
+      - 📄 ai2.js
+    - 📂 styles/
+      - 📄 styles_ai2.css
+    - 📄 Ai2_ORGANIZED_BACKUP.html
+    - 📄 Ai2_WORKING_BACKUP.html
+  - 📂 ai3/
+    - 📂 public/
+      - 📄 AI_v3.html
+    - 📂 scripts/
+      - 📄 ai_v3_main.js
+    - 📂 styles/
+      - 📄 ai_v3_styles.css
+    - 📄 AI_v3_ORGANIZED_BACKUP.html
+    - 📄 AI_v3.html
+    - 📄 app.py
+    - 📄 requirements.txt
+  - 📂 ai4/
+    - 📂 public/
+      - 📄 AI_v4.html
+    - 📂 scripts/
+      - 📄 ai_v4_main.js
+    - 📂 styles/
+      - 📄 ai_v4_styles.css
+    - 📄 AI_v4_ORGANIZED_BACKUP.html
+    - 📄 AI_v4.html
+  - 📂 ai5/
+    - 📂 ai5 files/
+      - 📂 public/
+        ...
+      - 📄 Check_JARVIS_Voices.bat
+    - 📂 JARVIS/
+      - 📂 CFX_UI_J.A.R.V.I.S/
+        ...
+      - 📂 GHV4_UI_J.A.R.V.I.S/
+        ...
+      - 📂 ProffieOS_V2_Voicepack_J.A.R.V.I.S/
+        ...
+      - 📂 SN4_UI_J.A.R.V.I.S/
+        ...
+      - 📂 Xeno2_UI_J.A.R.V.I.S/
+        ...
+      - 📂 Xeno3_UI_J.A.R.V.I.S/
+        ...
+      - 📄 boot.wav
+    - 📂 Jarvis-main/
+      - 📂 __pycache__/
+        ...
+      - 📂 Audio/
+        ...
+      - 📄 Jarvis RGB Effects Plugin Profile
+      - 📄 jarvis.py
+      - 📄 phrases.txt
+      - 📄 speaker_sample.wav
+      - 📄 Start_Voice_Bridge.bat
+      - 📄 voice_bridge.py
+    - 📂 public/
+      - 📄 AI_v5_JARVIS_CLEAN.html
+      - 📄 AI_v5_JARVIS.html
+      - 📄 AI_v5_nova.html
+      - 📄 nova_sw.js
+      - 📄 nova.webmanifest
+    - 📂 scripts/
+      - 📄 nova_conversation_flow.js
+      - 📄 nova_integration.js
+      - 📄 nova_kb_store.js
+      - 📄 nova_main.js
+      - 📄 nova_page_mobile_call.js
+      - 📄 nova_page_ui.js
+      - 📄 nova_page_voice_fix.js
+      - 📄 nova_runtime_ai.js
+      - 📄 nova_runtime_artifacts.js
+      - 📄 nova_runtime_chat.js
+      - 📄 nova_runtime_files.js
+      - 📄 nova_runtime_ui_events.js
+      - 📄 nova_runtime_ui_voice.js
+      - 📄 nova_runtime_vision.js
+      - 📄 nova_runtime_voice_tools.js
+      - 📄 nova_voice_before_interrupt.js
+      - 📄 nova_voice.js
+    - 📂 styles/
+      - 📄 nova_styles.css
+    - 📂 tests/
+      - 📄 run_tests.js
+    - 📄 voice_checker.html
+  - 📂 ai6/
+    - 📂 JARVIS-AI/
+      - 📂 Backend/
+        ...
+      - 📂 Data/
+        ...
+      - 📂 Frontend/
+        ...
+      - 📄 LICENSE
+      - 📄 Main.py
+      - 📄 Requirements.txt
+- 📂 api/
+  - 📂 __pycache__/
+    - 📄 images.cpython-312.pyc
+    - 📄 models.cpython-312.pyc
+    - 📄 submit_feedback.cpython-312.pyc
+  - 📄 chat.py
+  - 📄 images.py
+  - 📄 models.py
+  - 📄 submit_feedback.py
+- 📂 app/
+  - 📄 pages.html
+  - 📄 pages.js
+- 📂 docs/
+  - 📄 KennethO-Resume-Software-Engineer.pdf
+- 📂 extracted-weather/
+  - 📂 WeatherForecast-main/
+    - 📂 public/
+      - 📄 file.svg
+      - 📄 globe.svg
+      - 📄 next.svg
+      - 📄 vercel.svg
+      - 📄 window.svg
+    - 📂 src/
+      - 📂 app/
+        ...
+    - 📄 eslint.config.mjs
+    - 📄 next.config.mjs
+- 📂 Images/
+  - 📄 main.JPG
+- 📂 lesson_plan_generator/
+  - 📂 prompt/
+    - 📄 lesson_plan_prompt.txt
+  - 📂 public/
+    - 📄 app.py
+    - 📄 lesson_plan.docx
+    - 📄 lesson_planner_p1_backup_6_25_2025.html
+    - 📄 lesson_planner_p1.html
+    - 📄 lesson_planner_p2_backup_6_25_2025.html
+    - 📄 lesson_planner_p2.html
+  - 📂 src/
+    - 📄 core.py
+    - 📄 lesson_planner_p1.js
+    - 📄 lesson_planner_p2.js
+    - 📄 tools.py
+  - 📂 styles/
+    - 📄 style_p1.css
+    - 📄 style_p2.css
+  - 📄 Lesson Plan Generator.docx
+  - 📄 requirements.txt
+- 📂 presentation_generator/
+  - 📂 public/
+    - 📄 pg_p1.html
+    - 📄 pg_p2_smart.html
+    - 📄 pg_p2.html
+    - 📄 pg_p3.html
+  - 📂 src/
+    - 📄 pg_p1.js
+    - 📄 pg_p2.js
+    - 📄 pg_p3.js
+  - 📂 styles/
+    - 📄 style_p1.css
+    - 📄 style_p2.css
+- 📂 public/
+- 📂 RandomFact/
+  - 📄 randfact.html
+  - 📄 randfact2.html
+  - 📄 scripts.js
+  - 📄 scripts2.js
+  - 📄 style3_2.css
+  - 📄 style3.css
+- 📂 RealityAI_Lesson_Planner/
+  - 📂 public/
+    - 📄 app.py
+    - 📄 lesson_plan.docx
+    - 📄 lesson_planner_p1_backup_6_25_2025.html
+    - 📄 lesson_planner_p1.html
+    - 📄 lesson_planner_p2_backup_6_25_2025.html
+    - 📄 lesson_planner_p2.html
+  - 📂 src/
+    - 📄 core.py
+    - 📄 tools.py
+  - 📄 requirements.txt
+- 📂 RealityAI_Rubric_Generator/
+  - 📂 __pycache__/
+    - 📄 __init__.cpython-312.pyc
+    - 📄 core.cpython-312.pyc
+    - 📄 test_core.cpython-312-pytest-7.4.4.pyc
+    - 📄 test_tools.cpython-312-pytest-7.4.4.pyc
+    - 📄 tools.cpython-312.pyc
+  - 📂 public/
+    - 📄 rubric_gen_p1.html
+    - 📄 rubric_template_p2.html
+  - 📂 src/
+    - 📂 export/
+      - 📄 toDocsx.ts
+      - 📄 toPdf.ts
+    - 📂 logic/
+      - 📄 buildRubric.ts
+      - 📄 fetchUrlText.ts
+      - 📄 parseUpload.ts
+    - 📂 types/
+      - 📄 cheerio.d.ts
+      - 📄 html-to-docx.d.ts
+      - 📄 html2canvas.d.ts
+      - 📄 jspdf.d.ts
+      - 📄 mammoth.d.ts
+      - 📄 papaparse.d.ts
+      - 📄 pdfjs-dist.d.ts
+      - 📄 pptx-parser.d.ts
+    - 📂 ui/
+      - 📄 RubricForm.tsx
+    - 📄 App.tsx
+    - 📄 i18n.js
+    - 📄 main.tsx
+    - 📄 rubric.js
+  - 📂 test-results/
+  - 📂 tests/
+    - 📄 rubric_generation.test.js
+  - 📄 __init__.py
+  - 📄 core.py
+  - 📄 instructions
+  - 📄 test_core.py
+  - 📄 test_tools.py
+  - 📄 tools.py
+- 📂 Rubriks Cube/
+  - 📂 public/
+  - 📂 scripts/
+  - 📂 styles/
+- 📂 TicTacToe/
+  - 📄 tictactoe.css
+  - 📄 tictactoe.html
+  - 📄 tictactoe.js
+- 📂 ToughLuckv7/
+  - 📂 __pycache__/
+    - 📄 ToughLuckGameplay.cpython-312.pyc
+    - 📄 ToughLuckResults.cpython-312.pyc
+    - 📄 ToughLuckStart.cpython-312.pyc
+  - 📂 game-server/
+    - 📂 templates/
+      - 📄 index.html
+      - 📄 UserGameplay.html
+      - 📄 UserGUI.html
+      - 📄 UserResults.html
+      - 📄 UserStart.html
+    - 📄 app.py
+    - 📄 feedback.txt
+    - 📄 server.js
+  - 📂 public/
+    - 📄 game-logic.js
+    - 📄 UserGameplay.html
+    - 📄 UserGUI.html
+    - 📄 UserResults.html
+    - 📄 UserStart.html
+  - 📂 src/
+    - 📂 __pycache__/
+      - 📄 ToughLuckGameplay.cpython-312.pyc
+      - 📄 ToughLuckResults.cpython-312.pyc
+      - 📄 ToughLuckStart.cpython-312.pyc
+    - 📄 TLIntro.py
+    - 📄 ToughLuckGameplay.py
+    - 📄 ToughLuckGameplayUpdated.py
+    - 📄 ToughLuckResults.py
+    - 📄 ToughLuckStart.py
+  - 📄 test_game.html
+- 📂 website-mirror/
+  - 📂 hooks/
+    - 📄 applypatch-msg.sample
+    - 📄 commit-msg.sample
+    - 📄 fsmonitor-watchman.sample
+    - 📄 post-update.sample
+    - 📄 pre-applypatch.sample
+    - 📄 pre-commit.sample
+    - 📄 pre-merge-commit.sample
+    - 📄 pre-push.sample
+    - 📄 pre-rebase.sample
+    - 📄 pre-receive.sample
+    - 📄 prepare-commit-msg.sample
+    - 📄 push-to-checkout.sample
+    - 📄 sendemail-validate.sample
+    - 📄 update.sample
+  - 📂 info/
+    - 📄 exclude
+    - 📄 refs
+  - 📂 objects/
+    - 📂 info/
+      - 📄 commit-graph
+      - 📄 packs
+    - 📂 pack/
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.bitmap
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.idx
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.pack
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.rev
+  - 📂 refs/
+    - 📂 heads/
+    - 📂 tags/
+  - 📄 config
+  - 📄 description
+  - 📄 HEAD
+  - 📄 packed-refs
+- 📂 website-recovery/
+  - 📂 app/
+    - 📄 pages.html
+    - 📄 pages.js
+  - 📂 docs/
+    - 📄 Kenneth-Okwu-Full-Stack Developer I.pdf
+  - 📂 Images/
+    - 📄 main.JPG
+  - 📂 lesson_plan_generator/
+  - 📂 RandomFact/
+    - 📄 randfact.html
+    - 📄 randfact2.html
+    - 📄 scripts.js
+    - 📄 scripts2.js
+    - 📄 style3_2.css
+    - 📄 style3.css
+  - 📂 RealityAI_Lesson_Planner/
+    - 📂 public/
+      - 📄 app.py
+      - 📄 lesson_plan.docx
+      - 📄 lesson_planner_p1_backup_6_25_2025.html
+      - 📄 lesson_planner_p1.html
+      - 📄 lesson_planner_p2_backup_6_25_2025.html
+      - 📄 lesson_planner_p2.html
+    - 📂 src/
+      - 📄 core.py
+      - 📄 tools.py
+    - 📄 requirements.txt
+  - 📂 RealityAI_Rubric_Generator/
+  - 📂 ToughLuckv7/
+    - 📂 __pycache__/
+      - 📄 ToughLuckGameplay.cpython-312.pyc
+      - 📄 ToughLuckResults.cpython-312.pyc
+      - 📄 ToughLuckStart.cpython-312.pyc
+    - 📂 game-server/
+      - 📂 templates/
+        ...
+      - 📄 app.py
+      - 📄 feedback.txt
+      - 📄 server.js
+    - 📂 src/
+      - 📂 __pycache__/
+        ...
+      - 📄 TLIntro.py
+      - 📄 ToughLuckGameplay.py
+      - 📄 ToughLuckGameplayUpdated.py
+      - 📄 ToughLuckResults.py
+      - 📄 ToughLuckStart.py
+    - 📄 test_game.html
+  - 📂 WeatherForcaster/
+    - 📂 pages/
+      - 📄 index.js
+    - 📂 public/
+      - 📄 WF_p1.html
+    - 📂 src/
+      - 📄 App.js
+      - 📄 WeatherPage.js
+    - 📂 styles/
+      - 📄 styles.css
+  - 📂 website-mirror/
+    - 📂 hooks/
+      - 📄 applypatch-msg.sample
+      - 📄 commit-msg.sample
+      - 📄 fsmonitor-watchman.sample
+      - 📄 post-update.sample
+      - 📄 pre-applypatch.sample
+      - 📄 pre-commit.sample
+      - 📄 pre-merge-commit.sample
+      - 📄 pre-push.sample
+      - 📄 pre-rebase.sample
+      - 📄 pre-receive.sample
+      - 📄 prepare-commit-msg.sample
+      - 📄 push-to-checkout.sample
+      - 📄 sendemail-validate.sample
+      - 📄 update.sample
+    - 📂 info/
+      - 📄 exclude
+      - 📄 refs
+    - 📂 objects/
+      - 📂 info/
+        ...
+      - 📂 pack/
+        ...
+    - 📄 config
+    - 📄 description
+    - 📄 HEAD
+    - 📄 packed-refs
+  - 📂 xweatherforcast/
+  - 📄 Contact.html
+  - 📄 Games.html
+  - 📄 Home.html
+  - 📄 navbar.html
+  - 📄 Projects.html
+  - 📄 style.css
+  - 📄 style.css-Nova
+  - 📄 style2.css
+- 📄 AI_Development_Guide_Simple_Version.docx
+- 📄 AI_Development_Guide_v1_and_v2.docx
+- 📄 AI5_Creation_Documentation.docx
+- 📄 Contact.html
+- 📄 dev_server.py
+- 📄 Games.html
+- 📄 index.html
+- 📄 MyProject_ws.code-workspace
+- 📄 navbar.html
+- 📄 portfolio.css
+- 📄 portfolio.js
+- 📄 Projects.html
+- 📄 requirements.txt
+- 📄 style.css
+- 📄 style.css-Nova
+- 📄 style2.css
+
+
+## JS Dependencies
+
+### \RandomFact\scripts2.js
+No dependencies found
+
+### \RandomFact\scripts.js
+No dependencies found
+
+### \app\pages.js
+No dependencies found
+
+### \lesson_plan_generator\src\lesson_planner_p2.js
+No dependencies found
+
+### \lesson_plan_generator\src\lesson_planner_p1.js
+No dependencies found
+
+## PY Dependencies
+
+### \api\images.py
+Dependencies:
+- json
+- os
+- http.server
+- BaseHTTPRequestHandler
+- requests
+
+### \api\chat.py
+Dependencies:
+- json
+- os
+- re
+- requests
+- datetime
+- date
+- http.server
+- BaseHTTPRequestHandler
+- urllib.parse
+- quote
+
+### \api\models.py
+Dependencies:
+- json
+- os
+- requests
+- http.server
+- BaseHTTPRequestHandler
+
+### \api\submit_feedback.py
+Dependencies:
+- json
+- os
+- smtplib
+- datetime
+- email.message
+- EmailMessage
+- http.server
+- BaseHTTPRequestHandler
+
+### \dev_server.py
+Dependencies:
+- os
+- http.server
+- SimpleHTTPRequestHandler,
+- urllib.parse
+- urlparse
+- api.chat
+- handler
+- api.models
+
+## H Dependencies
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\_surface.h
+Dependencies:
+- _pygame.h
+- surface.h
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\_pygame.h
+Dependencies:
+- pgplatform.h
+- Python.h
+- SDL.h
+- include/_pygame.h
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\_camera.h
+Dependencies:
+- _pygame.h
+- camera.h
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\_blit_info.h
+Dependencies:
+- _surface.h
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\surface.h
+Dependencies:
+- SDL.h
+- pygame.h
+
+## TSX Dependencies
+
+### \RealityAI_Rubric_Generator\src\ui\RubricForm.tsx
+Dependencies:
+- react
+- ../logic/parseUpload
+- ../logic/fetchUrlText
+- ../logic/buildRubric
+- ../export/toPdf
+- ../export/toDocsx
+
+### \RealityAI_Rubric_Generator\src\main.tsx
+Dependencies:
+- react
+- react-dom/client
+- ./App
+
+### \RealityAI_Rubric_Generator\src\App.tsx
+Dependencies:
+- react
+- ./ui/RubricForm
+
+### \.vercel\cache\models_py\RealityAI_Rubric_Generator\src\ui\RubricForm.tsx
+Dependencies:
+- react
+- ../logic/parseUpload
+- ../logic/fetchUrlText
+- ../logic/buildRubric
+- ../export/toPdf
+- ../export/toDocsx
+
+### \.vercel\cache\models_py\RealityAI_Rubric_Generator\src\main.tsx
+Dependencies:
+- react
+- react-dom/client
+- ./App
+
+## TS Dependencies
+
+### \RealityAI_Rubric_Generator\src\types\pptx-parser.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\pdfjs-dist.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\papaparse.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\mammoth.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\jspdf.d.ts
+No dependencies found
+
+## C Dependencies
+
+### \ai\ai6\JARVIS-AI\.venv\Lib\site-packages\zope\interface\_zope_interface_coptimizations.c
+Dependencies:
+- Python.h
+- structmember.h
+
+
+
+## Project Directory Structure
+
+- 📂 __pycache__/
+  - 📄 dev_server.cpython-312.pyc
+- 📂 ai/
+  - 📂 ai1/
+    - 📂 public/
+      - 📄 ai.html
+    - 📂 scripts/
+      - 📄 ai.js
+    - 📂 styles/
+      - 📄 styles_ai.css
+    - 📄 Ai.html
+  - 📂 ai2/
+    - 📂 public/
+      - 📄 ai2.html
+    - 📂 scripts/
+      - 📄 ai2.js
+    - 📂 styles/
+      - 📄 styles_ai2.css
+    - 📄 Ai2_ORGANIZED_BACKUP.html
+    - 📄 Ai2_WORKING_BACKUP.html
+  - 📂 ai3/
+    - 📂 public/
+      - 📄 AI_v3.html
+    - 📂 scripts/
+      - 📄 ai_v3_main.js
+    - 📂 styles/
+      - 📄 ai_v3_styles.css
+    - 📄 AI_v3_ORGANIZED_BACKUP.html
+    - 📄 AI_v3.html
+    - 📄 app.py
+    - 📄 requirements.txt
+  - 📂 ai4/
+    - 📂 public/
+      - 📄 AI_v4.html
+    - 📂 scripts/
+      - 📄 ai_v4_main.js
+    - 📂 styles/
+      - 📄 ai_v4_styles.css
+    - 📄 AI_v4_ORGANIZED_BACKUP.html
+    - 📄 AI_v4.html
+  - 📂 ai5/
+    - 📂 ai5 files/
+      - 📂 public/
+        ...
+      - 📄 Check_JARVIS_Voices.bat
+    - 📂 JARVIS/
+      - 📂 CFX_UI_J.A.R.V.I.S/
+        ...
+      - 📂 GHV4_UI_J.A.R.V.I.S/
+        ...
+      - 📂 ProffieOS_V2_Voicepack_J.A.R.V.I.S/
+        ...
+      - 📂 SN4_UI_J.A.R.V.I.S/
+        ...
+      - 📂 Xeno2_UI_J.A.R.V.I.S/
+        ...
+      - 📂 Xeno3_UI_J.A.R.V.I.S/
+        ...
+      - 📄 boot.wav
+    - 📂 Jarvis-main/
+      - 📂 __pycache__/
+        ...
+      - 📂 Audio/
+        ...
+      - 📄 Jarvis RGB Effects Plugin Profile
+      - 📄 jarvis.py
+      - 📄 phrases.txt
+      - 📄 speaker_sample.wav
+      - 📄 Start_Voice_Bridge.bat
+      - 📄 voice_bridge.py
+    - 📂 public/
+      - 📄 AI_v5_JARVIS_CLEAN.html
+      - 📄 AI_v5_JARVIS.html
+      - 📄 AI_v5_nova.html
+      - 📄 nova_sw.js
+    - 📂 scripts/
+      - 📄 nova_conversation_flow.js
+      - 📄 nova_integration.js
+      - 📄 nova_kb_store.js
+      - 📄 nova_main.js
+      - 📄 nova_page_mobile_call.js
+      - 📄 nova_page_ui.js
+      - 📄 nova_page_voice_fix.js
+      - 📄 nova_runtime_ai.js
+      - 📄 nova_runtime_artifacts.js
+      - 📄 nova_runtime_chat.js
+      - 📄 nova_runtime_files.js
+      - 📄 nova_runtime_ui_events.js
+      - 📄 nova_runtime_ui_voice.js
+      - 📄 nova_runtime_voice_tools.js
+      - 📄 nova_voice_before_interrupt.js
+      - 📄 nova_voice.js
+    - 📂 styles/
+      - 📄 nova_styles.css
+    - 📄 voice_checker.html
+  - 📂 ai6/
+    - 📂 JARVIS-AI/
+      - 📂 Backend/
+        ...
+      - 📂 Data/
+        ...
+      - 📂 Frontend/
+        ...
+      - 📄 LICENSE
+      - 📄 Main.py
+      - 📄 Requirements.txt
+- 📂 api/
+  - 📂 __pycache__/
+    - 📄 images.cpython-312.pyc
+    - 📄 models.cpython-312.pyc
+    - 📄 submit_feedback.cpython-312.pyc
+  - 📄 chat.py
+  - 📄 images.py
+  - 📄 models.py
+  - 📄 submit_feedback.py
+- 📂 app/
+  - 📄 pages.html
+  - 📄 pages.js
+- 📂 docs/
+  - 📄 KennethO-Resume-Software-Engineer.pdf
+- 📂 extracted-weather/
+  - 📂 WeatherForecast-main/
+    - 📂 public/
+      - 📄 file.svg
+      - 📄 globe.svg
+      - 📄 next.svg
+      - 📄 vercel.svg
+      - 📄 window.svg
+    - 📂 src/
+      - 📂 app/
+        ...
+    - 📄 eslint.config.mjs
+    - 📄 next.config.mjs
+- 📂 Images/
+  - 📄 main.JPG
+- 📂 lesson_plan_generator/
+  - 📂 prompt/
+    - 📄 lesson_plan_prompt.txt
+  - 📂 public/
+    - 📄 app.py
+    - 📄 lesson_plan.docx
+    - 📄 lesson_planner_p1_backup_6_25_2025.html
+    - 📄 lesson_planner_p1.html
+    - 📄 lesson_planner_p2_backup_6_25_2025.html
+    - 📄 lesson_planner_p2.html
+  - 📂 src/
+    - 📄 core.py
+    - 📄 lesson_planner_p1.js
+    - 📄 lesson_planner_p2.js
+    - 📄 tools.py
+  - 📂 styles/
+    - 📄 style_p1.css
+    - 📄 style_p2.css
+  - 📄 Lesson Plan Generator.docx
+  - 📄 requirements.txt
+- 📂 presentation_generator/
+  - 📂 public/
+    - 📄 pg_p1.html
+    - 📄 pg_p2_smart.html
+    - 📄 pg_p2.html
+    - 📄 pg_p3.html
+  - 📂 src/
+    - 📄 pg_p1.js
+    - 📄 pg_p2.js
+    - 📄 pg_p3.js
+  - 📂 styles/
+    - 📄 style_p1.css
+    - 📄 style_p2.css
+- 📂 public/
+- 📂 RandomFact/
+  - 📄 randfact.html
+  - 📄 randfact2.html
+  - 📄 scripts.js
+  - 📄 scripts2.js
+  - 📄 style3_2.css
+  - 📄 style3.css
+- 📂 RealityAI_Lesson_Planner/
+  - 📂 public/
+    - 📄 app.py
+    - 📄 lesson_plan.docx
+    - 📄 lesson_planner_p1_backup_6_25_2025.html
+    - 📄 lesson_planner_p1.html
+    - 📄 lesson_planner_p2_backup_6_25_2025.html
+    - 📄 lesson_planner_p2.html
+  - 📂 src/
+    - 📄 core.py
+    - 📄 tools.py
+  - 📄 requirements.txt
+- 📂 RealityAI_Rubric_Generator/
+  - 📂 __pycache__/
+    - 📄 __init__.cpython-312.pyc
+    - 📄 core.cpython-312.pyc
+    - 📄 test_core.cpython-312-pytest-7.4.4.pyc
+    - 📄 test_tools.cpython-312-pytest-7.4.4.pyc
+    - 📄 tools.cpython-312.pyc
+  - 📂 public/
+    - 📄 rubric_gen_p1.html
+    - 📄 rubric_template_p2.html
+  - 📂 src/
+    - 📂 export/
+      - 📄 toDocsx.ts
+      - 📄 toPdf.ts
+    - 📂 logic/
+      - 📄 buildRubric.ts
+      - 📄 fetchUrlText.ts
+      - 📄 parseUpload.ts
+    - 📂 types/
+      - 📄 cheerio.d.ts
+      - 📄 html-to-docx.d.ts
+      - 📄 html2canvas.d.ts
+      - 📄 jspdf.d.ts
+      - 📄 mammoth.d.ts
+      - 📄 papaparse.d.ts
+      - 📄 pdfjs-dist.d.ts
+      - 📄 pptx-parser.d.ts
+    - 📂 ui/
+      - 📄 RubricForm.tsx
+    - 📄 App.tsx
+    - 📄 i18n.js
+    - 📄 main.tsx
+    - 📄 rubric.js
+  - 📂 test-results/
+  - 📂 tests/
+    - 📄 rubric_generation.test.js
+  - 📄 __init__.py
+  - 📄 core.py
+  - 📄 instructions
+  - 📄 test_core.py
+  - 📄 test_tools.py
+  - 📄 tools.py
+- 📂 Rubriks Cube/
+  - 📂 public/
+  - 📂 scripts/
+  - 📂 styles/
+- 📂 TicTacToe/
+  - 📄 tictactoe.css
+  - 📄 tictactoe.html
+  - 📄 tictactoe.js
+- 📂 ToughLuckv7/
+  - 📂 __pycache__/
+    - 📄 ToughLuckGameplay.cpython-312.pyc
+    - 📄 ToughLuckResults.cpython-312.pyc
+    - 📄 ToughLuckStart.cpython-312.pyc
+  - 📂 game-server/
+    - 📂 templates/
+      - 📄 index.html
+      - 📄 UserGameplay.html
+      - 📄 UserGUI.html
+      - 📄 UserResults.html
+      - 📄 UserStart.html
+    - 📄 app.py
+    - 📄 feedback.txt
+    - 📄 server.js
+  - 📂 public/
+    - 📄 game-logic.js
+    - 📄 UserGameplay.html
+    - 📄 UserGUI.html
+    - 📄 UserResults.html
+    - 📄 UserStart.html
+  - 📂 src/
+    - 📂 __pycache__/
+      - 📄 ToughLuckGameplay.cpython-312.pyc
+      - 📄 ToughLuckResults.cpython-312.pyc
+      - 📄 ToughLuckStart.cpython-312.pyc
+    - 📄 TLIntro.py
+    - 📄 ToughLuckGameplay.py
+    - 📄 ToughLuckGameplayUpdated.py
+    - 📄 ToughLuckResults.py
+    - 📄 ToughLuckStart.py
+  - 📄 test_game.html
+- 📂 website-mirror/
+  - 📂 hooks/
+    - 📄 applypatch-msg.sample
+    - 📄 commit-msg.sample
+    - 📄 fsmonitor-watchman.sample
+    - 📄 post-update.sample
+    - 📄 pre-applypatch.sample
+    - 📄 pre-commit.sample
+    - 📄 pre-merge-commit.sample
+    - 📄 pre-push.sample
+    - 📄 pre-rebase.sample
+    - 📄 pre-receive.sample
+    - 📄 prepare-commit-msg.sample
+    - 📄 push-to-checkout.sample
+    - 📄 sendemail-validate.sample
+    - 📄 update.sample
+  - 📂 info/
+    - 📄 exclude
+    - 📄 refs
+  - 📂 objects/
+    - 📂 info/
+      - 📄 commit-graph
+      - 📄 packs
+    - 📂 pack/
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.bitmap
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.idx
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.pack
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.rev
+  - 📂 refs/
+    - 📂 heads/
+    - 📂 tags/
+  - 📄 config
+  - 📄 description
+  - 📄 HEAD
+  - 📄 packed-refs
+- 📂 website-recovery/
+  - 📂 app/
+    - 📄 pages.html
+    - 📄 pages.js
+  - 📂 docs/
+    - 📄 Kenneth-Okwu-Full-Stack Developer I.pdf
+  - 📂 Images/
+    - 📄 main.JPG
+  - 📂 lesson_plan_generator/
+  - 📂 RandomFact/
+    - 📄 randfact.html
+    - 📄 randfact2.html
+    - 📄 scripts.js
+    - 📄 scripts2.js
+    - 📄 style3_2.css
+    - 📄 style3.css
+  - 📂 RealityAI_Lesson_Planner/
+    - 📂 public/
+      - 📄 app.py
+      - 📄 lesson_plan.docx
+      - 📄 lesson_planner_p1_backup_6_25_2025.html
+      - 📄 lesson_planner_p1.html
+      - 📄 lesson_planner_p2_backup_6_25_2025.html
+      - 📄 lesson_planner_p2.html
+    - 📂 src/
+      - 📄 core.py
+      - 📄 tools.py
+    - 📄 requirements.txt
+  - 📂 RealityAI_Rubric_Generator/
+  - 📂 ToughLuckv7/
+    - 📂 __pycache__/
+      - 📄 ToughLuckGameplay.cpython-312.pyc
+      - 📄 ToughLuckResults.cpython-312.pyc
+      - 📄 ToughLuckStart.cpython-312.pyc
+    - 📂 game-server/
+      - 📂 templates/
+        ...
+      - 📄 app.py
+      - 📄 feedback.txt
+      - 📄 server.js
+    - 📂 src/
+      - 📂 __pycache__/
+        ...
+      - 📄 TLIntro.py
+      - 📄 ToughLuckGameplay.py
+      - 📄 ToughLuckGameplayUpdated.py
+      - 📄 ToughLuckResults.py
+      - 📄 ToughLuckStart.py
+    - 📄 test_game.html
+  - 📂 WeatherForcaster/
+    - 📂 pages/
+      - 📄 index.js
+    - 📂 public/
+      - 📄 WF_p1.html
+    - 📂 src/
+      - 📄 App.js
+      - 📄 WeatherPage.js
+    - 📂 styles/
+      - 📄 styles.css
+  - 📂 website-mirror/
+    - 📂 hooks/
+      - 📄 applypatch-msg.sample
+      - 📄 commit-msg.sample
+      - 📄 fsmonitor-watchman.sample
+      - 📄 post-update.sample
+      - 📄 pre-applypatch.sample
+      - 📄 pre-commit.sample
+      - 📄 pre-merge-commit.sample
+      - 📄 pre-push.sample
+      - 📄 pre-rebase.sample
+      - 📄 pre-receive.sample
+      - 📄 prepare-commit-msg.sample
+      - 📄 push-to-checkout.sample
+      - 📄 sendemail-validate.sample
+      - 📄 update.sample
+    - 📂 info/
+      - 📄 exclude
+      - 📄 refs
+    - 📂 objects/
+      - 📂 info/
+        ...
+      - 📂 pack/
+        ...
+    - 📄 config
+    - 📄 description
+    - 📄 HEAD
+    - 📄 packed-refs
+  - 📂 xweatherforcast/
+  - 📄 Contact.html
+  - 📄 Games.html
+  - 📄 Home.html
+  - 📄 navbar.html
+  - 📄 Projects.html
+  - 📄 style.css
+  - 📄 style.css-Nova
+  - 📄 style2.css
+- 📄 AI_Development_Guide_Simple_Version.docx
+- 📄 AI_Development_Guide_v1_and_v2.docx
+- 📄 AI5_Creation_Documentation.docx
+- 📄 Contact.html
+- 📄 dev_server.py
+- 📄 Games.html
+- 📄 index.html
+- 📄 MyProject_ws.code-workspace
+- 📄 navbar.html
+- 📄 portfolio.css
+- 📄 portfolio.js
+- 📄 Projects.html
+- 📄 requirements.txt
+- 📄 style.css
+- 📄 style.css-Nova
+- 📄 style2.css
+
+
+## JS Dependencies
+
+### \website-recovery\WeatherForcaster\src\WeatherPage.js
+Dependencies:
+- react
+- axios
+- ./styles/styles.css
+
+### \website-recovery\WeatherForcaster\src\App.js
+Dependencies:
+- react
+- ./WeatherPage
+- ./styles/styles.css
+
+### \ai\ai1\scripts\ai.js
+No dependencies found
+
+### \website-recovery\WeatherForcaster\pages\index.js
+No dependencies found
+
+### \extracted-weather\WeatherForecast-main\src\app\page.js
+Dependencies:
+- ./components/BackButton
+- react
+- next/navigation
+- ./page.module.css
+
+## PY Dependencies
+
+### \lesson_plan_generator\src\tools.py
+Dependencies:
+- PyPDF2
+- csv
+- googletrans
+- Translator
+- the
+
+### \lesson_plan_generator\src\core.py
+Dependencies:
+- logging
+- typing
+- Dict,
+- .tools
+- parse_pdf,
+
+### \lesson_plan_generator\public\app.py
+Dependencies:
+- flask
+- Flask
+
+### \dev_server.py
+Dependencies:
+- os
+- http.server
+- SimpleHTTPRequestHandler,
+- urllib.parse
+- urlparse
+- api.chat
+- handler
+- api.models
+
+### \website-recovery\ToughLuckv7\src\ToughLuckStart.py
+Dependencies:
+- sys
+- timeit
+- random
+- ToughLuckGameplay
+- start
+
+## TSX Dependencies
+
+### \RealityAI_Rubric_Generator\src\ui\RubricForm.tsx
+Dependencies:
+- react
+- ../logic/parseUpload
+- ../logic/fetchUrlText
+- ../logic/buildRubric
+- ../export/toPdf
+- ../export/toDocsx
+
+### \RealityAI_Rubric_Generator\src\main.tsx
+Dependencies:
+- react
+- react-dom/client
+- ./App
+
+### \RealityAI_Rubric_Generator\src\App.tsx
+Dependencies:
+- react
+- ./ui/RubricForm
+
+### \.vercel\cache\models_py\RealityAI_Rubric_Generator\src\ui\RubricForm.tsx
+Dependencies:
+- react
+- ../logic/parseUpload
+- ../logic/fetchUrlText
+- ../logic/buildRubric
+- ../export/toPdf
+- ../export/toDocsx
+
+### \.vercel\cache\models_py\RealityAI_Rubric_Generator\src\main.tsx
+Dependencies:
+- react
+- react-dom/client
+- ./App
+
+## TS Dependencies
+
+### \RealityAI_Rubric_Generator\src\types\pptx-parser.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\pdfjs-dist.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\papaparse.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\mammoth.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\jspdf.d.ts
+No dependencies found
+
+## H Dependencies
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\pgarrinter.h
+No dependencies found
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\palette.h
+Dependencies:
+- SDL.h
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\mixer.h
+Dependencies:
+- SDL_mixer.h
+- include/pygame_mixer.h
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\mask.h
+Dependencies:
+- include/pygame_mask.h
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\_surface.h
+Dependencies:
+- _pygame.h
+- surface.h
+
+## C Dependencies
+
+### \ai\ai6\JARVIS-AI\.venv\Lib\site-packages\zope\interface\_zope_interface_coptimizations.c
+Dependencies:
+- Python.h
+- structmember.h
+
+
+
+## Project Directory Structure
+
+- 📂 __pycache__/
+  - 📄 dev_server.cpython-312.pyc
+- 📂 ai/
+  - 📂 ai1/
+    - 📂 public/
+      - 📄 ai.html
+    - 📂 scripts/
+      - 📄 ai.js
+    - 📂 styles/
+      - 📄 styles_ai.css
+    - 📄 Ai.html
+  - 📂 ai2/
+    - 📂 public/
+      - 📄 ai2.html
+    - 📂 scripts/
+      - 📄 ai2.js
+    - 📂 styles/
+      - 📄 styles_ai2.css
+    - 📄 Ai2_ORGANIZED_BACKUP.html
+    - 📄 Ai2_WORKING_BACKUP.html
+  - 📂 ai3/
+    - 📂 public/
+      - 📄 AI_v3.html
+    - 📂 scripts/
+      - 📄 ai_v3_main.js
+    - 📂 styles/
+      - 📄 ai_v3_styles.css
+    - 📄 AI_v3_ORGANIZED_BACKUP.html
+    - 📄 AI_v3.html
+    - 📄 app.py
+    - 📄 requirements.txt
+  - 📂 ai4/
+    - 📂 public/
+      - 📄 AI_v4.html
+    - 📂 scripts/
+      - 📄 ai_v4_main.js
+    - 📂 styles/
+      - 📄 ai_v4_styles.css
+    - 📄 AI_v4_ORGANIZED_BACKUP.html
+    - 📄 AI_v4.html
+  - 📂 ai5/
+    - 📂 ai5 files/
+      - 📂 public/
+        ...
+      - 📄 Check_JARVIS_Voices.bat
+    - 📂 JARVIS/
+      - 📂 CFX_UI_J.A.R.V.I.S/
+        ...
+      - 📂 GHV4_UI_J.A.R.V.I.S/
+        ...
+      - 📂 ProffieOS_V2_Voicepack_J.A.R.V.I.S/
+        ...
+      - 📂 SN4_UI_J.A.R.V.I.S/
+        ...
+      - 📂 Xeno2_UI_J.A.R.V.I.S/
+        ...
+      - 📂 Xeno3_UI_J.A.R.V.I.S/
+        ...
+      - 📄 boot.wav
+    - 📂 Jarvis-main/
+      - 📂 __pycache__/
+        ...
+      - 📂 Audio/
+        ...
+      - 📄 Jarvis RGB Effects Plugin Profile
+      - 📄 jarvis.py
+      - 📄 phrases.txt
+      - 📄 speaker_sample.wav
+      - 📄 Start_Voice_Bridge.bat
+      - 📄 voice_bridge.py
+    - 📂 public/
+      - 📄 AI_v5_JARVIS_CLEAN.html
+      - 📄 AI_v5_JARVIS.html
+      - 📄 AI_v5_nova.html
+    - 📂 scripts/
+      - 📄 nova_conversation_flow.js
+      - 📄 nova_integration.js
+      - 📄 nova_kb_store.js
+      - 📄 nova_main.js
+      - 📄 nova_page_mobile_call.js
+      - 📄 nova_page_ui.js
+      - 📄 nova_page_voice_fix.js
+      - 📄 nova_runtime_ai.js
+      - 📄 nova_runtime_artifacts.js
+      - 📄 nova_runtime_chat.js
+      - 📄 nova_runtime_files.js
+      - 📄 nova_runtime_ui_events.js
+      - 📄 nova_runtime_ui_voice.js
+      - 📄 nova_runtime_voice_tools.js
+      - 📄 nova_voice_before_interrupt.js
+      - 📄 nova_voice.js
+    - 📂 styles/
+      - 📄 nova_styles.css
+    - 📄 voice_checker.html
+  - 📂 ai6/
+    - 📂 JARVIS-AI/
+      - 📂 Backend/
+        ...
+      - 📂 Data/
+        ...
+      - 📂 Frontend/
+        ...
+      - 📄 LICENSE
+      - 📄 Main.py
+      - 📄 Requirements.txt
+- 📂 api/
+  - 📂 __pycache__/
+    - 📄 images.cpython-312.pyc
+    - 📄 models.cpython-312.pyc
+    - 📄 submit_feedback.cpython-312.pyc
+  - 📄 chat.py
+  - 📄 images.py
+  - 📄 models.py
+  - 📄 submit_feedback.py
+- 📂 app/
+  - 📄 pages.html
+  - 📄 pages.js
+- 📂 docs/
+  - 📄 KennethO-Resume-Software-Engineer.pdf
+- 📂 extracted-weather/
+  - 📂 WeatherForecast-main/
+    - 📂 public/
+      - 📄 file.svg
+      - 📄 globe.svg
+      - 📄 next.svg
+      - 📄 vercel.svg
+      - 📄 window.svg
+    - 📂 src/
+      - 📂 app/
+        ...
+    - 📄 eslint.config.mjs
+    - 📄 next.config.mjs
+- 📂 Images/
+  - 📄 main.JPG
+- 📂 lesson_plan_generator/
+  - 📂 prompt/
+    - 📄 lesson_plan_prompt.txt
+  - 📂 public/
+    - 📄 app.py
+    - 📄 lesson_plan.docx
+    - 📄 lesson_planner_p1_backup_6_25_2025.html
+    - 📄 lesson_planner_p1.html
+    - 📄 lesson_planner_p2_backup_6_25_2025.html
+    - 📄 lesson_planner_p2.html
+  - 📂 src/
+    - 📄 core.py
+    - 📄 lesson_planner_p1.js
+    - 📄 lesson_planner_p2.js
+    - 📄 tools.py
+  - 📂 styles/
+    - 📄 style_p1.css
+    - 📄 style_p2.css
+  - 📄 Lesson Plan Generator.docx
+  - 📄 requirements.txt
+- 📂 presentation_generator/
+  - 📂 public/
+    - 📄 pg_p1.html
+    - 📄 pg_p2_smart.html
+    - 📄 pg_p2.html
+    - 📄 pg_p3.html
+  - 📂 src/
+    - 📄 pg_p1.js
+    - 📄 pg_p2.js
+    - 📄 pg_p3.js
+  - 📂 styles/
+    - 📄 style_p1.css
+    - 📄 style_p2.css
+- 📂 public/
+- 📂 RandomFact/
+  - 📄 randfact.html
+  - 📄 randfact2.html
+  - 📄 scripts.js
+  - 📄 scripts2.js
+  - 📄 style3_2.css
+  - 📄 style3.css
+- 📂 RealityAI_Lesson_Planner/
+  - 📂 public/
+    - 📄 app.py
+    - 📄 lesson_plan.docx
+    - 📄 lesson_planner_p1_backup_6_25_2025.html
+    - 📄 lesson_planner_p1.html
+    - 📄 lesson_planner_p2_backup_6_25_2025.html
+    - 📄 lesson_planner_p2.html
+  - 📂 src/
+    - 📄 core.py
+    - 📄 tools.py
+  - 📄 requirements.txt
+- 📂 RealityAI_Rubric_Generator/
+  - 📂 __pycache__/
+    - 📄 __init__.cpython-312.pyc
+    - 📄 core.cpython-312.pyc
+    - 📄 test_core.cpython-312-pytest-7.4.4.pyc
+    - 📄 test_tools.cpython-312-pytest-7.4.4.pyc
+    - 📄 tools.cpython-312.pyc
+  - 📂 public/
+    - 📄 rubric_gen_p1.html
+    - 📄 rubric_template_p2.html
+  - 📂 src/
+    - 📂 export/
+      - 📄 toDocsx.ts
+      - 📄 toPdf.ts
+    - 📂 logic/
+      - 📄 buildRubric.ts
+      - 📄 fetchUrlText.ts
+      - 📄 parseUpload.ts
+    - 📂 types/
+      - 📄 cheerio.d.ts
+      - 📄 html-to-docx.d.ts
+      - 📄 html2canvas.d.ts
+      - 📄 jspdf.d.ts
+      - 📄 mammoth.d.ts
+      - 📄 papaparse.d.ts
+      - 📄 pdfjs-dist.d.ts
+      - 📄 pptx-parser.d.ts
+    - 📂 ui/
+      - 📄 RubricForm.tsx
+    - 📄 App.tsx
+    - 📄 i18n.js
+    - 📄 main.tsx
+    - 📄 rubric.js
+  - 📂 test-results/
+  - 📂 tests/
+    - 📄 rubric_generation.test.js
+  - 📄 __init__.py
+  - 📄 core.py
+  - 📄 instructions
+  - 📄 test_core.py
+  - 📄 test_tools.py
+  - 📄 tools.py
+- 📂 Rubriks Cube/
+  - 📂 public/
+  - 📂 scripts/
+  - 📂 styles/
+- 📂 TicTacToe/
+  - 📄 tictactoe.css
+  - 📄 tictactoe.html
+  - 📄 tictactoe.js
+- 📂 ToughLuckv7/
+  - 📂 __pycache__/
+    - 📄 ToughLuckGameplay.cpython-312.pyc
+    - 📄 ToughLuckResults.cpython-312.pyc
+    - 📄 ToughLuckStart.cpython-312.pyc
+  - 📂 game-server/
+    - 📂 templates/
+      - 📄 index.html
+      - 📄 UserGameplay.html
+      - 📄 UserGUI.html
+      - 📄 UserResults.html
+      - 📄 UserStart.html
+    - 📄 app.py
+    - 📄 feedback.txt
+    - 📄 server.js
+  - 📂 public/
+    - 📄 game-logic.js
+    - 📄 UserGameplay.html
+    - 📄 UserGUI.html
+    - 📄 UserResults.html
+    - 📄 UserStart.html
+  - 📂 src/
+    - 📂 __pycache__/
+      - 📄 ToughLuckGameplay.cpython-312.pyc
+      - 📄 ToughLuckResults.cpython-312.pyc
+      - 📄 ToughLuckStart.cpython-312.pyc
+    - 📄 TLIntro.py
+    - 📄 ToughLuckGameplay.py
+    - 📄 ToughLuckGameplayUpdated.py
+    - 📄 ToughLuckResults.py
+    - 📄 ToughLuckStart.py
+  - 📄 test_game.html
+- 📂 website-mirror/
+  - 📂 hooks/
+    - 📄 applypatch-msg.sample
+    - 📄 commit-msg.sample
+    - 📄 fsmonitor-watchman.sample
+    - 📄 post-update.sample
+    - 📄 pre-applypatch.sample
+    - 📄 pre-commit.sample
+    - 📄 pre-merge-commit.sample
+    - 📄 pre-push.sample
+    - 📄 pre-rebase.sample
+    - 📄 pre-receive.sample
+    - 📄 prepare-commit-msg.sample
+    - 📄 push-to-checkout.sample
+    - 📄 sendemail-validate.sample
+    - 📄 update.sample
+  - 📂 info/
+    - 📄 exclude
+    - 📄 refs
+  - 📂 objects/
+    - 📂 info/
+      - 📄 commit-graph
+      - 📄 packs
+    - 📂 pack/
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.bitmap
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.idx
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.pack
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.rev
+  - 📂 refs/
+    - 📂 heads/
+    - 📂 tags/
+  - 📄 config
+  - 📄 description
+  - 📄 HEAD
+  - 📄 packed-refs
+- 📂 website-recovery/
+  - 📂 app/
+    - 📄 pages.html
+    - 📄 pages.js
+  - 📂 docs/
+    - 📄 Kenneth-Okwu-Full-Stack Developer I.pdf
+  - 📂 Images/
+    - 📄 main.JPG
+  - 📂 lesson_plan_generator/
+  - 📂 RandomFact/
+    - 📄 randfact.html
+    - 📄 randfact2.html
+    - 📄 scripts.js
+    - 📄 scripts2.js
+    - 📄 style3_2.css
+    - 📄 style3.css
+  - 📂 RealityAI_Lesson_Planner/
+    - 📂 public/
+      - 📄 app.py
+      - 📄 lesson_plan.docx
+      - 📄 lesson_planner_p1_backup_6_25_2025.html
+      - 📄 lesson_planner_p1.html
+      - 📄 lesson_planner_p2_backup_6_25_2025.html
+      - 📄 lesson_planner_p2.html
+    - 📂 src/
+      - 📄 core.py
+      - 📄 tools.py
+    - 📄 requirements.txt
+  - 📂 RealityAI_Rubric_Generator/
+  - 📂 ToughLuckv7/
+    - 📂 __pycache__/
+      - 📄 ToughLuckGameplay.cpython-312.pyc
+      - 📄 ToughLuckResults.cpython-312.pyc
+      - 📄 ToughLuckStart.cpython-312.pyc
+    - 📂 game-server/
+      - 📂 templates/
+        ...
+      - 📄 app.py
+      - 📄 feedback.txt
+      - 📄 server.js
+    - 📂 src/
+      - 📂 __pycache__/
+        ...
+      - 📄 TLIntro.py
+      - 📄 ToughLuckGameplay.py
+      - 📄 ToughLuckGameplayUpdated.py
+      - 📄 ToughLuckResults.py
+      - 📄 ToughLuckStart.py
+    - 📄 test_game.html
+  - 📂 WeatherForcaster/
+    - 📂 pages/
+      - 📄 index.js
+    - 📂 public/
+      - 📄 WF_p1.html
+    - 📂 src/
+      - 📄 App.js
+      - 📄 WeatherPage.js
+    - 📂 styles/
+      - 📄 styles.css
+  - 📂 website-mirror/
+    - 📂 hooks/
+      - 📄 applypatch-msg.sample
+      - 📄 commit-msg.sample
+      - 📄 fsmonitor-watchman.sample
+      - 📄 post-update.sample
+      - 📄 pre-applypatch.sample
+      - 📄 pre-commit.sample
+      - 📄 pre-merge-commit.sample
+      - 📄 pre-push.sample
+      - 📄 pre-rebase.sample
+      - 📄 pre-receive.sample
+      - 📄 prepare-commit-msg.sample
+      - 📄 push-to-checkout.sample
+      - 📄 sendemail-validate.sample
+      - 📄 update.sample
+    - 📂 info/
+      - 📄 exclude
+      - 📄 refs
+    - 📂 objects/
+      - 📂 info/
+        ...
+      - 📂 pack/
+        ...
+    - 📄 config
+    - 📄 description
+    - 📄 HEAD
+    - 📄 packed-refs
+  - 📂 xweatherforcast/
+  - 📄 Contact.html
+  - 📄 Games.html
+  - 📄 Home.html
+  - 📄 navbar.html
+  - 📄 Projects.html
+  - 📄 style.css
+  - 📄 style.css-Nova
+  - 📄 style2.css
+- 📄 AI_Development_Guide_Simple_Version.docx
+- 📄 AI_Development_Guide_v1_and_v2.docx
+- 📄 AI5_Creation_Documentation.docx
+- 📄 Contact.html
+- 📄 dev_server.py
+- 📄 Games.html
+- 📄 index.html
+- 📄 MyProject_ws.code-workspace
+- 📄 navbar.html
+- 📄 portfolio.css
+- 📄 portfolio.js
+- 📄 Projects.html
+- 📄 requirements.txt
+- 📄 style.css
+- 📄 style.css-Nova
+- 📄 style2.css
+
+
+## PY Dependencies
+
+### \dev_server.py
+Dependencies:
+- os
+- http.server
+- SimpleHTTPRequestHandler,
+- urllib.parse
+- urlparse
+- api.chat
+- handler
+- api.models
+
+### \ai\ai6\JARVIS-AI\Main.py
+Dependencies:
+- Frontend.GUI
+- (
+- Backend.Model
+- FirstLayerDMM
+- Backend.RealtimeSearchEngine
+- RealtimeSearchEngine
+- Backend.Automation
+- Automation
+- Backend.SpeechToText
+- SpeechRecognition
+- Backend.Chatbot
+- Chatbot
+- Backend.TextToSpeech
+- TextToSpeech
+- Backend.screen_analysis
+- analyze_once
+- Backend.CameraAnalysis
+- dotenv
+- dotenv_values
+- asyncio
+- run
+- time
+- sleep
+- subprocess
+- os
+- threading
+- json
+
+### \api\submit_feedback.py
+Dependencies:
+- json
+- os
+- smtplib
+- datetime
+- email.message
+- EmailMessage
+- http.server
+- BaseHTTPRequestHandler
+
+### \api\models.py
+Dependencies:
+- json
+- os
+- requests
+- http.server
+- BaseHTTPRequestHandler
+
+### \api\images.py
+Dependencies:
+- json
+- os
+- http.server
+- BaseHTTPRequestHandler
+- requests
+
+## JS Dependencies
+
+### \RandomFact\scripts2.js
+No dependencies found
+
+### \RandomFact\scripts.js
+No dependencies found
+
+### \TicTacToe\tictactoe.js
+No dependencies found
+
+### \app\pages.js
+No dependencies found
+
+### \lesson_plan_generator\src\lesson_planner_p2.js
+No dependencies found
+
+## TSX Dependencies
+
+### \RealityAI_Rubric_Generator\src\ui\RubricForm.tsx
+Dependencies:
+- react
+- ../logic/parseUpload
+- ../logic/fetchUrlText
+- ../logic/buildRubric
+- ../export/toPdf
+- ../export/toDocsx
+
+### \RealityAI_Rubric_Generator\src\main.tsx
+Dependencies:
+- react
+- react-dom/client
+- ./App
+
+### \RealityAI_Rubric_Generator\src\App.tsx
+Dependencies:
+- react
+- ./ui/RubricForm
+
+### \.vercel\cache\models_py\RealityAI_Rubric_Generator\src\ui\RubricForm.tsx
+Dependencies:
+- react
+- ../logic/parseUpload
+- ../logic/fetchUrlText
+- ../logic/buildRubric
+- ../export/toPdf
+- ../export/toDocsx
+
+### \.vercel\cache\models_py\RealityAI_Rubric_Generator\src\main.tsx
+Dependencies:
+- react
+- react-dom/client
+- ./App
+
+## TS Dependencies
+
+### \RealityAI_Rubric_Generator\src\types\pptx-parser.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\pdfjs-dist.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\papaparse.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\mammoth.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\jspdf.d.ts
+No dependencies found
+
+## H Dependencies
+
+### \ai\ai6\JARVIS-AI\.venv\Lib\site-packages\cffi\parse_c_type.h
+No dependencies found
+
+### \ai\ai6\JARVIS-AI\.venv\Lib\site-packages\cffi\_embedding.h
+Dependencies:
+- _cffi_errors.h
+
+### \ai\ai6\JARVIS-AI\.venv\Lib\site-packages\cffi\_cffi_include.h
+Dependencies:
+- Python.h
+- stddef.h
+- parse_c_type.h
+
+### \ai\ai6\JARVIS-AI\.venv\Lib\site-packages\cffi\_cffi_errors.h
+No dependencies found
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\_surface.h
+Dependencies:
+- _pygame.h
+- surface.h
+
+## C Dependencies
+
+### \ai\ai6\JARVIS-AI\.venv\Lib\site-packages\zope\interface\_zope_interface_coptimizations.c
+Dependencies:
+- Python.h
+- structmember.h
+
+
+
+## Project Directory Structure
+
+- 📂 __pycache__/
+  - 📄 dev_server.cpython-312.pyc
+- 📂 ai/
+  - 📂 ai1/
+    - 📂 public/
+      - 📄 ai.html
+    - 📂 scripts/
+      - 📄 ai.js
+    - 📂 styles/
+      - 📄 styles_ai.css
+    - 📄 Ai.html
+  - 📂 ai2/
+    - 📂 public/
+      - 📄 ai2.html
+    - 📂 scripts/
+      - 📄 ai2.js
+    - 📂 styles/
+      - 📄 styles_ai2.css
+    - 📄 Ai2_ORGANIZED_BACKUP.html
+    - 📄 Ai2_WORKING_BACKUP.html
+  - 📂 ai3/
+    - 📂 public/
+      - 📄 AI_v3.html
+    - 📂 scripts/
+      - 📄 ai_v3_main.js
+    - 📂 styles/
+      - 📄 ai_v3_styles.css
+    - 📄 AI_v3_ORGANIZED_BACKUP.html
+    - 📄 AI_v3.html
+    - 📄 app.py
+    - 📄 requirements.txt
+  - 📂 ai4/
+    - 📂 public/
+      - 📄 AI_v4.html
+    - 📂 scripts/
+      - 📄 ai_v4_main.js
+    - 📂 styles/
+      - 📄 ai_v4_styles.css
+    - 📄 AI_v4_ORGANIZED_BACKUP.html
+    - 📄 AI_v4.html
+  - 📂 ai5/
+    - 📂 ai5 files/
+      - 📂 public/
+        ...
+      - 📄 Check_JARVIS_Voices.bat
+    - 📂 JARVIS/
+      - 📂 CFX_UI_J.A.R.V.I.S/
+        ...
+      - 📂 GHV4_UI_J.A.R.V.I.S/
+        ...
+      - 📂 ProffieOS_V2_Voicepack_J.A.R.V.I.S/
+        ...
+      - 📂 SN4_UI_J.A.R.V.I.S/
+        ...
+      - 📂 Xeno2_UI_J.A.R.V.I.S/
+        ...
+      - 📂 Xeno3_UI_J.A.R.V.I.S/
+        ...
+      - 📄 boot.wav
+    - 📂 Jarvis-main/
+      - 📂 __pycache__/
+        ...
+      - 📂 Audio/
+        ...
+      - 📄 Jarvis RGB Effects Plugin Profile
+      - 📄 jarvis.py
+      - 📄 phrases.txt
+      - 📄 speaker_sample.wav
+      - 📄 Start_Voice_Bridge.bat
+      - 📄 voice_bridge.py
+    - 📂 public/
+      - 📄 AI_v5_JARVIS_CLEAN.html
+      - 📄 AI_v5_JARVIS.html
+      - 📄 AI_v5_nova.html
+    - 📂 scripts/
+      - 📄 nova_conversation_flow.js
+      - 📄 nova_integration.js
+      - 📄 nova_kb_store.js
+      - 📄 nova_main.js
+      - 📄 nova_page_mobile_call.js
+      - 📄 nova_page_ui.js
+      - 📄 nova_page_voice_fix.js
+      - 📄 nova_runtime_ai.js
+      - 📄 nova_runtime_artifacts.js
+      - 📄 nova_runtime_chat.js
+      - 📄 nova_runtime_files.js
+      - 📄 nova_runtime_ui_events.js
+      - 📄 nova_runtime_ui_voice.js
+      - 📄 nova_runtime_voice_tools.js
+      - 📄 nova_voice_before_interrupt.js
+      - 📄 nova_voice.js
+    - 📂 styles/
+      - 📄 nova_styles.css
+    - 📄 voice_checker.html
+  - 📂 ai6/
+    - 📂 JARVIS-AI/
+      - 📂 Backend/
+        ...
+      - 📂 Data/
+        ...
+      - 📂 Frontend/
+        ...
+      - 📄 LICENSE
+      - 📄 Main.py
+      - 📄 Requirements.txt
+- 📂 api/
+  - 📂 __pycache__/
+    - 📄 images.cpython-312.pyc
+    - 📄 models.cpython-312.pyc
+    - 📄 submit_feedback.cpython-312.pyc
+  - 📄 chat.py
+  - 📄 images.py
+  - 📄 models.py
+  - 📄 submit_feedback.py
+- 📂 app/
+  - 📄 pages.html
+  - 📄 pages.js
+- 📂 docs/
+  - 📄 KennethO-Resume-Software-Engineer.pdf
+- 📂 extracted-weather/
+  - 📂 WeatherForecast-main/
+    - 📂 public/
+      - 📄 file.svg
+      - 📄 globe.svg
+      - 📄 next.svg
+      - 📄 vercel.svg
+      - 📄 window.svg
+    - 📂 src/
+      - 📂 app/
+        ...
+    - 📄 eslint.config.mjs
+    - 📄 next.config.mjs
+- 📂 Images/
+  - 📄 main.JPG
+- 📂 lesson_plan_generator/
+  - 📂 prompt/
+    - 📄 lesson_plan_prompt.txt
+  - 📂 public/
+    - 📄 app.py
+    - 📄 lesson_plan.docx
+    - 📄 lesson_planner_p1_backup_6_25_2025.html
+    - 📄 lesson_planner_p1.html
+    - 📄 lesson_planner_p2_backup_6_25_2025.html
+    - 📄 lesson_planner_p2.html
+  - 📂 src/
+    - 📄 core.py
+    - 📄 lesson_planner_p1.js
+    - 📄 lesson_planner_p2.js
+    - 📄 tools.py
+  - 📂 styles/
+    - 📄 style_p1.css
+    - 📄 style_p2.css
+  - 📄 Lesson Plan Generator.docx
+  - 📄 requirements.txt
+- 📂 presentation_generator/
+  - 📂 public/
+    - 📄 pg_p1.html
+    - 📄 pg_p2_smart.html
+    - 📄 pg_p2.html
+    - 📄 pg_p3.html
+  - 📂 src/
+    - 📄 pg_p1.js
+    - 📄 pg_p2.js
+    - 📄 pg_p3.js
+  - 📂 styles/
+    - 📄 style_p1.css
+    - 📄 style_p2.css
+- 📂 public/
+- 📂 RandomFact/
+  - 📄 randfact.html
+  - 📄 randfact2.html
+  - 📄 scripts.js
+  - 📄 scripts2.js
+  - 📄 style3_2.css
+  - 📄 style3.css
+- 📂 RealityAI_Lesson_Planner/
+  - 📂 public/
+    - 📄 app.py
+    - 📄 lesson_plan.docx
+    - 📄 lesson_planner_p1_backup_6_25_2025.html
+    - 📄 lesson_planner_p1.html
+    - 📄 lesson_planner_p2_backup_6_25_2025.html
+    - 📄 lesson_planner_p2.html
+  - 📂 src/
+    - 📄 core.py
+    - 📄 tools.py
+  - 📄 requirements.txt
+- 📂 RealityAI_Rubric_Generator/
+  - 📂 __pycache__/
+    - 📄 __init__.cpython-312.pyc
+    - 📄 core.cpython-312.pyc
+    - 📄 test_core.cpython-312-pytest-7.4.4.pyc
+    - 📄 test_tools.cpython-312-pytest-7.4.4.pyc
+    - 📄 tools.cpython-312.pyc
+  - 📂 public/
+    - 📄 rubric_gen_p1.html
+    - 📄 rubric_template_p2.html
+  - 📂 src/
+    - 📂 export/
+      - 📄 toDocsx.ts
+      - 📄 toPdf.ts
+    - 📂 logic/
+      - 📄 buildRubric.ts
+      - 📄 fetchUrlText.ts
+      - 📄 parseUpload.ts
+    - 📂 types/
+      - 📄 cheerio.d.ts
+      - 📄 html-to-docx.d.ts
+      - 📄 html2canvas.d.ts
+      - 📄 jspdf.d.ts
+      - 📄 mammoth.d.ts
+      - 📄 papaparse.d.ts
+      - 📄 pdfjs-dist.d.ts
+      - 📄 pptx-parser.d.ts
+    - 📂 ui/
+      - 📄 RubricForm.tsx
+    - 📄 App.tsx
+    - 📄 i18n.js
+    - 📄 main.tsx
+    - 📄 rubric.js
+  - 📂 test-results/
+  - 📂 tests/
+    - 📄 rubric_generation.test.js
+  - 📄 __init__.py
+  - 📄 core.py
+  - 📄 instructions
+  - 📄 test_core.py
+  - 📄 test_tools.py
+  - 📄 tools.py
+- 📂 Rubriks Cube/
+  - 📂 public/
+  - 📂 scripts/
+  - 📂 styles/
+- 📂 TicTacToe/
+  - 📄 tictactoe.css
+  - 📄 tictactoe.html
+  - 📄 tictactoe.js
+- 📂 ToughLuckv7/
+  - 📂 __pycache__/
+    - 📄 ToughLuckGameplay.cpython-312.pyc
+    - 📄 ToughLuckResults.cpython-312.pyc
+    - 📄 ToughLuckStart.cpython-312.pyc
+  - 📂 game-server/
+    - 📂 templates/
+      - 📄 index.html
+      - 📄 UserGameplay.html
+      - 📄 UserGUI.html
+      - 📄 UserResults.html
+      - 📄 UserStart.html
+    - 📄 app.py
+    - 📄 feedback.txt
+    - 📄 server.js
+  - 📂 public/
+    - 📄 game-logic.js
+    - 📄 UserGameplay.html
+    - 📄 UserGUI.html
+    - 📄 UserResults.html
+    - 📄 UserStart.html
+  - 📂 src/
+    - 📂 __pycache__/
+      - 📄 ToughLuckGameplay.cpython-312.pyc
+      - 📄 ToughLuckResults.cpython-312.pyc
+      - 📄 ToughLuckStart.cpython-312.pyc
+    - 📄 TLIntro.py
+    - 📄 ToughLuckGameplay.py
+    - 📄 ToughLuckGameplayUpdated.py
+    - 📄 ToughLuckResults.py
+    - 📄 ToughLuckStart.py
+  - 📄 test_game.html
+- 📂 website-mirror/
+  - 📂 hooks/
+    - 📄 applypatch-msg.sample
+    - 📄 commit-msg.sample
+    - 📄 fsmonitor-watchman.sample
+    - 📄 post-update.sample
+    - 📄 pre-applypatch.sample
+    - 📄 pre-commit.sample
+    - 📄 pre-merge-commit.sample
+    - 📄 pre-push.sample
+    - 📄 pre-rebase.sample
+    - 📄 pre-receive.sample
+    - 📄 prepare-commit-msg.sample
+    - 📄 push-to-checkout.sample
+    - 📄 sendemail-validate.sample
+    - 📄 update.sample
+  - 📂 info/
+    - 📄 exclude
+    - 📄 refs
+  - 📂 objects/
+    - 📂 info/
+      - 📄 commit-graph
+      - 📄 packs
+    - 📂 pack/
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.bitmap
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.idx
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.pack
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.rev
+  - 📂 refs/
+    - 📂 heads/
+    - 📂 tags/
+  - 📄 config
+  - 📄 description
+  - 📄 HEAD
+  - 📄 packed-refs
+- 📂 website-recovery/
+  - 📂 app/
+    - 📄 pages.html
+    - 📄 pages.js
+  - 📂 docs/
+    - 📄 Kenneth-Okwu-Full-Stack Developer I.pdf
+  - 📂 Images/
+    - 📄 main.JPG
+  - 📂 lesson_plan_generator/
+  - 📂 RandomFact/
+    - 📄 randfact.html
+    - 📄 randfact2.html
+    - 📄 scripts.js
+    - 📄 scripts2.js
+    - 📄 style3_2.css
+    - 📄 style3.css
+  - 📂 RealityAI_Lesson_Planner/
+    - 📂 public/
+      - 📄 app.py
+      - 📄 lesson_plan.docx
+      - 📄 lesson_planner_p1_backup_6_25_2025.html
+      - 📄 lesson_planner_p1.html
+      - 📄 lesson_planner_p2_backup_6_25_2025.html
+      - 📄 lesson_planner_p2.html
+    - 📂 src/
+      - 📄 core.py
+      - 📄 tools.py
+    - 📄 requirements.txt
+  - 📂 RealityAI_Rubric_Generator/
+  - 📂 ToughLuckv7/
+    - 📂 __pycache__/
+      - 📄 ToughLuckGameplay.cpython-312.pyc
+      - 📄 ToughLuckResults.cpython-312.pyc
+      - 📄 ToughLuckStart.cpython-312.pyc
+    - 📂 game-server/
+      - 📂 templates/
+        ...
+      - 📄 app.py
+      - 📄 feedback.txt
+      - 📄 server.js
+    - 📂 src/
+      - 📂 __pycache__/
+        ...
+      - 📄 TLIntro.py
+      - 📄 ToughLuckGameplay.py
+      - 📄 ToughLuckGameplayUpdated.py
+      - 📄 ToughLuckResults.py
+      - 📄 ToughLuckStart.py
+    - 📄 test_game.html
+  - 📂 WeatherForcaster/
+    - 📂 pages/
+      - 📄 index.js
+    - 📂 public/
+      - 📄 WF_p1.html
+    - 📂 src/
+      - 📄 App.js
+      - 📄 WeatherPage.js
+    - 📂 styles/
+      - 📄 styles.css
+  - 📂 website-mirror/
+    - 📂 hooks/
+      - 📄 applypatch-msg.sample
+      - 📄 commit-msg.sample
+      - 📄 fsmonitor-watchman.sample
+      - 📄 post-update.sample
+      - 📄 pre-applypatch.sample
+      - 📄 pre-commit.sample
+      - 📄 pre-merge-commit.sample
+      - 📄 pre-push.sample
+      - 📄 pre-rebase.sample
+      - 📄 pre-receive.sample
+      - 📄 prepare-commit-msg.sample
+      - 📄 push-to-checkout.sample
+      - 📄 sendemail-validate.sample
+      - 📄 update.sample
+    - 📂 info/
+      - 📄 exclude
+      - 📄 refs
+    - 📂 objects/
+      - 📂 info/
+        ...
+      - 📂 pack/
+        ...
+    - 📄 config
+    - 📄 description
+    - 📄 HEAD
+    - 📄 packed-refs
+  - 📂 xweatherforcast/
+  - 📄 Contact.html
+  - 📄 Games.html
+  - 📄 Home.html
+  - 📄 navbar.html
+  - 📄 Projects.html
+  - 📄 style.css
+  - 📄 style.css-Nova
+  - 📄 style2.css
+- 📄 AI_Development_Guide_Simple_Version.docx
+- 📄 AI_Development_Guide_v1_and_v2.docx
+- 📄 AI5_Creation_Documentation.docx
+- 📄 Contact.html
+- 📄 dev_server.py
+- 📄 Games.html
+- 📄 index.html
+- 📄 MyProject_ws.code-workspace
+- 📄 navbar.html
+- 📄 portfolio.css
+- 📄 portfolio.js
+- 📄 Projects.html
+- 📄 requirements.txt
+- 📄 style.css
+- 📄 style.css-Nova
+- 📄 style2.css
+
+
+## PY Dependencies
+
+### \dev_server.py
+Dependencies:
+- os
+- http.server
+- SimpleHTTPRequestHandler,
+- urllib.parse
+- urlparse
+- api.chat
+- handler
+- api.models
+
+### \lesson_plan_generator\src\tools.py
+Dependencies:
+- PyPDF2
+- csv
+- googletrans
+- Translator
+- the
+
+### \lesson_plan_generator\src\core.py
+Dependencies:
+- logging
+- typing
+- Dict,
+- .tools
+- parse_pdf,
+
+### \lesson_plan_generator\public\app.py
+Dependencies:
+- flask
+- Flask
+
+### \RealityAI_Rubric_Generator\test_core.py
+Dependencies:
+- pytest
+- RealityAI_Rubric_Generator.core
+- executor
+
+## JS Dependencies
+
+### \portfolio.js
+No dependencies found
+
+### \presentation_generator\src\pg_p3.js
+No dependencies found
+
+### \presentation_generator\src\pg_p2.js
+No dependencies found
+
+### \presentation_generator\src\pg_p1.js
+No dependencies found
+
+### \extracted-weather\WeatherForecast-main\src\app\page.js
+Dependencies:
+- ./components/BackButton
+- react
+- next/navigation
+- ./page.module.css
+
+## TSX Dependencies
+
+### \RealityAI_Rubric_Generator\src\ui\RubricForm.tsx
+Dependencies:
+- react
+- ../logic/parseUpload
+- ../logic/fetchUrlText
+- ../logic/buildRubric
+- ../export/toPdf
+- ../export/toDocsx
+
+### \RealityAI_Rubric_Generator\src\main.tsx
+Dependencies:
+- react
+- react-dom/client
+- ./App
+
+### \RealityAI_Rubric_Generator\src\App.tsx
+Dependencies:
+- react
+- ./ui/RubricForm
+
+### \.vercel\cache\models_py\RealityAI_Rubric_Generator\src\ui\RubricForm.tsx
+Dependencies:
+- react
+- ../logic/parseUpload
+- ../logic/fetchUrlText
+- ../logic/buildRubric
+- ../export/toPdf
+- ../export/toDocsx
+
+### \.vercel\cache\models_py\RealityAI_Rubric_Generator\src\main.tsx
+Dependencies:
+- react
+- react-dom/client
+- ./App
+
+## TS Dependencies
+
+### \RealityAI_Rubric_Generator\src\types\pptx-parser.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\pdfjs-dist.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\papaparse.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\mammoth.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\jspdf.d.ts
+No dependencies found
+
+## H Dependencies
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\camera.h
+Dependencies:
+- pygame.h
+- pgcompat.h
+- doc/camera_doc.h
+- structmember.h
+- stdio.h
+- stdlib.h
+- string.h
+- assert.h
+- fcntl.h
+- unistd.h
+- errno.h
+- sys/stat.h
+- sys/types.h
+- sys/time.h
+- sys/mman.h
+- sys/ioctl.h
+- asm/types.h
+- linux/videodev2.h
+- sys/videoio.h
+- mfapi.h
+- mfobjects.h
+- mfidl.h
+- mfreadwrite.h
+- combaseapi.h
+- mftransform.h
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\font.h
+Dependencies:
+- SDL_ttf.h
+- include/pygame_font.h
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\freetype.h
+Dependencies:
+- pgcompat.h
+- pgplatform.h
+- ft2build.h
+- include/pygame_freetype.h
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\pgplatform.h
+Dependencies:
+- include/pgplatform.h
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\pgopengl.h
+No dependencies found
+
+## C Dependencies
+
+### \ai\ai6\JARVIS-AI\.venv\Lib\site-packages\zope\interface\_zope_interface_coptimizations.c
+Dependencies:
+- Python.h
+- structmember.h
+
+
+
+## Project Directory Structure
+
+- 📂 __pycache__/
+  - 📄 dev_server.cpython-312.pyc
+- 📂 ai/
+  - 📂 ai1/
+    - 📂 public/
+      - 📄 ai.html
+    - 📂 scripts/
+      - 📄 ai.js
+    - 📂 styles/
+      - 📄 styles_ai.css
+    - 📄 Ai.html
+  - 📂 ai2/
+    - 📂 public/
+      - 📄 ai2.html
+    - 📂 scripts/
+      - 📄 ai2.js
+    - 📂 styles/
+      - 📄 styles_ai2.css
+    - 📄 Ai2_ORGANIZED_BACKUP.html
+    - 📄 Ai2_WORKING_BACKUP.html
+  - 📂 ai3/
+    - 📂 public/
+      - 📄 AI_v3.html
+    - 📂 scripts/
+      - 📄 ai_v3_main.js
+    - 📂 styles/
+      - 📄 ai_v3_styles.css
+    - 📄 AI_v3_ORGANIZED_BACKUP.html
+    - 📄 AI_v3.html
+    - 📄 app.py
+    - 📄 requirements.txt
+  - 📂 ai4/
+    - 📂 public/
+      - 📄 AI_v4.html
+    - 📂 scripts/
+      - 📄 ai_v4_main.js
+    - 📂 styles/
+      - 📄 ai_v4_styles.css
+    - 📄 AI_v4_ORGANIZED_BACKUP.html
+    - 📄 AI_v4.html
+  - 📂 ai5/
+    - 📂 ai5 files/
+      - 📂 public/
+        ...
+      - 📄 Check_JARVIS_Voices.bat
+    - 📂 JARVIS/
+      - 📂 CFX_UI_J.A.R.V.I.S/
+        ...
+      - 📂 GHV4_UI_J.A.R.V.I.S/
+        ...
+      - 📂 ProffieOS_V2_Voicepack_J.A.R.V.I.S/
+        ...
+      - 📂 SN4_UI_J.A.R.V.I.S/
+        ...
+      - 📂 Xeno2_UI_J.A.R.V.I.S/
+        ...
+      - 📂 Xeno3_UI_J.A.R.V.I.S/
+        ...
+      - 📄 boot.wav
+    - 📂 Jarvis-main/
+      - 📂 __pycache__/
+        ...
+      - 📂 Audio/
+        ...
+      - 📄 Jarvis RGB Effects Plugin Profile
+      - 📄 jarvis.py
+      - 📄 phrases.txt
+      - 📄 speaker_sample.wav
+      - 📄 Start_Voice_Bridge.bat
+      - 📄 voice_bridge.py
+    - 📂 public/
+      - 📄 AI_v5_JARVIS_CLEAN.html
+      - 📄 AI_v5_JARVIS.html
+      - 📄 AI_v5_nova.html
+    - 📂 scripts/
+      - 📄 nova_conversation_flow.js
+      - 📄 nova_integration.js
+      - 📄 nova_kb_store.js
+      - 📄 nova_main.js
+      - 📄 nova_page_mobile_call.js
+      - 📄 nova_page_ui.js
+      - 📄 nova_page_voice_fix.js
+      - 📄 nova_runtime_ai.js
+      - 📄 nova_runtime_artifacts.js
+      - 📄 nova_runtime_chat.js
+      - 📄 nova_runtime_files.js
+      - 📄 nova_runtime_ui_events.js
+      - 📄 nova_runtime_ui_voice.js
+      - 📄 nova_runtime_voice_tools.js
+      - 📄 nova_voice_before_interrupt.js
+      - 📄 nova_voice.js
+    - 📂 styles/
+      - 📄 nova_styles.css
+    - 📄 voice_checker.html
+  - 📂 ai6/
+    - 📂 JARVIS-AI/
+      - 📂 Backend/
+        ...
+      - 📂 Data/
+        ...
+      - 📂 Frontend/
+        ...
+      - 📄 LICENSE
+      - 📄 Main.py
+      - 📄 Requirements.txt
+- 📂 api/
+  - 📂 __pycache__/
+    - 📄 chat.cpython-312.pyc
+    - 📄 images.cpython-312.pyc
+    - 📄 models.cpython-312.pyc
+    - 📄 submit_feedback.cpython-312.pyc
+  - 📄 chat.py
+  - 📄 images.py
+  - 📄 models.py
+  - 📄 submit_feedback.py
+- 📂 app/
+  - 📄 pages.html
+  - 📄 pages.js
+- 📂 docs/
+  - 📄 KennethO-Resume-Software-Engineer.pdf
+- 📂 extracted-weather/
+  - 📂 WeatherForecast-main/
+    - 📂 public/
+      - 📄 file.svg
+      - 📄 globe.svg
+      - 📄 next.svg
+      - 📄 vercel.svg
+      - 📄 window.svg
+    - 📂 src/
+      - 📂 app/
+        ...
+    - 📄 eslint.config.mjs
+    - 📄 next.config.mjs
+- 📂 Images/
+  - 📄 main.JPG
+- 📂 lesson_plan_generator/
+  - 📂 prompt/
+    - 📄 lesson_plan_prompt.txt
+  - 📂 public/
+    - 📄 app.py
+    - 📄 lesson_plan.docx
+    - 📄 lesson_planner_p1_backup_6_25_2025.html
+    - 📄 lesson_planner_p1.html
+    - 📄 lesson_planner_p2_backup_6_25_2025.html
+    - 📄 lesson_planner_p2.html
+  - 📂 src/
+    - 📄 core.py
+    - 📄 lesson_planner_p1.js
+    - 📄 lesson_planner_p2.js
+    - 📄 tools.py
+  - 📂 styles/
+    - 📄 style_p1.css
+    - 📄 style_p2.css
+  - 📄 Lesson Plan Generator.docx
+  - 📄 requirements.txt
+- 📂 presentation_generator/
+  - 📂 public/
+    - 📄 pg_p1.html
+    - 📄 pg_p2_smart.html
+    - 📄 pg_p2.html
+    - 📄 pg_p3.html
+  - 📂 src/
+    - 📄 pg_p1.js
+    - 📄 pg_p2.js
+    - 📄 pg_p3.js
+  - 📂 styles/
+    - 📄 style_p1.css
+    - 📄 style_p2.css
+- 📂 public/
+- 📂 RandomFact/
+  - 📄 randfact.html
+  - 📄 randfact2.html
+  - 📄 scripts.js
+  - 📄 scripts2.js
+  - 📄 style3_2.css
+  - 📄 style3.css
+- 📂 RealityAI_Lesson_Planner/
+  - 📂 public/
+    - 📄 app.py
+    - 📄 lesson_plan.docx
+    - 📄 lesson_planner_p1_backup_6_25_2025.html
+    - 📄 lesson_planner_p1.html
+    - 📄 lesson_planner_p2_backup_6_25_2025.html
+    - 📄 lesson_planner_p2.html
+  - 📂 src/
+    - 📄 core.py
+    - 📄 tools.py
+  - 📄 requirements.txt
+- 📂 RealityAI_Rubric_Generator/
+  - 📂 __pycache__/
+    - 📄 __init__.cpython-312.pyc
+    - 📄 core.cpython-312.pyc
+    - 📄 test_core.cpython-312-pytest-7.4.4.pyc
+    - 📄 test_tools.cpython-312-pytest-7.4.4.pyc
+    - 📄 tools.cpython-312.pyc
+  - 📂 public/
+    - 📄 rubric_gen_p1.html
+    - 📄 rubric_template_p2.html
+  - 📂 src/
+    - 📂 export/
+      - 📄 toDocsx.ts
+      - 📄 toPdf.ts
+    - 📂 logic/
+      - 📄 buildRubric.ts
+      - 📄 fetchUrlText.ts
+      - 📄 parseUpload.ts
+    - 📂 types/
+      - 📄 cheerio.d.ts
+      - 📄 html-to-docx.d.ts
+      - 📄 html2canvas.d.ts
+      - 📄 jspdf.d.ts
+      - 📄 mammoth.d.ts
+      - 📄 papaparse.d.ts
+      - 📄 pdfjs-dist.d.ts
+      - 📄 pptx-parser.d.ts
+    - 📂 ui/
+      - 📄 RubricForm.tsx
+    - 📄 App.tsx
+    - 📄 i18n.js
+    - 📄 main.tsx
+    - 📄 rubric.js
+  - 📂 test-results/
+  - 📂 tests/
+    - 📄 rubric_generation.test.js
+  - 📄 __init__.py
+  - 📄 core.py
+  - 📄 instructions
+  - 📄 test_core.py
+  - 📄 test_tools.py
+  - 📄 tools.py
+- 📂 Rubriks Cube/
+  - 📂 public/
+  - 📂 scripts/
+  - 📂 styles/
+- 📂 TicTacToe/
+  - 📄 tictactoe.css
+  - 📄 tictactoe.html
+  - 📄 tictactoe.js
+- 📂 ToughLuckv7/
+  - 📂 __pycache__/
+    - 📄 ToughLuckGameplay.cpython-312.pyc
+    - 📄 ToughLuckResults.cpython-312.pyc
+    - 📄 ToughLuckStart.cpython-312.pyc
+  - 📂 game-server/
+    - 📂 templates/
+      - 📄 index.html
+      - 📄 UserGameplay.html
+      - 📄 UserGUI.html
+      - 📄 UserResults.html
+      - 📄 UserStart.html
+    - 📄 app.py
+    - 📄 feedback.txt
+    - 📄 server.js
+  - 📂 public/
+    - 📄 game-logic.js
+    - 📄 UserGameplay.html
+    - 📄 UserGUI.html
+    - 📄 UserResults.html
+    - 📄 UserStart.html
+  - 📂 src/
+    - 📂 __pycache__/
+      - 📄 ToughLuckGameplay.cpython-312.pyc
+      - 📄 ToughLuckResults.cpython-312.pyc
+      - 📄 ToughLuckStart.cpython-312.pyc
+    - 📄 TLIntro.py
+    - 📄 ToughLuckGameplay.py
+    - 📄 ToughLuckGameplayUpdated.py
+    - 📄 ToughLuckResults.py
+    - 📄 ToughLuckStart.py
+  - 📄 test_game.html
+- 📂 website-mirror/
+  - 📂 hooks/
+    - 📄 applypatch-msg.sample
+    - 📄 commit-msg.sample
+    - 📄 fsmonitor-watchman.sample
+    - 📄 post-update.sample
+    - 📄 pre-applypatch.sample
+    - 📄 pre-commit.sample
+    - 📄 pre-merge-commit.sample
+    - 📄 pre-push.sample
+    - 📄 pre-rebase.sample
+    - 📄 pre-receive.sample
+    - 📄 prepare-commit-msg.sample
+    - 📄 push-to-checkout.sample
+    - 📄 sendemail-validate.sample
+    - 📄 update.sample
+  - 📂 info/
+    - 📄 exclude
+    - 📄 refs
+  - 📂 objects/
+    - 📂 info/
+      - 📄 commit-graph
+      - 📄 packs
+    - 📂 pack/
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.bitmap
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.idx
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.pack
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.rev
+  - 📂 refs/
+    - 📂 heads/
+    - 📂 tags/
+  - 📄 config
+  - 📄 description
+  - 📄 HEAD
+  - 📄 packed-refs
+- 📂 website-recovery/
+  - 📂 app/
+    - 📄 pages.html
+    - 📄 pages.js
+  - 📂 docs/
+    - 📄 Kenneth-Okwu-Full-Stack Developer I.pdf
+  - 📂 Images/
+    - 📄 main.JPG
+  - 📂 lesson_plan_generator/
+  - 📂 RandomFact/
+    - 📄 randfact.html
+    - 📄 randfact2.html
+    - 📄 scripts.js
+    - 📄 scripts2.js
+    - 📄 style3_2.css
+    - 📄 style3.css
+  - 📂 RealityAI_Lesson_Planner/
+    - 📂 public/
+      - 📄 app.py
+      - 📄 lesson_plan.docx
+      - 📄 lesson_planner_p1_backup_6_25_2025.html
+      - 📄 lesson_planner_p1.html
+      - 📄 lesson_planner_p2_backup_6_25_2025.html
+      - 📄 lesson_planner_p2.html
+    - 📂 src/
+      - 📄 core.py
+      - 📄 tools.py
+    - 📄 requirements.txt
+  - 📂 RealityAI_Rubric_Generator/
+  - 📂 ToughLuckv7/
+    - 📂 __pycache__/
+      - 📄 ToughLuckGameplay.cpython-312.pyc
+      - 📄 ToughLuckResults.cpython-312.pyc
+      - 📄 ToughLuckStart.cpython-312.pyc
+    - 📂 game-server/
+      - 📂 templates/
+        ...
+      - 📄 app.py
+      - 📄 feedback.txt
+      - 📄 server.js
+    - 📂 src/
+      - 📂 __pycache__/
+        ...
+      - 📄 TLIntro.py
+      - 📄 ToughLuckGameplay.py
+      - 📄 ToughLuckGameplayUpdated.py
+      - 📄 ToughLuckResults.py
+      - 📄 ToughLuckStart.py
+    - 📄 test_game.html
+  - 📂 WeatherForcaster/
+    - 📂 pages/
+      - 📄 index.js
+    - 📂 public/
+      - 📄 WF_p1.html
+    - 📂 src/
+      - 📄 App.js
+      - 📄 WeatherPage.js
+    - 📂 styles/
+      - 📄 styles.css
+  - 📂 website-mirror/
+    - 📂 hooks/
+      - 📄 applypatch-msg.sample
+      - 📄 commit-msg.sample
+      - 📄 fsmonitor-watchman.sample
+      - 📄 post-update.sample
+      - 📄 pre-applypatch.sample
+      - 📄 pre-commit.sample
+      - 📄 pre-merge-commit.sample
+      - 📄 pre-push.sample
+      - 📄 pre-rebase.sample
+      - 📄 pre-receive.sample
+      - 📄 prepare-commit-msg.sample
+      - 📄 push-to-checkout.sample
+      - 📄 sendemail-validate.sample
+      - 📄 update.sample
+    - 📂 info/
+      - 📄 exclude
+      - 📄 refs
+    - 📂 objects/
+      - 📂 info/
+        ...
+      - 📂 pack/
+        ...
+    - 📄 config
+    - 📄 description
+    - 📄 HEAD
+    - 📄 packed-refs
+  - 📂 xweatherforcast/
+  - 📄 Contact.html
+  - 📄 Games.html
+  - 📄 Home.html
+  - 📄 navbar.html
+  - 📄 Projects.html
+  - 📄 style.css
+  - 📄 style.css-Nova
+  - 📄 style2.css
+- 📄 AI_Development_Guide_Simple_Version.docx
+- 📄 AI_Development_Guide_v1_and_v2.docx
+- 📄 AI5_Creation_Documentation.docx
+- 📄 Contact.html
+- 📄 dev_server.py
+- 📄 Games.html
+- 📄 index.html
+- 📄 MyProject_ws.code-workspace
+- 📄 navbar.html
+- 📄 portfolio.css
+- 📄 portfolio.js
+- 📄 Projects.html
+- 📄 requirements.txt
+- 📄 style.css
+- 📄 style.css-Nova
+- 📄 style2.css
+
+
+## PY Dependencies
+
+### \dev_server.py
+Dependencies:
+- os
+- http.server
+- SimpleHTTPRequestHandler,
+- urllib.parse
+- urlparse
+- api.chat
+- handler
+- api.models
+
+### \RealityAI_Lesson_Planner\src\tools.py
+Dependencies:
+- PyPDF2
+- csv
+- googletrans
+- Translator
+- the
+
+### \RealityAI_Lesson_Planner\src\core.py
+Dependencies:
+- logging
+- typing
+- Dict,
+- .tools
+- parse_pdf,
+
+### \RealityAI_Lesson_Planner\public\app.py
+Dependencies:
+- flask
+- Flask
+
+### \ai\ai6\JARVIS-AI\Main.py
+Dependencies:
+- Frontend.GUI
+- (
+- Backend.Model
+- FirstLayerDMM
+- Backend.RealtimeSearchEngine
+- RealtimeSearchEngine
+- Backend.Automation
+- Automation
+- Backend.SpeechToText
+- SpeechRecognition
+- Backend.Chatbot
+- Chatbot
+- Backend.TextToSpeech
+- TextToSpeech
+- Backend.screen_analysis
+- analyze_once
+- Backend.CameraAnalysis
+- dotenv
+- dotenv_values
+- asyncio
+- run
+- time
+- sleep
+- subprocess
+- os
+- threading
+- json
+
+## JS Dependencies
+
+### \app\pages.js
+No dependencies found
+
+### \website-recovery\RandomFact\scripts2.js
+No dependencies found
+
+### \website-recovery\RandomFact\scripts.js
+No dependencies found
+
+### \RandomFact\scripts2.js
+No dependencies found
+
+### \RandomFact\scripts.js
+No dependencies found
+
+## TSX Dependencies
+
+### \RealityAI_Rubric_Generator\src\ui\RubricForm.tsx
+Dependencies:
+- react
+- ../logic/parseUpload
+- ../logic/fetchUrlText
+- ../logic/buildRubric
+- ../export/toPdf
+- ../export/toDocsx
+
+### \RealityAI_Rubric_Generator\src\main.tsx
+Dependencies:
+- react
+- react-dom/client
+- ./App
+
+### \RealityAI_Rubric_Generator\src\App.tsx
+Dependencies:
+- react
+- ./ui/RubricForm
+
+### \.vercel\cache\chat_py\RealityAI_Rubric_Generator\src\ui\RubricForm.tsx
+Dependencies:
+- react
+- ../logic/parseUpload
+- ../logic/fetchUrlText
+- ../logic/buildRubric
+- ../export/toPdf
+- ../export/toDocsx
+
+### \.vercel\cache\chat_py\RealityAI_Rubric_Generator\src\main.tsx
+Dependencies:
+- react
+- react-dom/client
+- ./App
+
+## TS Dependencies
+
+### \RealityAI_Rubric_Generator\src\types\pptx-parser.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\pdfjs-dist.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\papaparse.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\mammoth.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\jspdf.d.ts
+No dependencies found
+
+## C Dependencies
+
+### \ai\ai6\JARVIS-AI\.venv\Lib\site-packages\zope\interface\_zope_interface_coptimizations.c
+Dependencies:
+- Python.h
+- structmember.h
+
+## H Dependencies
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\_surface.h
+Dependencies:
+- _pygame.h
+- surface.h
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\_pygame.h
+Dependencies:
+- pgplatform.h
+- Python.h
+- SDL.h
+- include/_pygame.h
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\_camera.h
+Dependencies:
+- _pygame.h
+- camera.h
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\_blit_info.h
+Dependencies:
+- _surface.h
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\surface.h
+Dependencies:
+- SDL.h
+- pygame.h
+
+
+
+## Project Directory Structure
+
+- 📂 __pycache__/
+  - 📄 dev_server.cpython-312.pyc
+- 📂 ai/
+  - 📂 ai1/
+    - 📂 public/
+      - 📄 ai.html
+    - 📂 scripts/
+      - 📄 ai.js
+    - 📂 styles/
+      - 📄 styles_ai.css
+    - 📄 Ai.html
+  - 📂 ai2/
+    - 📂 public/
+      - 📄 ai2.html
+    - 📂 scripts/
+      - 📄 ai2.js
+    - 📂 styles/
+      - 📄 styles_ai2.css
+    - 📄 Ai2_ORGANIZED_BACKUP.html
+    - 📄 Ai2_WORKING_BACKUP.html
+  - 📂 ai3/
+    - 📂 public/
+      - 📄 AI_v3.html
+    - 📂 scripts/
+      - 📄 ai_v3_main.js
+    - 📂 styles/
+      - 📄 ai_v3_styles.css
+    - 📄 AI_v3_ORGANIZED_BACKUP.html
+    - 📄 AI_v3.html
+    - 📄 app.py
+    - 📄 requirements.txt
+  - 📂 ai4/
+    - 📂 public/
+      - 📄 AI_v4.html
+    - 📂 scripts/
+      - 📄 ai_v4_main.js
+    - 📂 styles/
+      - 📄 ai_v4_styles.css
+    - 📄 AI_v4_ORGANIZED_BACKUP.html
+    - 📄 AI_v4.html
+  - 📂 ai5/
+    - 📂 ai5 files/
+      - 📂 public/
+        ...
+      - 📄 Check_JARVIS_Voices.bat
+    - 📂 JARVIS/
+      - 📂 CFX_UI_J.A.R.V.I.S/
+        ...
+      - 📂 GHV4_UI_J.A.R.V.I.S/
+        ...
+      - 📂 ProffieOS_V2_Voicepack_J.A.R.V.I.S/
+        ...
+      - 📂 SN4_UI_J.A.R.V.I.S/
+        ...
+      - 📂 Xeno2_UI_J.A.R.V.I.S/
+        ...
+      - 📂 Xeno3_UI_J.A.R.V.I.S/
+        ...
+      - 📄 boot.wav
+    - 📂 Jarvis-main/
+      - 📂 __pycache__/
+        ...
+      - 📂 Audio/
+        ...
+      - 📄 Jarvis RGB Effects Plugin Profile
+      - 📄 jarvis.py
+      - 📄 phrases.txt
+      - 📄 speaker_sample.wav
+      - 📄 Start_Voice_Bridge.bat
+      - 📄 voice_bridge.py
+    - 📂 public/
+      - 📄 AI_v5_JARVIS_CLEAN.html
+      - 📄 AI_v5_JARVIS.html
+      - 📄 AI_v5_nova.html
+    - 📂 scripts/
+      - 📄 nova_conversation_flow.js
+      - 📄 nova_integration.js
+      - 📄 nova_kb_store.js
+      - 📄 nova_main.js
+      - 📄 nova_page_mobile_call.js
+      - 📄 nova_page_ui.js
+      - 📄 nova_page_voice_fix.js
+      - 📄 nova_runtime_ai.js
+      - 📄 nova_runtime_artifacts.js
+      - 📄 nova_runtime_chat.js
+      - 📄 nova_runtime_files.js
+      - 📄 nova_runtime_ui_events.js
+      - 📄 nova_runtime_ui_voice.js
+      - 📄 nova_runtime_voice_tools.js
+      - 📄 nova_voice_before_interrupt.js
+      - 📄 nova_voice.js
+    - 📂 styles/
+      - 📄 nova_styles.css
+    - 📄 voice_checker.html
+  - 📂 ai6/
+    - 📂 JARVIS-AI/
+      - 📂 Backend/
+        ...
+      - 📂 Data/
+        ...
+      - 📂 Frontend/
+        ...
+      - 📄 LICENSE
+      - 📄 Main.py
+      - 📄 Requirements.txt
+- 📂 api/
+  - 📂 __pycache__/
+    - 📄 chat.cpython-312.pyc
+    - 📄 images.cpython-312.pyc
+    - 📄 models.cpython-312.pyc
+    - 📄 submit_feedback.cpython-312.pyc
+  - 📄 chat.py
+  - 📄 images.py
+  - 📄 models.py
+  - 📄 submit_feedback.py
+- 📂 app/
+  - 📄 pages.html
+  - 📄 pages.js
+- 📂 docs/
+  - 📄 KennethO-Resume-Software-Engineer.pdf
+- 📂 extracted-weather/
+  - 📂 WeatherForecast-main/
+    - 📂 public/
+      - 📄 file.svg
+      - 📄 globe.svg
+      - 📄 next.svg
+      - 📄 vercel.svg
+      - 📄 window.svg
+    - 📂 src/
+      - 📂 app/
+        ...
+    - 📄 eslint.config.mjs
+    - 📄 next.config.mjs
+- 📂 Images/
+  - 📄 main.JPG
+- 📂 lesson_plan_generator/
+  - 📂 prompt/
+    - 📄 lesson_plan_prompt.txt
+  - 📂 public/
+    - 📄 app.py
+    - 📄 lesson_plan.docx
+    - 📄 lesson_planner_p1_backup_6_25_2025.html
+    - 📄 lesson_planner_p1.html
+    - 📄 lesson_planner_p2_backup_6_25_2025.html
+    - 📄 lesson_planner_p2.html
+  - 📂 src/
+    - 📄 core.py
+    - 📄 lesson_planner_p1.js
+    - 📄 lesson_planner_p2.js
+    - 📄 tools.py
+  - 📂 styles/
+    - 📄 style_p1.css
+    - 📄 style_p2.css
+  - 📄 Lesson Plan Generator.docx
+  - 📄 requirements.txt
+- 📂 presentation_generator/
+  - 📂 public/
+    - 📄 pg_p1.html
+    - 📄 pg_p2_smart.html
+    - 📄 pg_p2.html
+    - 📄 pg_p3.html
+  - 📂 src/
+    - 📄 pg_p1.js
+    - 📄 pg_p2.js
+    - 📄 pg_p3.js
+  - 📂 styles/
+    - 📄 style_p1.css
+    - 📄 style_p2.css
+- 📂 public/
+- 📂 RandomFact/
+  - 📄 randfact.html
+  - 📄 randfact2.html
+  - 📄 scripts.js
+  - 📄 scripts2.js
+  - 📄 style3_2.css
+  - 📄 style3.css
+- 📂 RealityAI_Lesson_Planner/
+  - 📂 public/
+    - 📄 app.py
+    - 📄 lesson_plan.docx
+    - 📄 lesson_planner_p1_backup_6_25_2025.html
+    - 📄 lesson_planner_p1.html
+    - 📄 lesson_planner_p2_backup_6_25_2025.html
+    - 📄 lesson_planner_p2.html
+  - 📂 src/
+    - 📄 core.py
+    - 📄 tools.py
+  - 📄 requirements.txt
+- 📂 RealityAI_Rubric_Generator/
+  - 📂 __pycache__/
+    - 📄 __init__.cpython-312.pyc
+    - 📄 core.cpython-312.pyc
+    - 📄 test_core.cpython-312-pytest-7.4.4.pyc
+    - 📄 test_tools.cpython-312-pytest-7.4.4.pyc
+    - 📄 tools.cpython-312.pyc
+  - 📂 public/
+    - 📄 rubric_gen_p1.html
+    - 📄 rubric_template_p2.html
+  - 📂 src/
+    - 📂 export/
+      - 📄 toDocsx.ts
+      - 📄 toPdf.ts
+    - 📂 logic/
+      - 📄 buildRubric.ts
+      - 📄 fetchUrlText.ts
+      - 📄 parseUpload.ts
+    - 📂 types/
+      - 📄 cheerio.d.ts
+      - 📄 html-to-docx.d.ts
+      - 📄 html2canvas.d.ts
+      - 📄 jspdf.d.ts
+      - 📄 mammoth.d.ts
+      - 📄 papaparse.d.ts
+      - 📄 pdfjs-dist.d.ts
+      - 📄 pptx-parser.d.ts
+    - 📂 ui/
+      - 📄 RubricForm.tsx
+    - 📄 App.tsx
+    - 📄 i18n.js
+    - 📄 main.tsx
+    - 📄 rubric.js
+  - 📂 test-results/
+  - 📂 tests/
+    - 📄 rubric_generation.test.js
+  - 📄 __init__.py
+  - 📄 core.py
+  - 📄 instructions
+  - 📄 test_core.py
+  - 📄 test_tools.py
+  - 📄 tools.py
+- 📂 Rubriks Cube/
+  - 📂 public/
+  - 📂 scripts/
+  - 📂 styles/
+- 📂 TicTacToe/
+  - 📄 tictactoe.css
+  - 📄 tictactoe.html
+  - 📄 tictactoe.js
+- 📂 ToughLuckv7/
+  - 📂 __pycache__/
+    - 📄 ToughLuckGameplay.cpython-312.pyc
+    - 📄 ToughLuckResults.cpython-312.pyc
+    - 📄 ToughLuckStart.cpython-312.pyc
+  - 📂 game-server/
+    - 📂 templates/
+      - 📄 index.html
+      - 📄 UserGameplay.html
+      - 📄 UserGUI.html
+      - 📄 UserResults.html
+      - 📄 UserStart.html
+    - 📄 app.py
+    - 📄 feedback.txt
+    - 📄 server.js
+  - 📂 public/
+    - 📄 game-logic.js
+    - 📄 UserGameplay.html
+    - 📄 UserGUI.html
+    - 📄 UserResults.html
+    - 📄 UserStart.html
+  - 📂 src/
+    - 📂 __pycache__/
+      - 📄 ToughLuckGameplay.cpython-312.pyc
+      - 📄 ToughLuckResults.cpython-312.pyc
+      - 📄 ToughLuckStart.cpython-312.pyc
+    - 📄 TLIntro.py
+    - 📄 ToughLuckGameplay.py
+    - 📄 ToughLuckGameplayUpdated.py
+    - 📄 ToughLuckResults.py
+    - 📄 ToughLuckStart.py
+  - 📄 test_game.html
+- 📂 website-mirror/
+  - 📂 hooks/
+    - 📄 applypatch-msg.sample
+    - 📄 commit-msg.sample
+    - 📄 fsmonitor-watchman.sample
+    - 📄 post-update.sample
+    - 📄 pre-applypatch.sample
+    - 📄 pre-commit.sample
+    - 📄 pre-merge-commit.sample
+    - 📄 pre-push.sample
+    - 📄 pre-rebase.sample
+    - 📄 pre-receive.sample
+    - 📄 prepare-commit-msg.sample
+    - 📄 push-to-checkout.sample
+    - 📄 sendemail-validate.sample
+    - 📄 update.sample
+  - 📂 info/
+    - 📄 exclude
+    - 📄 refs
+  - 📂 objects/
+    - 📂 info/
+      - 📄 commit-graph
+      - 📄 packs
+    - 📂 pack/
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.bitmap
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.idx
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.pack
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.rev
+  - 📂 refs/
+    - 📂 heads/
+    - 📂 tags/
+  - 📄 config
+  - 📄 description
+  - 📄 HEAD
+  - 📄 packed-refs
+- 📂 website-recovery/
+  - 📂 app/
+    - 📄 pages.html
+    - 📄 pages.js
+  - 📂 docs/
+    - 📄 Kenneth-Okwu-Full-Stack Developer I.pdf
+  - 📂 Images/
+    - 📄 main.JPG
+  - 📂 lesson_plan_generator/
+  - 📂 RandomFact/
+    - 📄 randfact.html
+    - 📄 randfact2.html
+    - 📄 scripts.js
+    - 📄 scripts2.js
+    - 📄 style3_2.css
+    - 📄 style3.css
+  - 📂 RealityAI_Lesson_Planner/
+    - 📂 public/
+      - 📄 app.py
+      - 📄 lesson_plan.docx
+      - 📄 lesson_planner_p1_backup_6_25_2025.html
+      - 📄 lesson_planner_p1.html
+      - 📄 lesson_planner_p2_backup_6_25_2025.html
+      - 📄 lesson_planner_p2.html
+    - 📂 src/
+      - 📄 core.py
+      - 📄 tools.py
+    - 📄 requirements.txt
+  - 📂 RealityAI_Rubric_Generator/
+  - 📂 ToughLuckv7/
+    - 📂 __pycache__/
+      - 📄 ToughLuckGameplay.cpython-312.pyc
+      - 📄 ToughLuckResults.cpython-312.pyc
+      - 📄 ToughLuckStart.cpython-312.pyc
+    - 📂 game-server/
+      - 📂 templates/
+        ...
+      - 📄 app.py
+      - 📄 feedback.txt
+      - 📄 server.js
+    - 📂 src/
+      - 📂 __pycache__/
+        ...
+      - 📄 TLIntro.py
+      - 📄 ToughLuckGameplay.py
+      - 📄 ToughLuckGameplayUpdated.py
+      - 📄 ToughLuckResults.py
+      - 📄 ToughLuckStart.py
+    - 📄 test_game.html
+  - 📂 WeatherForcaster/
+    - 📂 pages/
+      - 📄 index.js
+    - 📂 public/
+      - 📄 WF_p1.html
+    - 📂 src/
+      - 📄 App.js
+      - 📄 WeatherPage.js
+    - 📂 styles/
+      - 📄 styles.css
+  - 📂 website-mirror/
+    - 📂 hooks/
+      - 📄 applypatch-msg.sample
+      - 📄 commit-msg.sample
+      - 📄 fsmonitor-watchman.sample
+      - 📄 post-update.sample
+      - 📄 pre-applypatch.sample
+      - 📄 pre-commit.sample
+      - 📄 pre-merge-commit.sample
+      - 📄 pre-push.sample
+      - 📄 pre-rebase.sample
+      - 📄 pre-receive.sample
+      - 📄 prepare-commit-msg.sample
+      - 📄 push-to-checkout.sample
+      - 📄 sendemail-validate.sample
+      - 📄 update.sample
+    - 📂 info/
+      - 📄 exclude
+      - 📄 refs
+    - 📂 objects/
+      - 📂 info/
+        ...
+      - 📂 pack/
+        ...
+    - 📄 config
+    - 📄 description
+    - 📄 HEAD
+    - 📄 packed-refs
+  - 📂 xweatherforcast/
+  - 📄 Contact.html
+  - 📄 Games.html
+  - 📄 Home.html
+  - 📄 navbar.html
+  - 📄 Projects.html
+  - 📄 style.css
+  - 📄 style.css-Nova
+  - 📄 style2.css
+- 📄 AI_Development_Guide_Simple_Version.docx
+- 📄 AI_Development_Guide_v1_and_v2.docx
+- 📄 AI5_Creation_Documentation.docx
+- 📄 Contact.html
+- 📄 dev_server.py
+- 📄 Games.html
+- 📄 index.html
+- 📄 MyProject_ws.code-workspace
+- 📄 navbar.html
+- 📄 portfolio.css
+- 📄 portfolio.js
+- 📄 Projects.html
+- 📄 requirements.txt
+- 📄 style.css
+- 📄 style.css-Nova
+- 📄 style2.css
+
+
+## PY Dependencies
+
+### \ai\ai6\JARVIS-AI\Main.py
+Dependencies:
+- Frontend.GUI
+- (
+- Backend.Model
+- FirstLayerDMM
+- Backend.RealtimeSearchEngine
+- RealtimeSearchEngine
+- Backend.Automation
+- Automation
+- Backend.SpeechToText
+- SpeechRecognition
+- Backend.Chatbot
+- Chatbot
+- Backend.TextToSpeech
+- TextToSpeech
+- Backend.screen_analysis
+- analyze_once
+- Backend.CameraAnalysis
+- dotenv
+- dotenv_values
+- asyncio
+- run
+- time
+- sleep
+- subprocess
+- os
+- threading
+- json
+
+### \api\submit_feedback.py
+Dependencies:
+- json
+- os
+- smtplib
+- datetime
+- email.message
+- EmailMessage
+- http.server
+- BaseHTTPRequestHandler
+
+### \api\models.py
+Dependencies:
+- json
+- os
+- requests
+- http.server
+- BaseHTTPRequestHandler
+
+### \api\images.py
+Dependencies:
+- json
+- os
+- http.server
+- BaseHTTPRequestHandler
+- requests
+
+### \api\chat.py
+Dependencies:
+- json
+- os
+- re
+- requests
+- datetime
+- date
+- http.server
+- BaseHTTPRequestHandler
+- urllib.parse
+- quote
+
+## JS Dependencies
+
+### \ai\ai1\scripts\ai.js
+No dependencies found
+
+### \RealityAI_Rubric_Generator\tests\rubric_generation.test.js
+Dependencies:
+- @playwright/test
+
+### \ai\ai5\scripts\nova_voice_before_interrupt.js
+No dependencies found
+
+### \ai\ai5\scripts\nova_voice.js
+No dependencies found
+
+### \ai\ai5\scripts\nova_runtime_voice_tools.js
+No dependencies found
+
+## TSX Dependencies
+
+### \RealityAI_Rubric_Generator\src\ui\RubricForm.tsx
+Dependencies:
+- react
+- ../logic/parseUpload
+- ../logic/fetchUrlText
+- ../logic/buildRubric
+- ../export/toPdf
+- ../export/toDocsx
+
+### \RealityAI_Rubric_Generator\src\App.tsx
+Dependencies:
+- react
+- ./ui/RubricForm
+
+### \RealityAI_Rubric_Generator\src\main.tsx
+Dependencies:
+- react
+- react-dom/client
+- ./App
+
+### \.vercel\cache\chat_py\RealityAI_Rubric_Generator\src\ui\RubricForm.tsx
+Dependencies:
+- react
+- ../logic/parseUpload
+- ../logic/fetchUrlText
+- ../logic/buildRubric
+- ../export/toPdf
+- ../export/toDocsx
+
+### \.vercel\cache\chat_py\RealityAI_Rubric_Generator\src\main.tsx
+Dependencies:
+- react
+- react-dom/client
+- ./App
+
+## TS Dependencies
+
+### \RealityAI_Rubric_Generator\src\export\toPdf.ts
+Dependencies:
+- html2canvas
+- jspdf
+
+### \RealityAI_Rubric_Generator\src\export\toDocsx.ts
+Dependencies:
+- html-docx-js/dist/html-docx
+
+### \RealityAI_Rubric_Generator\src\logic\parseUpload.ts
+Dependencies:
+- mammoth
+- pdfjs-dist
+- pptx-parser
+- papaparse
+
+### \RealityAI_Rubric_Generator\src\logic\fetchUrlText.ts
+Dependencies:
+- cheerio
+
+### \RealityAI_Rubric_Generator\src\logic\buildRubric.ts
+No dependencies found
+
+## H Dependencies
+
+### \ai\ai6\JARVIS-AI\.venv\Lib\site-packages\cffi\_embedding.h
+Dependencies:
+- _cffi_errors.h
+
+### \ai\ai6\JARVIS-AI\.venv\Lib\site-packages\cffi\_cffi_include.h
+Dependencies:
+- Python.h
+- stddef.h
+- parse_c_type.h
+
+### \ai\ai6\JARVIS-AI\.venv\Lib\site-packages\cffi\_cffi_errors.h
+No dependencies found
+
+### \ai\ai6\JARVIS-AI\.venv\Lib\site-packages\cffi\parse_c_type.h
+No dependencies found
+
+## C Dependencies
+
+### \ai\ai6\JARVIS-AI\.venv\Lib\site-packages\zope\interface\_zope_interface_coptimizations.c
+Dependencies:
+- Python.h
+- structmember.h
+
+
+
+## Project Directory Structure
+
+- 📂 __pycache__/
+  - 📄 dev_server.cpython-312.pyc
+- 📂 ai/
+  - 📂 ai1/
+    - 📂 public/
+      - 📄 ai.html
+    - 📂 scripts/
+      - 📄 ai.js
+    - 📂 styles/
+      - 📄 styles_ai.css
+    - 📄 Ai.html
+  - 📂 ai2/
+    - 📂 public/
+      - 📄 ai2.html
+    - 📂 scripts/
+      - 📄 ai2.js
+    - 📂 styles/
+      - 📄 styles_ai2.css
+    - 📄 Ai2_ORGANIZED_BACKUP.html
+    - 📄 Ai2_WORKING_BACKUP.html
+  - 📂 ai3/
+    - 📂 public/
+      - 📄 AI_v3.html
+    - 📂 scripts/
+      - 📄 ai_v3_main.js
+    - 📂 styles/
+      - 📄 ai_v3_styles.css
+    - 📄 AI_v3_ORGANIZED_BACKUP.html
+    - 📄 AI_v3.html
+    - 📄 app.py
+    - 📄 requirements.txt
+  - 📂 ai4/
+    - 📂 public/
+      - 📄 AI_v4.html
+    - 📂 scripts/
+      - 📄 ai_v4_main.js
+    - 📂 styles/
+      - 📄 ai_v4_styles.css
+    - 📄 AI_v4_ORGANIZED_BACKUP.html
+    - 📄 AI_v4.html
+  - 📂 ai5/
+    - 📂 ai5 files/
+      - 📂 public/
+        ...
+      - 📄 Check_JARVIS_Voices.bat
+    - 📂 JARVIS/
+      - 📂 CFX_UI_J.A.R.V.I.S/
+        ...
+      - 📂 GHV4_UI_J.A.R.V.I.S/
+        ...
+      - 📂 ProffieOS_V2_Voicepack_J.A.R.V.I.S/
+        ...
+      - 📂 SN4_UI_J.A.R.V.I.S/
+        ...
+      - 📂 Xeno2_UI_J.A.R.V.I.S/
+        ...
+      - 📂 Xeno3_UI_J.A.R.V.I.S/
+        ...
+      - 📄 boot.wav
+    - 📂 Jarvis-main/
+      - 📂 __pycache__/
+        ...
+      - 📂 Audio/
+        ...
+      - 📄 Jarvis RGB Effects Plugin Profile
+      - 📄 jarvis.py
+      - 📄 phrases.txt
+      - 📄 speaker_sample.wav
+      - 📄 Start_Voice_Bridge.bat
+      - 📄 voice_bridge.py
+    - 📂 public/
+      - 📄 AI_v5_JARVIS_CLEAN.html
+      - 📄 AI_v5_JARVIS.html
+      - 📄 AI_v5_nova.html
+    - 📂 scripts/
+      - 📄 nova_conversation_flow.js
+      - 📄 nova_integration.js
+      - 📄 nova_kb_store.js
+      - 📄 nova_main.js
+      - 📄 nova_page_mobile_call.js
+      - 📄 nova_page_ui.js
+      - 📄 nova_page_voice_fix.js
+      - 📄 nova_runtime_ai.js
+      - 📄 nova_runtime_chat.js
+      - 📄 nova_runtime_files.js
+      - 📄 nova_runtime_ui_events.js
+      - 📄 nova_runtime_ui_voice.js
+      - 📄 nova_runtime_voice_tools.js
+      - 📄 nova_voice_before_interrupt.js
+      - 📄 nova_voice.js
+    - 📂 styles/
+      - 📄 nova_styles.css
+    - 📄 voice_checker.html
+  - 📂 ai6/
+    - 📂 JARVIS-AI/
+      - 📂 Backend/
+        ...
+      - 📂 Data/
+        ...
+      - 📂 Frontend/
+        ...
+      - 📄 LICENSE
+      - 📄 Main.py
+      - 📄 Requirements.txt
+- 📂 api/
+  - 📂 __pycache__/
+    - 📄 chat.cpython-312.pyc
+    - 📄 models.cpython-312.pyc
+    - 📄 submit_feedback.cpython-312.pyc
+  - 📄 chat.py
+  - 📄 models.py
+  - 📄 submit_feedback.py
+- 📂 app/
+  - 📄 pages.html
+  - 📄 pages.js
+- 📂 docs/
+  - 📄 KennethO-Resume-Software-Engineer.pdf
+- 📂 extracted-weather/
+  - 📂 WeatherForecast-main/
+    - 📂 public/
+      - 📄 file.svg
+      - 📄 globe.svg
+      - 📄 next.svg
+      - 📄 vercel.svg
+      - 📄 window.svg
+    - 📂 src/
+      - 📂 app/
+        ...
+    - 📄 eslint.config.mjs
+    - 📄 next.config.mjs
+- 📂 Images/
+  - 📄 main.JPG
+- 📂 lesson_plan_generator/
+  - 📂 prompt/
+    - 📄 lesson_plan_prompt.txt
+  - 📂 public/
+    - 📄 app.py
+    - 📄 lesson_plan.docx
+    - 📄 lesson_planner_p1_backup_6_25_2025.html
+    - 📄 lesson_planner_p1.html
+    - 📄 lesson_planner_p2_backup_6_25_2025.html
+    - 📄 lesson_planner_p2.html
+  - 📂 src/
+    - 📄 core.py
+    - 📄 lesson_planner_p1.js
+    - 📄 lesson_planner_p2.js
+    - 📄 tools.py
+  - 📂 styles/
+    - 📄 style_p1.css
+    - 📄 style_p2.css
+  - 📄 Lesson Plan Generator.docx
+  - 📄 requirements.txt
+- 📂 presentation_generator/
+  - 📂 public/
+    - 📄 pg_p1.html
+    - 📄 pg_p2_smart.html
+    - 📄 pg_p2.html
+    - 📄 pg_p3.html
+  - 📂 src/
+    - 📄 pg_p1.js
+    - 📄 pg_p2.js
+    - 📄 pg_p3.js
+  - 📂 styles/
+    - 📄 style_p1.css
+    - 📄 style_p2.css
+- 📂 public/
+- 📂 RandomFact/
+  - 📄 randfact.html
+  - 📄 randfact2.html
+  - 📄 scripts.js
+  - 📄 scripts2.js
+  - 📄 style3_2.css
+  - 📄 style3.css
+- 📂 RealityAI_Lesson_Planner/
+  - 📂 public/
+    - 📄 app.py
+    - 📄 lesson_plan.docx
+    - 📄 lesson_planner_p1_backup_6_25_2025.html
+    - 📄 lesson_planner_p1.html
+    - 📄 lesson_planner_p2_backup_6_25_2025.html
+    - 📄 lesson_planner_p2.html
+  - 📂 src/
+    - 📄 core.py
+    - 📄 tools.py
+  - 📄 requirements.txt
+- 📂 RealityAI_Rubric_Generator/
+  - 📂 __pycache__/
+    - 📄 __init__.cpython-312.pyc
+    - 📄 core.cpython-312.pyc
+    - 📄 test_core.cpython-312-pytest-7.4.4.pyc
+    - 📄 test_tools.cpython-312-pytest-7.4.4.pyc
+    - 📄 tools.cpython-312.pyc
+  - 📂 public/
+    - 📄 rubric_gen_p1.html
+    - 📄 rubric_template_p2.html
+  - 📂 src/
+    - 📂 export/
+      - 📄 toDocsx.ts
+      - 📄 toPdf.ts
+    - 📂 logic/
+      - 📄 buildRubric.ts
+      - 📄 fetchUrlText.ts
+      - 📄 parseUpload.ts
+    - 📂 types/
+      - 📄 cheerio.d.ts
+      - 📄 html-to-docx.d.ts
+      - 📄 html2canvas.d.ts
+      - 📄 jspdf.d.ts
+      - 📄 mammoth.d.ts
+      - 📄 papaparse.d.ts
+      - 📄 pdfjs-dist.d.ts
+      - 📄 pptx-parser.d.ts
+    - 📂 ui/
+      - 📄 RubricForm.tsx
+    - 📄 App.tsx
+    - 📄 i18n.js
+    - 📄 main.tsx
+    - 📄 rubric.js
+  - 📂 test-results/
+  - 📂 tests/
+    - 📄 rubric_generation.test.js
+  - 📄 __init__.py
+  - 📄 core.py
+  - 📄 instructions
+  - 📄 test_core.py
+  - 📄 test_tools.py
+  - 📄 tools.py
+- 📂 Rubriks Cube/
+  - 📂 public/
+  - 📂 scripts/
+  - 📂 styles/
+- 📂 TicTacToe/
+  - 📄 tictactoe.css
+  - 📄 tictactoe.html
+  - 📄 tictactoe.js
+- 📂 ToughLuckv7/
+  - 📂 __pycache__/
+    - 📄 ToughLuckGameplay.cpython-312.pyc
+    - 📄 ToughLuckResults.cpython-312.pyc
+    - 📄 ToughLuckStart.cpython-312.pyc
+  - 📂 game-server/
+    - 📂 templates/
+      - 📄 index.html
+      - 📄 UserGameplay.html
+      - 📄 UserGUI.html
+      - 📄 UserResults.html
+      - 📄 UserStart.html
+    - 📄 app.py
+    - 📄 feedback.txt
+    - 📄 server.js
+  - 📂 public/
+    - 📄 game-logic.js
+    - 📄 UserGameplay.html
+    - 📄 UserGUI.html
+    - 📄 UserResults.html
+    - 📄 UserStart.html
+  - 📂 src/
+    - 📂 __pycache__/
+      - 📄 ToughLuckGameplay.cpython-312.pyc
+      - 📄 ToughLuckResults.cpython-312.pyc
+      - 📄 ToughLuckStart.cpython-312.pyc
+    - 📄 TLIntro.py
+    - 📄 ToughLuckGameplay.py
+    - 📄 ToughLuckGameplayUpdated.py
+    - 📄 ToughLuckResults.py
+    - 📄 ToughLuckStart.py
+  - 📄 test_game.html
+- 📂 website-mirror/
+  - 📂 hooks/
+    - 📄 applypatch-msg.sample
+    - 📄 commit-msg.sample
+    - 📄 fsmonitor-watchman.sample
+    - 📄 post-update.sample
+    - 📄 pre-applypatch.sample
+    - 📄 pre-commit.sample
+    - 📄 pre-merge-commit.sample
+    - 📄 pre-push.sample
+    - 📄 pre-rebase.sample
+    - 📄 pre-receive.sample
+    - 📄 prepare-commit-msg.sample
+    - 📄 push-to-checkout.sample
+    - 📄 sendemail-validate.sample
+    - 📄 update.sample
+  - 📂 info/
+    - 📄 exclude
+    - 📄 refs
+  - 📂 objects/
+    - 📂 info/
+      - 📄 commit-graph
+      - 📄 packs
+    - 📂 pack/
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.bitmap
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.idx
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.pack
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.rev
+  - 📂 refs/
+    - 📂 heads/
+    - 📂 tags/
+  - 📄 config
+  - 📄 description
+  - 📄 HEAD
+  - 📄 packed-refs
+- 📂 website-recovery/
+  - 📂 app/
+    - 📄 pages.html
+    - 📄 pages.js
+  - 📂 docs/
+    - 📄 Kenneth-Okwu-Full-Stack Developer I.pdf
+  - 📂 Images/
+    - 📄 main.JPG
+  - 📂 lesson_plan_generator/
+  - 📂 RandomFact/
+    - 📄 randfact.html
+    - 📄 randfact2.html
+    - 📄 scripts.js
+    - 📄 scripts2.js
+    - 📄 style3_2.css
+    - 📄 style3.css
+  - 📂 RealityAI_Lesson_Planner/
+    - 📂 public/
+      - 📄 app.py
+      - 📄 lesson_plan.docx
+      - 📄 lesson_planner_p1_backup_6_25_2025.html
+      - 📄 lesson_planner_p1.html
+      - 📄 lesson_planner_p2_backup_6_25_2025.html
+      - 📄 lesson_planner_p2.html
+    - 📂 src/
+      - 📄 core.py
+      - 📄 tools.py
+    - 📄 requirements.txt
+  - 📂 RealityAI_Rubric_Generator/
+  - 📂 ToughLuckv7/
+    - 📂 __pycache__/
+      - 📄 ToughLuckGameplay.cpython-312.pyc
+      - 📄 ToughLuckResults.cpython-312.pyc
+      - 📄 ToughLuckStart.cpython-312.pyc
+    - 📂 game-server/
+      - 📂 templates/
+        ...
+      - 📄 app.py
+      - 📄 feedback.txt
+      - 📄 server.js
+    - 📂 src/
+      - 📂 __pycache__/
+        ...
+      - 📄 TLIntro.py
+      - 📄 ToughLuckGameplay.py
+      - 📄 ToughLuckGameplayUpdated.py
+      - 📄 ToughLuckResults.py
+      - 📄 ToughLuckStart.py
+    - 📄 test_game.html
+  - 📂 WeatherForcaster/
+    - 📂 pages/
+      - 📄 index.js
+    - 📂 public/
+      - 📄 WF_p1.html
+    - 📂 src/
+      - 📄 App.js
+      - 📄 WeatherPage.js
+    - 📂 styles/
+      - 📄 styles.css
+  - 📂 website-mirror/
+    - 📂 hooks/
+      - 📄 applypatch-msg.sample
+      - 📄 commit-msg.sample
+      - 📄 fsmonitor-watchman.sample
+      - 📄 post-update.sample
+      - 📄 pre-applypatch.sample
+      - 📄 pre-commit.sample
+      - 📄 pre-merge-commit.sample
+      - 📄 pre-push.sample
+      - 📄 pre-rebase.sample
+      - 📄 pre-receive.sample
+      - 📄 prepare-commit-msg.sample
+      - 📄 push-to-checkout.sample
+      - 📄 sendemail-validate.sample
+      - 📄 update.sample
+    - 📂 info/
+      - 📄 exclude
+      - 📄 refs
+    - 📂 objects/
+      - 📂 info/
+        ...
+      - 📂 pack/
+        ...
+    - 📄 config
+    - 📄 description
+    - 📄 HEAD
+    - 📄 packed-refs
+  - 📂 xweatherforcast/
+  - 📄 Contact.html
+  - 📄 Games.html
+  - 📄 Home.html
+  - 📄 navbar.html
+  - 📄 Projects.html
+  - 📄 style.css
+  - 📄 style.css-Nova
+  - 📄 style2.css
+- 📄 AI_Development_Guide_Simple_Version.docx
+- 📄 AI_Development_Guide_v1_and_v2.docx
+- 📄 AI5_Creation_Documentation.docx
+- 📄 Contact.html
+- 📄 dev_server.py
+- 📄 Games.html
+- 📄 index.html
+- 📄 MyProject_ws.code-workspace
+- 📄 navbar.html
+- 📄 portfolio.css
+- 📄 portfolio.js
+- 📄 Projects.html
+- 📄 requirements.txt
+- 📄 style.css
+- 📄 style.css-Nova
+- 📄 style2.css
+
+
+## JS Dependencies
+
+### \app\pages.js
+No dependencies found
+
+### \website-recovery\WeatherForcaster\src\WeatherPage.js
+Dependencies:
+- react
+- axios
+- ./styles/styles.css
+
+### \website-recovery\WeatherForcaster\src\App.js
+Dependencies:
+- react
+- ./WeatherPage
+- ./styles/styles.css
+
+### \RandomFact\scripts2.js
+No dependencies found
+
+### \RandomFact\scripts.js
+No dependencies found
+
+## PY Dependencies
+
+### \api\models.py
+Dependencies:
+- json
+- os
+- requests
+- http.server
+- BaseHTTPRequestHandler
+
+### \api\chat.py
+Dependencies:
+- json
+- os
+- re
+- requests
+- http.server
+- BaseHTTPRequestHandler
+- urllib.parse
+- quote
+
+### \api\submit_feedback.py
+Dependencies:
+- json
+- os
+- smtplib
+- datetime
+- email.message
+- EmailMessage
+- http.server
+- BaseHTTPRequestHandler
+
+### \dev_server.py
+Dependencies:
+- os
+- http.server
+- SimpleHTTPRequestHandler,
+- urllib.parse
+- urlparse
+- api.chat
+- handler
+- api.models
+
+### \RealityAI_Lesson_Planner\src\tools.py
+Dependencies:
+- PyPDF2
+- csv
+- googletrans
+- Translator
+- the
+
+## TSX Dependencies
+
+### \RealityAI_Rubric_Generator\src\ui\RubricForm.tsx
+Dependencies:
+- react
+- ../logic/parseUpload
+- ../logic/fetchUrlText
+- ../logic/buildRubric
+- ../export/toPdf
+- ../export/toDocsx
+
+### \RealityAI_Rubric_Generator\src\main.tsx
+Dependencies:
+- react
+- react-dom/client
+- ./App
+
+### \RealityAI_Rubric_Generator\src\App.tsx
+Dependencies:
+- react
+- ./ui/RubricForm
+
+### \.vercel\cache\chat_py\RealityAI_Rubric_Generator\src\ui\RubricForm.tsx
+Dependencies:
+- react
+- ../logic/parseUpload
+- ../logic/fetchUrlText
+- ../logic/buildRubric
+- ../export/toPdf
+- ../export/toDocsx
+
+### \.vercel\cache\chat_py\RealityAI_Rubric_Generator\src\main.tsx
+Dependencies:
+- react
+- react-dom/client
+- ./App
+
+## TS Dependencies
+
+### \RealityAI_Rubric_Generator\src\types\pptx-parser.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\pdfjs-dist.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\papaparse.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\mammoth.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\jspdf.d.ts
+No dependencies found
+
+## C Dependencies
+
+### \ai\ai6\JARVIS-AI\.venv\Lib\site-packages\zope\interface\_zope_interface_coptimizations.c
+Dependencies:
+- Python.h
+- structmember.h
+
+
+
+## Project Directory Structure
+
+- 📂 __pycache__/
+  - 📄 dev_server.cpython-312.pyc
+- 📂 ai/
+  - 📂 ai1/
+    - 📂 public/
+      - 📄 ai.html
+    - 📂 scripts/
+      - 📄 ai.js
+    - 📂 styles/
+      - 📄 styles_ai.css
+    - 📄 Ai.html
+  - 📂 ai2/
+    - 📂 public/
+      - 📄 ai2.html
+    - 📂 scripts/
+      - 📄 ai2.js
+    - 📂 styles/
+      - 📄 styles_ai2.css
+    - 📄 Ai2_ORGANIZED_BACKUP.html
+    - 📄 Ai2_WORKING_BACKUP.html
+  - 📂 ai3/
+    - 📂 public/
+      - 📄 AI_v3.html
+    - 📂 scripts/
+      - 📄 ai_v3_main.js
+    - 📂 styles/
+      - 📄 ai_v3_styles.css
+    - 📄 AI_v3_ORGANIZED_BACKUP.html
+    - 📄 AI_v3.html
+    - 📄 app.py
+    - 📄 requirements.txt
+  - 📂 ai4/
+    - 📂 public/
+      - 📄 AI_v4.html
+    - 📂 scripts/
+      - 📄 ai_v4_main.js
+    - 📂 styles/
+      - 📄 ai_v4_styles.css
+    - 📄 AI_v4_ORGANIZED_BACKUP.html
+    - 📄 AI_v4.html
+  - 📂 ai5/
+    - 📂 ai5 files/
+      - 📂 public/
+        ...
+      - 📄 Check_JARVIS_Voices.bat
+    - 📂 JARVIS/
+      - 📂 CFX_UI_J.A.R.V.I.S/
+        ...
+      - 📂 GHV4_UI_J.A.R.V.I.S/
+        ...
+      - 📂 ProffieOS_V2_Voicepack_J.A.R.V.I.S/
+        ...
+      - 📂 SN4_UI_J.A.R.V.I.S/
+        ...
+      - 📂 Xeno2_UI_J.A.R.V.I.S/
+        ...
+      - 📂 Xeno3_UI_J.A.R.V.I.S/
+        ...
+      - 📄 boot.wav
+    - 📂 Jarvis-main/
+      - 📂 __pycache__/
+        ...
+      - 📂 Audio/
+        ...
+      - 📄 Jarvis RGB Effects Plugin Profile
+      - 📄 jarvis.py
+      - 📄 phrases.txt
+      - 📄 speaker_sample.wav
+      - 📄 Start_Voice_Bridge.bat
+      - 📄 voice_bridge.py
+    - 📂 public/
+      - 📄 AI_v5_JARVIS_CLEAN.html
+      - 📄 AI_v5_JARVIS.html
+      - 📄 AI_v5_nova.html
+    - 📂 scripts/
+      - 📄 nova_conversation_flow.js
+      - 📄 nova_integration.js
+      - 📄 nova_kb_store.js
+      - 📄 nova_main.js
+      - 📄 nova_page_mobile_call.js
+      - 📄 nova_page_ui.js
+      - 📄 nova_page_voice_fix.js
+      - 📄 nova_runtime_ai.js
+      - 📄 nova_runtime_chat.js
+      - 📄 nova_runtime_files.js
+      - 📄 nova_runtime_ui_events.js
+      - 📄 nova_runtime_ui_voice.js
+      - 📄 nova_runtime_voice_tools.js
+      - 📄 nova_voice_before_interrupt.js
+      - 📄 nova_voice.js
+    - 📂 styles/
+      - 📄 nova_styles.css
+    - 📄 voice_checker.html
+  - 📂 ai6/
+    - 📂 JARVIS-AI/
+      - 📂 Backend/
+        ...
+      - 📂 Data/
+        ...
+      - 📂 Frontend/
+        ...
+      - 📄 LICENSE
+      - 📄 Main.py
+      - 📄 Requirements.txt
+- 📂 api/
+  - 📂 __pycache__/
+    - 📄 chat.cpython-312.pyc
+    - 📄 models.cpython-312.pyc
+    - 📄 submit_feedback.cpython-312.pyc
+  - 📄 chat.py
+  - 📄 models.py
+  - 📄 submit_feedback.py
+- 📂 app/
+  - 📄 pages.html
+  - 📄 pages.js
+- 📂 docs/
+  - 📄 KennethO-Resume-Software-Engineer.pdf
+- 📂 extracted-weather/
+  - 📂 WeatherForecast-main/
+    - 📂 public/
+      - 📄 file.svg
+      - 📄 globe.svg
+      - 📄 next.svg
+      - 📄 vercel.svg
+      - 📄 window.svg
+    - 📂 src/
+      - 📂 app/
+        ...
+    - 📄 eslint.config.mjs
+    - 📄 next.config.mjs
+- 📂 Images/
+  - 📄 main.JPG
+- 📂 lesson_plan_generator/
+  - 📂 prompt/
+    - 📄 lesson_plan_prompt.txt
+  - 📂 public/
+    - 📄 app.py
+    - 📄 lesson_plan.docx
+    - 📄 lesson_planner_p1_backup_6_25_2025.html
+    - 📄 lesson_planner_p1.html
+    - 📄 lesson_planner_p2_backup_6_25_2025.html
+    - 📄 lesson_planner_p2.html
+  - 📂 src/
+    - 📄 core.py
+    - 📄 lesson_planner_p1.js
+    - 📄 lesson_planner_p2.js
+    - 📄 tools.py
+  - 📂 styles/
+    - 📄 style_p1.css
+    - 📄 style_p2.css
+  - 📄 Lesson Plan Generator.docx
+  - 📄 requirements.txt
+- 📂 presentation_generator/
+  - 📂 public/
+    - 📄 pg_p1.html
+    - 📄 pg_p2_smart.html
+    - 📄 pg_p2.html
+    - 📄 pg_p3.html
+  - 📂 src/
+    - 📄 pg_p1.js
+    - 📄 pg_p2.js
+    - 📄 pg_p3.js
+  - 📂 styles/
+    - 📄 style_p1.css
+    - 📄 style_p2.css
+- 📂 public/
+- 📂 RandomFact/
+  - 📄 randfact.html
+  - 📄 randfact2.html
+  - 📄 scripts.js
+  - 📄 scripts2.js
+  - 📄 style3_2.css
+  - 📄 style3.css
+- 📂 RealityAI_Lesson_Planner/
+  - 📂 public/
+    - 📄 app.py
+    - 📄 lesson_plan.docx
+    - 📄 lesson_planner_p1_backup_6_25_2025.html
+    - 📄 lesson_planner_p1.html
+    - 📄 lesson_planner_p2_backup_6_25_2025.html
+    - 📄 lesson_planner_p2.html
+  - 📂 src/
+    - 📄 core.py
+    - 📄 tools.py
+  - 📄 requirements.txt
+- 📂 RealityAI_Rubric_Generator/
+  - 📂 __pycache__/
+    - 📄 __init__.cpython-312.pyc
+    - 📄 core.cpython-312.pyc
+    - 📄 test_core.cpython-312-pytest-7.4.4.pyc
+    - 📄 test_tools.cpython-312-pytest-7.4.4.pyc
+    - 📄 tools.cpython-312.pyc
+  - 📂 public/
+    - 📄 rubric_gen_p1.html
+    - 📄 rubric_template_p2.html
+  - 📂 src/
+    - 📂 export/
+      - 📄 toDocsx.ts
+      - 📄 toPdf.ts
+    - 📂 logic/
+      - 📄 buildRubric.ts
+      - 📄 fetchUrlText.ts
+      - 📄 parseUpload.ts
+    - 📂 types/
+      - 📄 cheerio.d.ts
+      - 📄 html-to-docx.d.ts
+      - 📄 html2canvas.d.ts
+      - 📄 jspdf.d.ts
+      - 📄 mammoth.d.ts
+      - 📄 papaparse.d.ts
+      - 📄 pdfjs-dist.d.ts
+      - 📄 pptx-parser.d.ts
+    - 📂 ui/
+      - 📄 RubricForm.tsx
+    - 📄 App.tsx
+    - 📄 i18n.js
+    - 📄 main.tsx
+    - 📄 rubric.js
+  - 📂 test-results/
+  - 📂 tests/
+    - 📄 rubric_generation.test.js
+  - 📄 __init__.py
+  - 📄 core.py
+  - 📄 instructions
+  - 📄 test_core.py
+  - 📄 test_tools.py
+  - 📄 tools.py
+- 📂 Rubriks Cube/
+  - 📂 public/
+  - 📂 scripts/
+  - 📂 styles/
+- 📂 TicTacToe/
+  - 📄 tictactoe.css
+  - 📄 tictactoe.html
+  - 📄 tictactoe.js
+- 📂 ToughLuckv7/
+  - 📂 __pycache__/
+    - 📄 ToughLuckGameplay.cpython-312.pyc
+    - 📄 ToughLuckResults.cpython-312.pyc
+    - 📄 ToughLuckStart.cpython-312.pyc
+  - 📂 game-server/
+    - 📂 templates/
+      - 📄 index.html
+      - 📄 UserGameplay.html
+      - 📄 UserGUI.html
+      - 📄 UserResults.html
+      - 📄 UserStart.html
+    - 📄 app.py
+    - 📄 feedback.txt
+    - 📄 server.js
+  - 📂 public/
+    - 📄 game-logic.js
+    - 📄 UserGameplay.html
+    - 📄 UserGUI.html
+    - 📄 UserResults.html
+    - 📄 UserStart.html
+  - 📂 src/
+    - 📂 __pycache__/
+      - 📄 ToughLuckGameplay.cpython-312.pyc
+      - 📄 ToughLuckResults.cpython-312.pyc
+      - 📄 ToughLuckStart.cpython-312.pyc
+    - 📄 TLIntro.py
+    - 📄 ToughLuckGameplay.py
+    - 📄 ToughLuckGameplayUpdated.py
+    - 📄 ToughLuckResults.py
+    - 📄 ToughLuckStart.py
+  - 📄 test_game.html
+- 📂 website-mirror/
+  - 📂 hooks/
+    - 📄 applypatch-msg.sample
+    - 📄 commit-msg.sample
+    - 📄 fsmonitor-watchman.sample
+    - 📄 post-update.sample
+    - 📄 pre-applypatch.sample
+    - 📄 pre-commit.sample
+    - 📄 pre-merge-commit.sample
+    - 📄 pre-push.sample
+    - 📄 pre-rebase.sample
+    - 📄 pre-receive.sample
+    - 📄 prepare-commit-msg.sample
+    - 📄 push-to-checkout.sample
+    - 📄 sendemail-validate.sample
+    - 📄 update.sample
+  - 📂 info/
+    - 📄 exclude
+    - 📄 refs
+  - 📂 objects/
+    - 📂 info/
+      - 📄 commit-graph
+      - 📄 packs
+    - 📂 pack/
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.bitmap
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.idx
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.pack
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.rev
+  - 📂 refs/
+    - 📂 heads/
+    - 📂 tags/
+  - 📄 config
+  - 📄 description
+  - 📄 HEAD
+  - 📄 packed-refs
+- 📂 website-recovery/
+  - 📂 app/
+    - 📄 pages.html
+    - 📄 pages.js
+  - 📂 docs/
+    - 📄 Kenneth-Okwu-Full-Stack Developer I.pdf
+  - 📂 Images/
+    - 📄 main.JPG
+  - 📂 lesson_plan_generator/
+  - 📂 RandomFact/
+    - 📄 randfact.html
+    - 📄 randfact2.html
+    - 📄 scripts.js
+    - 📄 scripts2.js
+    - 📄 style3_2.css
+    - 📄 style3.css
+  - 📂 RealityAI_Lesson_Planner/
+    - 📂 public/
+      - 📄 app.py
+      - 📄 lesson_plan.docx
+      - 📄 lesson_planner_p1_backup_6_25_2025.html
+      - 📄 lesson_planner_p1.html
+      - 📄 lesson_planner_p2_backup_6_25_2025.html
+      - 📄 lesson_planner_p2.html
+    - 📂 src/
+      - 📄 core.py
+      - 📄 tools.py
+    - 📄 requirements.txt
+  - 📂 RealityAI_Rubric_Generator/
+  - 📂 ToughLuckv7/
+    - 📂 __pycache__/
+      - 📄 ToughLuckGameplay.cpython-312.pyc
+      - 📄 ToughLuckResults.cpython-312.pyc
+      - 📄 ToughLuckStart.cpython-312.pyc
+    - 📂 game-server/
+      - 📂 templates/
+        ...
+      - 📄 app.py
+      - 📄 feedback.txt
+      - 📄 server.js
+    - 📂 src/
+      - 📂 __pycache__/
+        ...
+      - 📄 TLIntro.py
+      - 📄 ToughLuckGameplay.py
+      - 📄 ToughLuckGameplayUpdated.py
+      - 📄 ToughLuckResults.py
+      - 📄 ToughLuckStart.py
+    - 📄 test_game.html
+  - 📂 WeatherForcaster/
+    - 📂 pages/
+      - 📄 index.js
+    - 📂 public/
+      - 📄 WF_p1.html
+    - 📂 src/
+      - 📄 App.js
+      - 📄 WeatherPage.js
+    - 📂 styles/
+      - 📄 styles.css
+  - 📂 website-mirror/
+    - 📂 hooks/
+      - 📄 applypatch-msg.sample
+      - 📄 commit-msg.sample
+      - 📄 fsmonitor-watchman.sample
+      - 📄 post-update.sample
+      - 📄 pre-applypatch.sample
+      - 📄 pre-commit.sample
+      - 📄 pre-merge-commit.sample
+      - 📄 pre-push.sample
+      - 📄 pre-rebase.sample
+      - 📄 pre-receive.sample
+      - 📄 prepare-commit-msg.sample
+      - 📄 push-to-checkout.sample
+      - 📄 sendemail-validate.sample
+      - 📄 update.sample
+    - 📂 info/
+      - 📄 exclude
+      - 📄 refs
+    - 📂 objects/
+      - 📂 info/
+        ...
+      - 📂 pack/
+        ...
+    - 📄 config
+    - 📄 description
+    - 📄 HEAD
+    - 📄 packed-refs
+  - 📂 xweatherforcast/
+  - 📄 Contact.html
+  - 📄 Games.html
+  - 📄 Home.html
+  - 📄 navbar.html
+  - 📄 Projects.html
+  - 📄 style.css
+  - 📄 style.css-Nova
+  - 📄 style2.css
+- 📄 AI_Development_Guide_Simple_Version.docx
+- 📄 AI_Development_Guide_v1_and_v2.docx
+- 📄 AI5_Creation_Documentation.docx
+- 📄 Contact.html
+- 📄 dev_server.py
+- 📄 Games.html
+- 📄 index.html
+- 📄 MyProject_ws.code-workspace
+- 📄 navbar.html
+- 📄 portfolio.css
+- 📄 portfolio.js
+- 📄 Projects.html
+- 📄 requirements.txt
+- 📄 style.css
+- 📄 style.css-Nova
+- 📄 style2.css
+
+
+## PY Dependencies
+
+### \dev_server.py
+Dependencies:
+- os
+- http.server
+- SimpleHTTPRequestHandler,
+- urllib.parse
+- urlparse
+- api.chat
+- handler
+- api.models
+
+### \lesson_plan_generator\src\tools.py
+Dependencies:
+- PyPDF2
+- csv
+- googletrans
+- Translator
+- the
+
+### \lesson_plan_generator\src\core.py
+Dependencies:
+- logging
+- typing
+- Dict,
+- .tools
+- parse_pdf,
+
+### \lesson_plan_generator\public\app.py
+Dependencies:
+- flask
+- Flask
+
+### \ai\ai6\JARVIS-AI\Main.py
+Dependencies:
+- Frontend.GUI
+- (
+- Backend.Model
+- FirstLayerDMM
+- Backend.RealtimeSearchEngine
+- RealtimeSearchEngine
+- Backend.Automation
+- Automation
+- Backend.SpeechToText
+- SpeechRecognition
+- Backend.Chatbot
+- Chatbot
+- Backend.TextToSpeech
+- TextToSpeech
+- Backend.screen_analysis
+- analyze_once
+- Backend.CameraAnalysis
+- dotenv
+- dotenv_values
+- asyncio
+- run
+- time
+- sleep
+- subprocess
+- os
+- threading
+- json
+
+## JS Dependencies
+
+### \app\pages.js
+No dependencies found
+
+### \lesson_plan_generator\src\lesson_planner_p2.js
+No dependencies found
+
+### \lesson_plan_generator\src\lesson_planner_p1.js
+No dependencies found
+
+### \extracted-weather\WeatherForecast-main\src\app\page.js
+Dependencies:
+- ./components/BackButton
+- react
+- next/navigation
+- ./page.module.css
+
+### \extracted-weather\WeatherForecast-main\src\app\layout.js
+Dependencies:
+- next/font/google
+- ./globals.css
+
+## TSX Dependencies
+
+### \RealityAI_Rubric_Generator\src\ui\RubricForm.tsx
+Dependencies:
+- react
+- ../logic/parseUpload
+- ../logic/fetchUrlText
+- ../logic/buildRubric
+- ../export/toPdf
+- ../export/toDocsx
+
+### \RealityAI_Rubric_Generator\src\main.tsx
+Dependencies:
+- react
+- react-dom/client
+- ./App
+
+### \RealityAI_Rubric_Generator\src\App.tsx
+Dependencies:
+- react
+- ./ui/RubricForm
+
+### \.vercel\cache\chat_py\RealityAI_Rubric_Generator\src\ui\RubricForm.tsx
+Dependencies:
+- react
+- ../logic/parseUpload
+- ../logic/fetchUrlText
+- ../logic/buildRubric
+- ../export/toPdf
+- ../export/toDocsx
+
+### \.vercel\cache\chat_py\RealityAI_Rubric_Generator\src\main.tsx
+Dependencies:
+- react
+- react-dom/client
+- ./App
+
+## TS Dependencies
+
+### \RealityAI_Rubric_Generator\src\types\pptx-parser.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\pdfjs-dist.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\papaparse.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\mammoth.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\jspdf.d.ts
+No dependencies found
+
+## H Dependencies
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\_surface.h
+Dependencies:
+- _pygame.h
+- surface.h
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\_pygame.h
+Dependencies:
+- pgplatform.h
+- Python.h
+- SDL.h
+- include/_pygame.h
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\_camera.h
+Dependencies:
+- _pygame.h
+- camera.h
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\_blit_info.h
+Dependencies:
+- _surface.h
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\surface.h
+Dependencies:
+- SDL.h
+- pygame.h
+
+## C Dependencies
+
+### \ai\ai6\JARVIS-AI\.venv\Lib\site-packages\zope\interface\_zope_interface_coptimizations.c
+Dependencies:
+- Python.h
+- structmember.h
+
+
+
+## Project Directory Structure
+
+- 📂 __pycache__/
+  - 📄 dev_server.cpython-312.pyc
+- 📂 ai/
+  - 📂 ai1/
+    - 📂 public/
+      - 📄 ai.html
+    - 📂 scripts/
+      - 📄 ai.js
+    - 📂 styles/
+      - 📄 styles_ai.css
+    - 📄 Ai.html
+  - 📂 ai2/
+    - 📂 public/
+      - 📄 ai2.html
+    - 📂 scripts/
+      - 📄 ai2.js
+    - 📂 styles/
+      - 📄 styles_ai2.css
+    - 📄 Ai2_ORGANIZED_BACKUP.html
+    - 📄 Ai2_WORKING_BACKUP.html
+  - 📂 ai3/
+    - 📂 public/
+      - 📄 AI_v3.html
+    - 📂 scripts/
+      - 📄 ai_v3_main.js
+    - 📂 styles/
+      - 📄 ai_v3_styles.css
+    - 📄 AI_v3_ORGANIZED_BACKUP.html
+    - 📄 AI_v3.html
+    - 📄 app.py
+    - 📄 requirements.txt
+  - 📂 ai4/
+    - 📂 public/
+      - 📄 AI_v4.html
+    - 📂 scripts/
+      - 📄 ai_v4_main.js
+    - 📂 styles/
+      - 📄 ai_v4_styles.css
+    - 📄 AI_v4_ORGANIZED_BACKUP.html
+    - 📄 AI_v4.html
+  - 📂 ai5/
+    - 📂 ai5 files/
+      - 📂 public/
+        ...
+      - 📄 Check_JARVIS_Voices.bat
+    - 📂 JARVIS/
+      - 📂 CFX_UI_J.A.R.V.I.S/
+        ...
+      - 📂 GHV4_UI_J.A.R.V.I.S/
+        ...
+      - 📂 ProffieOS_V2_Voicepack_J.A.R.V.I.S/
+        ...
+      - 📂 SN4_UI_J.A.R.V.I.S/
+        ...
+      - 📂 Xeno2_UI_J.A.R.V.I.S/
+        ...
+      - 📂 Xeno3_UI_J.A.R.V.I.S/
+        ...
+      - 📄 boot.wav
+    - 📂 Jarvis-main/
+      - 📂 __pycache__/
+        ...
+      - 📂 Audio/
+        ...
+      - 📄 Jarvis RGB Effects Plugin Profile
+      - 📄 jarvis.py
+      - 📄 phrases.txt
+      - 📄 speaker_sample.wav
+      - 📄 Start_Voice_Bridge.bat
+      - 📄 voice_bridge.py
+    - 📂 public/
+      - 📄 AI_v5_JARVIS_CLEAN.html
+      - 📄 AI_v5_JARVIS.html
+      - 📄 AI_v5_nova.html
+    - 📂 scripts/
+      - 📄 nova_conversation_flow.js
+      - 📄 nova_integration.js
+      - 📄 nova_kb_store.js
+      - 📄 nova_main.js
+      - 📄 nova_page_mobile_call.js
+      - 📄 nova_page_ui.js
+      - 📄 nova_page_voice_fix.js
+      - 📄 nova_runtime_ai.js
+      - 📄 nova_runtime_chat.js
+      - 📄 nova_runtime_files.js
+      - 📄 nova_runtime_ui_events.js
+      - 📄 nova_runtime_ui_voice.js
+      - 📄 nova_runtime_voice_tools.js
+      - 📄 nova_voice_before_interrupt.js
+      - 📄 nova_voice.js
+    - 📂 styles/
+      - 📄 nova_styles.css
+    - 📄 voice_checker.html
+  - 📂 ai6/
+    - 📂 JARVIS-AI/
+      - 📂 Backend/
+        ...
+      - 📂 Data/
+        ...
+      - 📂 Frontend/
+        ...
+      - 📄 LICENSE
+      - 📄 Main.py
+      - 📄 Requirements.txt
+- 📂 api/
+  - 📂 __pycache__/
+    - 📄 chat.cpython-312.pyc
+    - 📄 models.cpython-312.pyc
+    - 📄 submit_feedback.cpython-312.pyc
+  - 📄 chat.py
+  - 📄 models.py
+  - 📄 submit_feedback.py
+- 📂 app/
+  - 📄 pages.html
+  - 📄 pages.js
+- 📂 docs/
+  - 📄 KennethO-Resume-Software-Engineer.pdf
+- 📂 extracted-weather/
+  - 📂 WeatherForecast-main/
+    - 📂 public/
+      - 📄 file.svg
+      - 📄 globe.svg
+      - 📄 next.svg
+      - 📄 vercel.svg
+      - 📄 window.svg
+    - 📂 src/
+      - 📂 app/
+        ...
+    - 📄 eslint.config.mjs
+    - 📄 next.config.mjs
+- 📂 Images/
+  - 📄 main.JPG
+- 📂 lesson_plan_generator/
+  - 📂 prompt/
+    - 📄 lesson_plan_prompt.txt
+  - 📂 public/
+    - 📄 app.py
+    - 📄 lesson_plan.docx
+    - 📄 lesson_planner_p1_backup_6_25_2025.html
+    - 📄 lesson_planner_p1.html
+    - 📄 lesson_planner_p2_backup_6_25_2025.html
+    - 📄 lesson_planner_p2.html
+  - 📂 src/
+    - 📄 core.py
+    - 📄 lesson_planner_p1.js
+    - 📄 lesson_planner_p2.js
+    - 📄 tools.py
+  - 📂 styles/
+    - 📄 style_p1.css
+    - 📄 style_p2.css
+  - 📄 Lesson Plan Generator.docx
+  - 📄 requirements.txt
+- 📂 presentation_generator/
+  - 📂 public/
+    - 📄 pg_p1.html
+    - 📄 pg_p2_smart.html
+    - 📄 pg_p2.html
+    - 📄 pg_p3.html
+  - 📂 src/
+    - 📄 pg_p1.js
+    - 📄 pg_p2.js
+    - 📄 pg_p3.js
+  - 📂 styles/
+    - 📄 style_p1.css
+    - 📄 style_p2.css
+- 📂 public/
+- 📂 RandomFact/
+  - 📄 randfact.html
+  - 📄 randfact2.html
+  - 📄 scripts.js
+  - 📄 scripts2.js
+  - 📄 style3_2.css
+  - 📄 style3.css
+- 📂 RealityAI_Lesson_Planner/
+  - 📂 public/
+    - 📄 app.py
+    - 📄 lesson_plan.docx
+    - 📄 lesson_planner_p1_backup_6_25_2025.html
+    - 📄 lesson_planner_p1.html
+    - 📄 lesson_planner_p2_backup_6_25_2025.html
+    - 📄 lesson_planner_p2.html
+  - 📂 src/
+    - 📄 core.py
+    - 📄 tools.py
+  - 📄 requirements.txt
+- 📂 RealityAI_Rubric_Generator/
+  - 📂 __pycache__/
+    - 📄 __init__.cpython-312.pyc
+    - 📄 core.cpython-312.pyc
+    - 📄 test_core.cpython-312-pytest-7.4.4.pyc
+    - 📄 test_tools.cpython-312-pytest-7.4.4.pyc
+    - 📄 tools.cpython-312.pyc
+  - 📂 public/
+    - 📄 rubric_gen_p1.html
+    - 📄 rubric_template_p2.html
+  - 📂 src/
+    - 📂 export/
+      - 📄 toDocsx.ts
+      - 📄 toPdf.ts
+    - 📂 logic/
+      - 📄 buildRubric.ts
+      - 📄 fetchUrlText.ts
+      - 📄 parseUpload.ts
+    - 📂 types/
+      - 📄 cheerio.d.ts
+      - 📄 html-to-docx.d.ts
+      - 📄 html2canvas.d.ts
+      - 📄 jspdf.d.ts
+      - 📄 mammoth.d.ts
+      - 📄 papaparse.d.ts
+      - 📄 pdfjs-dist.d.ts
+      - 📄 pptx-parser.d.ts
+    - 📂 ui/
+      - 📄 RubricForm.tsx
+    - 📄 App.tsx
+    - 📄 i18n.js
+    - 📄 main.tsx
+    - 📄 rubric.js
+  - 📂 test-results/
+  - 📂 tests/
+    - 📄 rubric_generation.test.js
+  - 📄 __init__.py
+  - 📄 core.py
+  - 📄 instructions
+  - 📄 test_core.py
+  - 📄 test_tools.py
+  - 📄 tools.py
+- 📂 Rubriks Cube/
+  - 📂 public/
+  - 📂 scripts/
+  - 📂 styles/
+- 📂 TicTacToe/
+  - 📄 tictactoe.css
+  - 📄 tictactoe.html
+  - 📄 tictactoe.js
+- 📂 ToughLuckv7/
+  - 📂 __pycache__/
+    - 📄 ToughLuckGameplay.cpython-312.pyc
+    - 📄 ToughLuckResults.cpython-312.pyc
+    - 📄 ToughLuckStart.cpython-312.pyc
+  - 📂 game-server/
+    - 📂 templates/
+      - 📄 index.html
+      - 📄 UserGameplay.html
+      - 📄 UserGUI.html
+      - 📄 UserResults.html
+      - 📄 UserStart.html
+    - 📄 app.py
+    - 📄 feedback.txt
+    - 📄 server.js
+  - 📂 public/
+    - 📄 game-logic.js
+    - 📄 UserGameplay.html
+    - 📄 UserGUI.html
+    - 📄 UserResults.html
+    - 📄 UserStart.html
+  - 📂 src/
+    - 📂 __pycache__/
+      - 📄 ToughLuckGameplay.cpython-312.pyc
+      - 📄 ToughLuckResults.cpython-312.pyc
+      - 📄 ToughLuckStart.cpython-312.pyc
+    - 📄 TLIntro.py
+    - 📄 ToughLuckGameplay.py
+    - 📄 ToughLuckGameplayUpdated.py
+    - 📄 ToughLuckResults.py
+    - 📄 ToughLuckStart.py
+  - 📄 test_game.html
+- 📂 website-mirror/
+  - 📂 hooks/
+    - 📄 applypatch-msg.sample
+    - 📄 commit-msg.sample
+    - 📄 fsmonitor-watchman.sample
+    - 📄 post-update.sample
+    - 📄 pre-applypatch.sample
+    - 📄 pre-commit.sample
+    - 📄 pre-merge-commit.sample
+    - 📄 pre-push.sample
+    - 📄 pre-rebase.sample
+    - 📄 pre-receive.sample
+    - 📄 prepare-commit-msg.sample
+    - 📄 push-to-checkout.sample
+    - 📄 sendemail-validate.sample
+    - 📄 update.sample
+  - 📂 info/
+    - 📄 exclude
+    - 📄 refs
+  - 📂 objects/
+    - 📂 info/
+      - 📄 commit-graph
+      - 📄 packs
+    - 📂 pack/
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.bitmap
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.idx
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.pack
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.rev
+  - 📂 refs/
+    - 📂 heads/
+    - 📂 tags/
+  - 📄 config
+  - 📄 description
+  - 📄 HEAD
+  - 📄 packed-refs
+- 📂 website-recovery/
+  - 📂 app/
+    - 📄 pages.html
+    - 📄 pages.js
+  - 📂 docs/
+    - 📄 Kenneth-Okwu-Full-Stack Developer I.pdf
+  - 📂 Images/
+    - 📄 main.JPG
+  - 📂 lesson_plan_generator/
+  - 📂 RandomFact/
+    - 📄 randfact.html
+    - 📄 randfact2.html
+    - 📄 scripts.js
+    - 📄 scripts2.js
+    - 📄 style3_2.css
+    - 📄 style3.css
+  - 📂 RealityAI_Lesson_Planner/
+    - 📂 public/
+      - 📄 app.py
+      - 📄 lesson_plan.docx
+      - 📄 lesson_planner_p1_backup_6_25_2025.html
+      - 📄 lesson_planner_p1.html
+      - 📄 lesson_planner_p2_backup_6_25_2025.html
+      - 📄 lesson_planner_p2.html
+    - 📂 src/
+      - 📄 core.py
+      - 📄 tools.py
+    - 📄 requirements.txt
+  - 📂 RealityAI_Rubric_Generator/
+  - 📂 ToughLuckv7/
+    - 📂 __pycache__/
+      - 📄 ToughLuckGameplay.cpython-312.pyc
+      - 📄 ToughLuckResults.cpython-312.pyc
+      - 📄 ToughLuckStart.cpython-312.pyc
+    - 📂 game-server/
+      - 📂 templates/
+        ...
+      - 📄 app.py
+      - 📄 feedback.txt
+      - 📄 server.js
+    - 📂 src/
+      - 📂 __pycache__/
+        ...
+      - 📄 TLIntro.py
+      - 📄 ToughLuckGameplay.py
+      - 📄 ToughLuckGameplayUpdated.py
+      - 📄 ToughLuckResults.py
+      - 📄 ToughLuckStart.py
+    - 📄 test_game.html
+  - 📂 WeatherForcaster/
+    - 📂 pages/
+      - 📄 index.js
+    - 📂 public/
+      - 📄 WF_p1.html
+    - 📂 src/
+      - 📄 App.js
+      - 📄 WeatherPage.js
+    - 📂 styles/
+      - 📄 styles.css
+  - 📂 website-mirror/
+    - 📂 hooks/
+      - 📄 applypatch-msg.sample
+      - 📄 commit-msg.sample
+      - 📄 fsmonitor-watchman.sample
+      - 📄 post-update.sample
+      - 📄 pre-applypatch.sample
+      - 📄 pre-commit.sample
+      - 📄 pre-merge-commit.sample
+      - 📄 pre-push.sample
+      - 📄 pre-rebase.sample
+      - 📄 pre-receive.sample
+      - 📄 prepare-commit-msg.sample
+      - 📄 push-to-checkout.sample
+      - 📄 sendemail-validate.sample
+      - 📄 update.sample
+    - 📂 info/
+      - 📄 exclude
+      - 📄 refs
+    - 📂 objects/
+      - 📂 info/
+        ...
+      - 📂 pack/
+        ...
+    - 📄 config
+    - 📄 description
+    - 📄 HEAD
+    - 📄 packed-refs
+  - 📂 xweatherforcast/
+  - 📄 Contact.html
+  - 📄 Games.html
+  - 📄 Home.html
+  - 📄 navbar.html
+  - 📄 Projects.html
+  - 📄 style.css
+  - 📄 style.css-Nova
+  - 📄 style2.css
+- 📄 AI_Development_Guide_Simple_Version.docx
+- 📄 AI_Development_Guide_v1_and_v2.docx
+- 📄 AI5_Creation_Documentation.docx
+- 📄 Contact.html
+- 📄 dev_server.py
+- 📄 Games.html
+- 📄 index.html
+- 📄 MyProject_ws.code-workspace
+- 📄 navbar.html
+- 📄 portfolio.css
+- 📄 portfolio.js
+- 📄 Projects.html
+- 📄 requirements.txt
+- 📄 style.css
+- 📄 style.css-Nova
+- 📄 style2.css
+
+
+## PY Dependencies
+
+### \api\models.py
+Dependencies:
+- json
+- os
+- requests
+- http.server
+- BaseHTTPRequestHandler
+
+### \api\chat.py
+Dependencies:
+- json
+- os
+- re
+- requests
+- http.server
+- BaseHTTPRequestHandler
+- urllib.parse
+- quote
+
+### \api\submit_feedback.py
+Dependencies:
+- json
+- os
+- smtplib
+- datetime
+- email.message
+- EmailMessage
+- http.server
+- BaseHTTPRequestHandler
+
+### \dev_server.py
+Dependencies:
+- os
+- http.server
+- SimpleHTTPRequestHandler,
+- urllib.parse
+- urlparse
+- api.chat
+- handler
+- api.models
+
+### \ai\ai6\JARVIS-AI\Main.py
+Dependencies:
+- Frontend.GUI
+- (
+- Backend.Model
+- FirstLayerDMM
+- Backend.RealtimeSearchEngine
+- RealtimeSearchEngine
+- Backend.Automation
+- Automation
+- Backend.SpeechToText
+- SpeechRecognition
+- Backend.Chatbot
+- Chatbot
+- Backend.TextToSpeech
+- TextToSpeech
+- Backend.screen_analysis
+- analyze_once
+- Backend.CameraAnalysis
+- dotenv
+- dotenv_values
+- asyncio
+- run
+- time
+- sleep
+- subprocess
+- os
+- threading
+- json
+
+## JS Dependencies
+
+### \extracted-weather\WeatherForecast-main\src\app\page.js
+Dependencies:
+- ./components/BackButton
+- react
+- next/navigation
+- ./page.module.css
+
+### \extracted-weather\WeatherForecast-main\src\app\layout.js
+Dependencies:
+- next/font/google
+- ./globals.css
+
+### \app\pages.js
+No dependencies found
+
+### \extracted-weather\WeatherForecast-main\src\app\components\BackButton.js
+Dependencies:
+- next/navigation
+- ../page.module.css
+
+### \extracted-weather\WeatherForecast-main\src\app\api\weather\route.js
+Dependencies:
+- next/server
+
+## H Dependencies
+
+### \ai\ai6\JARVIS-AI\.venv\Lib\site-packages\cffi\_embedding.h
+Dependencies:
+- _cffi_errors.h
+
+### \ai\ai6\JARVIS-AI\.venv\Lib\site-packages\cffi\_cffi_include.h
+Dependencies:
+- Python.h
+- stddef.h
+- parse_c_type.h
+
+### \ai\ai6\JARVIS-AI\.venv\Lib\site-packages\cffi\_cffi_errors.h
+No dependencies found
+
+### \ai\ai6\JARVIS-AI\.venv\Lib\site-packages\cffi\parse_c_type.h
+No dependencies found
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\_surface.h
+Dependencies:
+- _pygame.h
+- surface.h
+
+## C Dependencies
+
+### \ai\ai6\JARVIS-AI\.venv\Lib\site-packages\zope\interface\_zope_interface_coptimizations.c
+Dependencies:
+- Python.h
+- structmember.h
+
+## TSX Dependencies
+
+### \.vercel\cache\models_py\RealityAI_Rubric_Generator\src\ui\RubricForm.tsx
+Dependencies:
+- react
+- ../logic/parseUpload
+- ../logic/fetchUrlText
+- ../logic/buildRubric
+- ../export/toPdf
+- ../export/toDocsx
+
+### \.vercel\cache\models_py\RealityAI_Rubric_Generator\src\main.tsx
+Dependencies:
+- react
+- react-dom/client
+- ./App
+
+### \.vercel\cache\models_py\RealityAI_Rubric_Generator\src\App.tsx
+Dependencies:
+- react
+- ./ui/RubricForm
+
+### \RealityAI_Rubric_Generator\src\ui\RubricForm.tsx
+Dependencies:
+- react
+- ../logic/parseUpload
+- ../logic/fetchUrlText
+- ../logic/buildRubric
+- ../export/toPdf
+- ../export/toDocsx
+
+### \RealityAI_Rubric_Generator\src\main.tsx
+Dependencies:
+- react
+- react-dom/client
+- ./App
+
+## TS Dependencies
+
+### \.vercel\cache\models_py\RealityAI_Rubric_Generator\src\types\pptx-parser.d.ts
+No dependencies found
+
+### \.vercel\cache\models_py\RealityAI_Rubric_Generator\src\types\pdfjs-dist.d.ts
+No dependencies found
+
+### \.vercel\cache\models_py\RealityAI_Rubric_Generator\src\types\papaparse.d.ts
+No dependencies found
+
+### \.vercel\cache\models_py\RealityAI_Rubric_Generator\src\types\mammoth.d.ts
+No dependencies found
+
+### \.vercel\cache\models_py\RealityAI_Rubric_Generator\src\types\jspdf.d.ts
+No dependencies found
+
+
+
+## Project Directory Structure
+
+- 📂 ai/
+  - 📂 ai1/
+    - 📂 public/
+      - 📄 ai.html
+    - 📂 scripts/
+      - 📄 ai.js
+    - 📂 styles/
+      - 📄 styles_ai.css
+    - 📄 Ai.html
+  - 📂 ai2/
+    - 📂 public/
+      - 📄 ai2.html
+    - 📂 scripts/
+      - 📄 ai2.js
+    - 📂 styles/
+      - 📄 styles_ai2.css
+    - 📄 Ai2_ORGANIZED_BACKUP.html
+    - 📄 Ai2_WORKING_BACKUP.html
+  - 📂 ai3/
+    - 📂 public/
+      - 📄 AI_v3.html
+    - 📂 scripts/
+      - 📄 ai_v3_main.js
+    - 📂 styles/
+      - 📄 ai_v3_styles.css
+    - 📄 AI_v3_ORGANIZED_BACKUP.html
+    - 📄 AI_v3.html
+    - 📄 app.py
+    - 📄 requirements.txt
+  - 📂 ai4/
+    - 📂 public/
+      - 📄 AI_v4.html
+    - 📂 scripts/
+      - 📄 ai_v4_main.js
+    - 📂 styles/
+      - 📄 ai_v4_styles.css
+    - 📄 AI_v4_ORGANIZED_BACKUP.html
+    - 📄 AI_v4.html
+  - 📂 ai5/
+    - 📂 ai5 files/
+      - 📂 public/
+        ...
+      - 📄 Check_JARVIS_Voices.bat
+    - 📂 JARVIS/
+      - 📂 CFX_UI_J.A.R.V.I.S/
+        ...
+      - 📂 GHV4_UI_J.A.R.V.I.S/
+        ...
+      - 📂 ProffieOS_V2_Voicepack_J.A.R.V.I.S/
+        ...
+      - 📂 SN4_UI_J.A.R.V.I.S/
+        ...
+      - 📂 Xeno2_UI_J.A.R.V.I.S/
+        ...
+      - 📂 Xeno3_UI_J.A.R.V.I.S/
+        ...
+      - 📄 boot.wav
+    - 📂 Jarvis-main/
+      - 📂 __pycache__/
+        ...
+      - 📂 Audio/
+        ...
+      - 📄 Jarvis RGB Effects Plugin Profile
+      - 📄 jarvis.py
+      - 📄 phrases.txt
+      - 📄 speaker_sample.wav
+      - 📄 Start_Voice_Bridge.bat
+      - 📄 voice_bridge.py
+    - 📂 public/
+      - 📄 AI_v5_JARVIS_CLEAN.html
+      - 📄 AI_v5_JARVIS.html
+      - 📄 AI_v5_nova.html
+    - 📂 scripts/
+      - 📄 nova_conversation_flow.js
+      - 📄 nova_integration.js
+      - 📄 nova_kb_store.js
+      - 📄 nova_main.js
+      - 📄 nova_page_mobile_call.js
+      - 📄 nova_page_ui.js
+      - 📄 nova_page_voice_fix.js
+      - 📄 nova_runtime_ai.js
+      - 📄 nova_runtime_chat.js
+      - 📄 nova_runtime_files.js
+      - 📄 nova_runtime_ui_events.js
+      - 📄 nova_runtime_ui_voice.js
+      - 📄 nova_runtime_voice_tools.js
+      - 📄 nova_voice_before_interrupt.js
+      - 📄 nova_voice.js
+    - 📂 styles/
+      - 📄 nova_styles.css
+    - 📄 voice_checker.html
+  - 📂 ai6/
+    - 📂 JARVIS-AI/
+      - 📂 Backend/
+        ...
+      - 📂 Data/
+        ...
+      - 📂 Frontend/
+        ...
+      - 📄 LICENSE
+      - 📄 Main.py
+      - 📄 Requirements.txt
+- 📂 api/
+  - 📂 __pycache__/
+    - 📄 chat.cpython-312.pyc
+    - 📄 submit_feedback.cpython-312.pyc
+  - 📄 chat.py
+  - 📄 submit_feedback.py
+- 📂 app/
+  - 📄 pages.html
+  - 📄 pages.js
+- 📂 docs/
+  - 📄 KennethO-Resume-Software-Engineer.pdf
+- 📂 extracted-weather/
+  - 📂 WeatherForecast-main/
+    - 📂 public/
+      - 📄 file.svg
+      - 📄 globe.svg
+      - 📄 next.svg
+      - 📄 vercel.svg
+      - 📄 window.svg
+    - 📂 src/
+      - 📂 app/
+        ...
+    - 📄 eslint.config.mjs
+    - 📄 next.config.mjs
+- 📂 Images/
+  - 📄 main.JPG
+- 📂 lesson_plan_generator/
+  - 📂 prompt/
+    - 📄 lesson_plan_prompt.txt
+  - 📂 public/
+    - 📄 app.py
+    - 📄 lesson_plan.docx
+    - 📄 lesson_planner_p1_backup_6_25_2025.html
+    - 📄 lesson_planner_p1.html
+    - 📄 lesson_planner_p2_backup_6_25_2025.html
+    - 📄 lesson_planner_p2.html
+  - 📂 src/
+    - 📄 core.py
+    - 📄 lesson_planner_p1.js
+    - 📄 lesson_planner_p2.js
+    - 📄 tools.py
+  - 📂 styles/
+    - 📄 style_p1.css
+    - 📄 style_p2.css
+  - 📄 Lesson Plan Generator.docx
+  - 📄 requirements.txt
+- 📂 presentation_generator/
+  - 📂 public/
+    - 📄 pg_p1.html
+    - 📄 pg_p2_smart.html
+    - 📄 pg_p2.html
+    - 📄 pg_p3.html
+  - 📂 src/
+    - 📄 pg_p1.js
+    - 📄 pg_p2.js
+    - 📄 pg_p3.js
+  - 📂 styles/
+    - 📄 style_p1.css
+    - 📄 style_p2.css
+- 📂 public/
+- 📂 RandomFact/
+  - 📄 randfact.html
+  - 📄 randfact2.html
+  - 📄 scripts.js
+  - 📄 scripts2.js
+  - 📄 style3_2.css
+  - 📄 style3.css
+- 📂 RealityAI_Lesson_Planner/
+  - 📂 public/
+    - 📄 app.py
+    - 📄 lesson_plan.docx
+    - 📄 lesson_planner_p1_backup_6_25_2025.html
+    - 📄 lesson_planner_p1.html
+    - 📄 lesson_planner_p2_backup_6_25_2025.html
+    - 📄 lesson_planner_p2.html
+  - 📂 src/
+    - 📄 core.py
+    - 📄 tools.py
+  - 📄 requirements.txt
+- 📂 RealityAI_Rubric_Generator/
+  - 📂 __pycache__/
+    - 📄 __init__.cpython-312.pyc
+    - 📄 core.cpython-312.pyc
+    - 📄 test_core.cpython-312-pytest-7.4.4.pyc
+    - 📄 test_tools.cpython-312-pytest-7.4.4.pyc
+    - 📄 tools.cpython-312.pyc
+  - 📂 public/
+    - 📄 rubric_gen_p1.html
+    - 📄 rubric_template_p2.html
+  - 📂 src/
+    - 📂 export/
+      - 📄 toDocsx.ts
+      - 📄 toPdf.ts
+    - 📂 logic/
+      - 📄 buildRubric.ts
+      - 📄 fetchUrlText.ts
+      - 📄 parseUpload.ts
+    - 📂 types/
+      - 📄 cheerio.d.ts
+      - 📄 html-to-docx.d.ts
+      - 📄 html2canvas.d.ts
+      - 📄 jspdf.d.ts
+      - 📄 mammoth.d.ts
+      - 📄 papaparse.d.ts
+      - 📄 pdfjs-dist.d.ts
+      - 📄 pptx-parser.d.ts
+    - 📂 ui/
+      - 📄 RubricForm.tsx
+    - 📄 App.tsx
+    - 📄 i18n.js
+    - 📄 main.tsx
+    - 📄 rubric.js
+  - 📂 test-results/
+  - 📂 tests/
+    - 📄 rubric_generation.test.js
+  - 📄 __init__.py
+  - 📄 core.py
+  - 📄 instructions
+  - 📄 test_core.py
+  - 📄 test_tools.py
+  - 📄 tools.py
+- 📂 Rubriks Cube/
+  - 📂 public/
+  - 📂 scripts/
+  - 📂 styles/
+- 📂 TicTacToe/
+  - 📄 tictactoe.css
+  - 📄 tictactoe.html
+  - 📄 tictactoe.js
+- 📂 ToughLuckv7/
+  - 📂 __pycache__/
+    - 📄 ToughLuckGameplay.cpython-312.pyc
+    - 📄 ToughLuckResults.cpython-312.pyc
+    - 📄 ToughLuckStart.cpython-312.pyc
+  - 📂 game-server/
+    - 📂 templates/
+      - 📄 index.html
+      - 📄 UserGameplay.html
+      - 📄 UserGUI.html
+      - 📄 UserResults.html
+      - 📄 UserStart.html
+    - 📄 app.py
+    - 📄 feedback.txt
+    - 📄 server.js
+  - 📂 public/
+    - 📄 game-logic.js
+    - 📄 UserGameplay.html
+    - 📄 UserGUI.html
+    - 📄 UserResults.html
+    - 📄 UserStart.html
+  - 📂 src/
+    - 📂 __pycache__/
+      - 📄 ToughLuckGameplay.cpython-312.pyc
+      - 📄 ToughLuckResults.cpython-312.pyc
+      - 📄 ToughLuckStart.cpython-312.pyc
+    - 📄 TLIntro.py
+    - 📄 ToughLuckGameplay.py
+    - 📄 ToughLuckGameplayUpdated.py
+    - 📄 ToughLuckResults.py
+    - 📄 ToughLuckStart.py
+  - 📄 test_game.html
+- 📂 website-mirror/
+  - 📂 hooks/
+    - 📄 applypatch-msg.sample
+    - 📄 commit-msg.sample
+    - 📄 fsmonitor-watchman.sample
+    - 📄 post-update.sample
+    - 📄 pre-applypatch.sample
+    - 📄 pre-commit.sample
+    - 📄 pre-merge-commit.sample
+    - 📄 pre-push.sample
+    - 📄 pre-rebase.sample
+    - 📄 pre-receive.sample
+    - 📄 prepare-commit-msg.sample
+    - 📄 push-to-checkout.sample
+    - 📄 sendemail-validate.sample
+    - 📄 update.sample
+  - 📂 info/
+    - 📄 exclude
+    - 📄 refs
+  - 📂 objects/
+    - 📂 info/
+      - 📄 commit-graph
+      - 📄 packs
+    - 📂 pack/
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.bitmap
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.idx
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.pack
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.rev
+  - 📂 refs/
+    - 📂 heads/
+    - 📂 tags/
+  - 📄 config
+  - 📄 description
+  - 📄 HEAD
+  - 📄 packed-refs
+- 📂 website-recovery/
+  - 📂 app/
+    - 📄 pages.html
+    - 📄 pages.js
+  - 📂 docs/
+    - 📄 Kenneth-Okwu-Full-Stack Developer I.pdf
+  - 📂 Images/
+    - 📄 main.JPG
+  - 📂 lesson_plan_generator/
+  - 📂 RandomFact/
+    - 📄 randfact.html
+    - 📄 randfact2.html
+    - 📄 scripts.js
+    - 📄 scripts2.js
+    - 📄 style3_2.css
+    - 📄 style3.css
+  - 📂 RealityAI_Lesson_Planner/
+    - 📂 public/
+      - 📄 app.py
+      - 📄 lesson_plan.docx
+      - 📄 lesson_planner_p1_backup_6_25_2025.html
+      - 📄 lesson_planner_p1.html
+      - 📄 lesson_planner_p2_backup_6_25_2025.html
+      - 📄 lesson_planner_p2.html
+    - 📂 src/
+      - 📄 core.py
+      - 📄 tools.py
+    - 📄 requirements.txt
+  - 📂 RealityAI_Rubric_Generator/
+  - 📂 ToughLuckv7/
+    - 📂 __pycache__/
+      - 📄 ToughLuckGameplay.cpython-312.pyc
+      - 📄 ToughLuckResults.cpython-312.pyc
+      - 📄 ToughLuckStart.cpython-312.pyc
+    - 📂 game-server/
+      - 📂 templates/
+        ...
+      - 📄 app.py
+      - 📄 feedback.txt
+      - 📄 server.js
+    - 📂 src/
+      - 📂 __pycache__/
+        ...
+      - 📄 TLIntro.py
+      - 📄 ToughLuckGameplay.py
+      - 📄 ToughLuckGameplayUpdated.py
+      - 📄 ToughLuckResults.py
+      - 📄 ToughLuckStart.py
+    - 📄 test_game.html
+  - 📂 WeatherForcaster/
+    - 📂 pages/
+      - 📄 index.js
+    - 📂 public/
+      - 📄 WF_p1.html
+    - 📂 src/
+      - 📄 App.js
+      - 📄 WeatherPage.js
+    - 📂 styles/
+      - 📄 styles.css
+  - 📂 website-mirror/
+    - 📂 hooks/
+      - 📄 applypatch-msg.sample
+      - 📄 commit-msg.sample
+      - 📄 fsmonitor-watchman.sample
+      - 📄 post-update.sample
+      - 📄 pre-applypatch.sample
+      - 📄 pre-commit.sample
+      - 📄 pre-merge-commit.sample
+      - 📄 pre-push.sample
+      - 📄 pre-rebase.sample
+      - 📄 pre-receive.sample
+      - 📄 prepare-commit-msg.sample
+      - 📄 push-to-checkout.sample
+      - 📄 sendemail-validate.sample
+      - 📄 update.sample
+    - 📂 info/
+      - 📄 exclude
+      - 📄 refs
+    - 📂 objects/
+      - 📂 info/
+        ...
+      - 📂 pack/
+        ...
+    - 📄 config
+    - 📄 description
+    - 📄 HEAD
+    - 📄 packed-refs
+  - 📂 xweatherforcast/
+  - 📄 Contact.html
+  - 📄 Games.html
+  - 📄 Home.html
+  - 📄 navbar.html
+  - 📄 Projects.html
+  - 📄 style.css
+  - 📄 style.css-Nova
+  - 📄 style2.css
+- 📄 AI_Development_Guide_Simple_Version.docx
+- 📄 AI_Development_Guide_v1_and_v2.docx
+- 📄 AI5_Creation_Documentation.docx
+- 📄 Contact.html
+- 📄 Games.html
+- 📄 index.html
+- 📄 MyProject_ws.code-workspace
+- 📄 navbar.html
+- 📄 portfolio.css
+- 📄 portfolio.js
+- 📄 Projects.html
+- 📄 requirements.txt
+- 📄 style.css
+- 📄 style.css-Nova
+- 📄 style2.css
+
+
+## PY Dependencies
+
+### \api\submit_feedback.py
+Dependencies:
+- json
+- os
+- smtplib
+- datetime
+- email.message
+- EmailMessage
+- http.server
+- BaseHTTPRequestHandler
+
+### \api\chat.py
+Dependencies:
+- json
+- os
+- re
+- requests
+- http.server
+- BaseHTTPRequestHandler
+- urllib.parse
+- quote
+
+### \RealityAI_Lesson_Planner\src\tools.py
+Dependencies:
+- PyPDF2
+- csv
+- googletrans
+- Translator
+- the
+
+### \RealityAI_Lesson_Planner\src\core.py
+Dependencies:
+- logging
+- typing
+- Dict,
+- .tools
+- parse_pdf,
+
+### \ai\ai6\JARVIS-AI\Main.py
+Dependencies:
+- Frontend.GUI
+- (
+- Backend.Model
+- FirstLayerDMM
+- Backend.RealtimeSearchEngine
+- RealtimeSearchEngine
+- Backend.Automation
+- Automation
+- Backend.SpeechToText
+- SpeechRecognition
+- Backend.Chatbot
+- Chatbot
+- Backend.TextToSpeech
+- TextToSpeech
+- Backend.screen_analysis
+- analyze_once
+- Backend.CameraAnalysis
+- dotenv
+- dotenv_values
+- asyncio
+- run
+- time
+- sleep
+- subprocess
+- os
+- threading
+- json
+
+## JS Dependencies
+
+### \extracted-weather\WeatherForecast-main\src\app\page.js
+Dependencies:
+- ./components/BackButton
+- react
+- next/navigation
+- ./page.module.css
+
+### \extracted-weather\WeatherForecast-main\src\app\layout.js
+Dependencies:
+- next/font/google
+- ./globals.css
+
+### \presentation_generator\src\pg_p3.js
+No dependencies found
+
+### \presentation_generator\src\pg_p2.js
+No dependencies found
+
+### \presentation_generator\src\pg_p1.js
+No dependencies found
+
+## TSX Dependencies
+
+### \RealityAI_Rubric_Generator\src\main.tsx
+Dependencies:
+- react
+- react-dom/client
+- ./App
+
+### \RealityAI_Rubric_Generator\src\ui\RubricForm.tsx
+Dependencies:
+- react
+- ../logic/parseUpload
+- ../logic/fetchUrlText
+- ../logic/buildRubric
+- ../export/toPdf
+- ../export/toDocsx
+
+### \RealityAI_Rubric_Generator\src\App.tsx
+Dependencies:
+- react
+- ./ui/RubricForm
+
+## TS Dependencies
+
+### \RealityAI_Rubric_Generator\src\types\pptx-parser.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\pdfjs-dist.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\papaparse.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\mammoth.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\jspdf.d.ts
+No dependencies found
+
+## H Dependencies
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\_surface.h
+Dependencies:
+- _pygame.h
+- surface.h
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\_pygame.h
+Dependencies:
+- pgplatform.h
+- Python.h
+- SDL.h
+- include/_pygame.h
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\_camera.h
+Dependencies:
+- _pygame.h
+- camera.h
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\_blit_info.h
+Dependencies:
+- _surface.h
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\surface.h
+Dependencies:
+- SDL.h
+- pygame.h
+
+## C Dependencies
+
+### \ai\ai6\JARVIS-AI\.venv\Lib\site-packages\zope\interface\_zope_interface_coptimizations.c
+Dependencies:
+- Python.h
+- structmember.h
+
+
+
+## Project Directory Structure
+
+- 📂 ai/
+  - 📂 ai1/
+    - 📂 public/
+      - 📄 ai.html
+    - 📂 scripts/
+      - 📄 ai.js
+    - 📂 styles/
+      - 📄 styles_ai.css
+    - 📄 Ai.html
+  - 📂 ai2/
+    - 📂 public/
+      - 📄 ai2.html
+    - 📂 scripts/
+      - 📄 ai2.js
+    - 📂 styles/
+      - 📄 styles_ai2.css
+    - 📄 Ai2_ORGANIZED_BACKUP.html
+    - 📄 Ai2_WORKING_BACKUP.html
+  - 📂 ai3/
+    - 📂 public/
+      - 📄 AI_v3.html
+    - 📂 scripts/
+      - 📄 ai_v3_main.js
+    - 📂 styles/
+      - 📄 ai_v3_styles.css
+    - 📄 AI_v3_ORGANIZED_BACKUP.html
+    - 📄 AI_v3.html
+    - 📄 app.py
+    - 📄 requirements.txt
+  - 📂 ai4/
+    - 📂 public/
+      - 📄 AI_v4.html
+    - 📂 scripts/
+      - 📄 ai_v4_main.js
+    - 📂 styles/
+      - 📄 ai_v4_styles.css
+    - 📄 AI_v4_ORGANIZED_BACKUP.html
+    - 📄 AI_v4.html
+  - 📂 ai5/
+    - 📂 ai5 files/
+      - 📂 public/
+        ...
+      - 📄 Check_JARVIS_Voices.bat
+    - 📂 JARVIS/
+      - 📂 CFX_UI_J.A.R.V.I.S/
+        ...
+      - 📂 GHV4_UI_J.A.R.V.I.S/
+        ...
+      - 📂 ProffieOS_V2_Voicepack_J.A.R.V.I.S/
+        ...
+      - 📂 SN4_UI_J.A.R.V.I.S/
+        ...
+      - 📂 Xeno2_UI_J.A.R.V.I.S/
+        ...
+      - 📂 Xeno3_UI_J.A.R.V.I.S/
+        ...
+      - 📄 boot.wav
+    - 📂 Jarvis-main/
+      - 📂 __pycache__/
+        ...
+      - 📂 Audio/
+        ...
+      - 📄 Jarvis RGB Effects Plugin Profile
+      - 📄 jarvis.py
+      - 📄 phrases.txt
+      - 📄 speaker_sample.wav
+      - 📄 Start_Voice_Bridge.bat
+      - 📄 voice_bridge.py
+    - 📂 public/
+      - 📄 AI_v5_JARVIS_CLEAN.html
+      - 📄 AI_v5_JARVIS.html
+      - 📄 AI_v5_nova.html
+    - 📂 scripts/
+      - 📄 nova_conversation_flow.js
+      - 📄 nova_integration.js
+      - 📄 nova_kb_store.js
+      - 📄 nova_main.js
+      - 📄 nova_page_mobile_call.js
+      - 📄 nova_page_ui.js
+      - 📄 nova_page_voice_fix.js
+      - 📄 nova_runtime_ai.js
+      - 📄 nova_runtime_chat.js
+      - 📄 nova_runtime_files.js
+      - 📄 nova_runtime_ui_events.js
+      - 📄 nova_runtime_ui_voice.js
+      - 📄 nova_runtime_voice_tools.js
+      - 📄 nova_voice_before_interrupt.js
+      - 📄 nova_voice.js
+    - 📂 styles/
+      - 📄 nova_styles.css
+    - 📄 voice_checker.html
+  - 📂 ai6/
+    - 📂 JARVIS-AI/
+      - 📂 Backend/
+        ...
+      - 📂 Data/
+        ...
+      - 📂 Frontend/
+        ...
+      - 📄 LICENSE
+      - 📄 Main.py
+      - 📄 Requirements.txt
+- 📂 api/
+  - 📂 __pycache__/
+    - 📄 chat.cpython-312.pyc
+    - 📄 submit_feedback.cpython-312.pyc
+  - 📄 chat.py
+  - 📄 submit_feedback.py
+- 📂 app/
+  - 📄 pages.html
+  - 📄 pages.js
+- 📂 docs/
+  - 📄 KennethO-Resume-Software-Engineer.pdf
+- 📂 extracted-weather/
+  - 📂 WeatherForecast-main/
+    - 📂 public/
+      - 📄 file.svg
+      - 📄 globe.svg
+      - 📄 next.svg
+      - 📄 vercel.svg
+      - 📄 window.svg
+    - 📂 src/
+      - 📂 app/
+        ...
+    - 📄 eslint.config.mjs
+    - 📄 next.config.mjs
+- 📂 Images/
+  - 📄 main.JPG
+- 📂 lesson_plan_generator/
+  - 📂 prompt/
+    - 📄 lesson_plan_prompt.txt
+  - 📂 public/
+    - 📄 app.py
+    - 📄 lesson_plan.docx
+    - 📄 lesson_planner_p1_backup_6_25_2025.html
+    - 📄 lesson_planner_p1.html
+    - 📄 lesson_planner_p2_backup_6_25_2025.html
+    - 📄 lesson_planner_p2.html
+  - 📂 src/
+    - 📄 core.py
+    - 📄 lesson_planner_p1.js
+    - 📄 lesson_planner_p2.js
+    - 📄 tools.py
+  - 📂 styles/
+    - 📄 style_p1.css
+    - 📄 style_p2.css
+  - 📄 Lesson Plan Generator.docx
+  - 📄 requirements.txt
+- 📂 presentation_generator/
+  - 📂 public/
+    - 📄 pg_p1.html
+    - 📄 pg_p2_smart.html
+    - 📄 pg_p2.html
+    - 📄 pg_p3.html
+  - 📂 src/
+    - 📄 pg_p1.js
+    - 📄 pg_p2.js
+    - 📄 pg_p3.js
+  - 📂 styles/
+    - 📄 style_p1.css
+    - 📄 style_p2.css
+- 📂 public/
+- 📂 RandomFact/
+  - 📄 randfact.html
+  - 📄 randfact2.html
+  - 📄 scripts.js
+  - 📄 scripts2.js
+  - 📄 style3_2.css
+  - 📄 style3.css
+- 📂 RealityAI_Lesson_Planner/
+  - 📂 public/
+    - 📄 app.py
+    - 📄 lesson_plan.docx
+    - 📄 lesson_planner_p1_backup_6_25_2025.html
+    - 📄 lesson_planner_p1.html
+    - 📄 lesson_planner_p2_backup_6_25_2025.html
+    - 📄 lesson_planner_p2.html
+  - 📂 src/
+    - 📄 core.py
+    - 📄 tools.py
+  - 📄 requirements.txt
+- 📂 RealityAI_Rubric_Generator/
+  - 📂 __pycache__/
+    - 📄 __init__.cpython-312.pyc
+    - 📄 core.cpython-312.pyc
+    - 📄 test_core.cpython-312-pytest-7.4.4.pyc
+    - 📄 test_tools.cpython-312-pytest-7.4.4.pyc
+    - 📄 tools.cpython-312.pyc
+  - 📂 public/
+    - 📄 rubric_gen_p1.html
+    - 📄 rubric_template_p2.html
+  - 📂 src/
+    - 📂 export/
+      - 📄 toDocsx.ts
+      - 📄 toPdf.ts
+    - 📂 logic/
+      - 📄 buildRubric.ts
+      - 📄 fetchUrlText.ts
+      - 📄 parseUpload.ts
+    - 📂 types/
+      - 📄 cheerio.d.ts
+      - 📄 html-to-docx.d.ts
+      - 📄 html2canvas.d.ts
+      - 📄 jspdf.d.ts
+      - 📄 mammoth.d.ts
+      - 📄 papaparse.d.ts
+      - 📄 pdfjs-dist.d.ts
+      - 📄 pptx-parser.d.ts
+    - 📂 ui/
+      - 📄 RubricForm.tsx
+    - 📄 App.tsx
+    - 📄 i18n.js
+    - 📄 main.tsx
+    - 📄 rubric.js
+  - 📂 test-results/
+  - 📂 tests/
+    - 📄 rubric_generation.test.js
+  - 📄 __init__.py
+  - 📄 core.py
+  - 📄 instructions
+  - 📄 test_core.py
+  - 📄 test_tools.py
+  - 📄 tools.py
+- 📂 Rubriks Cube/
+  - 📂 public/
+  - 📂 scripts/
+  - 📂 styles/
+- 📂 TicTacToe/
+  - 📄 tictactoe.css
+  - 📄 tictactoe.html
+  - 📄 tictactoe.js
+- 📂 ToughLuckv7/
+  - 📂 __pycache__/
+    - 📄 ToughLuckGameplay.cpython-312.pyc
+    - 📄 ToughLuckResults.cpython-312.pyc
+    - 📄 ToughLuckStart.cpython-312.pyc
+  - 📂 game-server/
+    - 📂 templates/
+      - 📄 index.html
+      - 📄 UserGameplay.html
+      - 📄 UserGUI.html
+      - 📄 UserResults.html
+      - 📄 UserStart.html
+    - 📄 app.py
+    - 📄 feedback.txt
+    - 📄 server.js
+  - 📂 public/
+    - 📄 game-logic.js
+    - 📄 UserGameplay.html
+    - 📄 UserGUI.html
+    - 📄 UserResults.html
+    - 📄 UserStart.html
+  - 📂 src/
+    - 📂 __pycache__/
+      - 📄 ToughLuckGameplay.cpython-312.pyc
+      - 📄 ToughLuckResults.cpython-312.pyc
+      - 📄 ToughLuckStart.cpython-312.pyc
+    - 📄 TLIntro.py
+    - 📄 ToughLuckGameplay.py
+    - 📄 ToughLuckGameplayUpdated.py
+    - 📄 ToughLuckResults.py
+    - 📄 ToughLuckStart.py
+  - 📄 test_game.html
+- 📂 website-mirror/
+  - 📂 hooks/
+    - 📄 applypatch-msg.sample
+    - 📄 commit-msg.sample
+    - 📄 fsmonitor-watchman.sample
+    - 📄 post-update.sample
+    - 📄 pre-applypatch.sample
+    - 📄 pre-commit.sample
+    - 📄 pre-merge-commit.sample
+    - 📄 pre-push.sample
+    - 📄 pre-rebase.sample
+    - 📄 pre-receive.sample
+    - 📄 prepare-commit-msg.sample
+    - 📄 push-to-checkout.sample
+    - 📄 sendemail-validate.sample
+    - 📄 update.sample
+  - 📂 info/
+    - 📄 exclude
+    - 📄 refs
+  - 📂 objects/
+    - 📂 info/
+      - 📄 commit-graph
+      - 📄 packs
+    - 📂 pack/
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.bitmap
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.idx
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.pack
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.rev
+  - 📂 refs/
+    - 📂 heads/
+    - 📂 tags/
+  - 📄 config
+  - 📄 description
+  - 📄 HEAD
+  - 📄 packed-refs
+- 📂 website-recovery/
+  - 📂 app/
+    - 📄 pages.html
+    - 📄 pages.js
+  - 📂 docs/
+    - 📄 Kenneth-Okwu-Full-Stack Developer I.pdf
+  - 📂 Images/
+    - 📄 main.JPG
+  - 📂 lesson_plan_generator/
+  - 📂 RandomFact/
+    - 📄 randfact.html
+    - 📄 randfact2.html
+    - 📄 scripts.js
+    - 📄 scripts2.js
+    - 📄 style3_2.css
+    - 📄 style3.css
+  - 📂 RealityAI_Lesson_Planner/
+    - 📂 public/
+      - 📄 app.py
+      - 📄 lesson_plan.docx
+      - 📄 lesson_planner_p1_backup_6_25_2025.html
+      - 📄 lesson_planner_p1.html
+      - 📄 lesson_planner_p2_backup_6_25_2025.html
+      - 📄 lesson_planner_p2.html
+    - 📂 src/
+      - 📄 core.py
+      - 📄 tools.py
+    - 📄 requirements.txt
+  - 📂 RealityAI_Rubric_Generator/
+  - 📂 ToughLuckv7/
+    - 📂 __pycache__/
+      - 📄 ToughLuckGameplay.cpython-312.pyc
+      - 📄 ToughLuckResults.cpython-312.pyc
+      - 📄 ToughLuckStart.cpython-312.pyc
+    - 📂 game-server/
+      - 📂 templates/
+        ...
+      - 📄 app.py
+      - 📄 feedback.txt
+      - 📄 server.js
+    - 📂 src/
+      - 📂 __pycache__/
+        ...
+      - 📄 TLIntro.py
+      - 📄 ToughLuckGameplay.py
+      - 📄 ToughLuckGameplayUpdated.py
+      - 📄 ToughLuckResults.py
+      - 📄 ToughLuckStart.py
+    - 📄 test_game.html
+  - 📂 WeatherForcaster/
+    - 📂 pages/
+      - 📄 index.js
+    - 📂 public/
+      - 📄 WF_p1.html
+    - 📂 src/
+      - 📄 App.js
+      - 📄 WeatherPage.js
+    - 📂 styles/
+      - 📄 styles.css
+  - 📂 website-mirror/
+    - 📂 hooks/
+      - 📄 applypatch-msg.sample
+      - 📄 commit-msg.sample
+      - 📄 fsmonitor-watchman.sample
+      - 📄 post-update.sample
+      - 📄 pre-applypatch.sample
+      - 📄 pre-commit.sample
+      - 📄 pre-merge-commit.sample
+      - 📄 pre-push.sample
+      - 📄 pre-rebase.sample
+      - 📄 pre-receive.sample
+      - 📄 prepare-commit-msg.sample
+      - 📄 push-to-checkout.sample
+      - 📄 sendemail-validate.sample
+      - 📄 update.sample
+    - 📂 info/
+      - 📄 exclude
+      - 📄 refs
+    - 📂 objects/
+      - 📂 info/
+        ...
+      - 📂 pack/
+        ...
+    - 📄 config
+    - 📄 description
+    - 📄 HEAD
+    - 📄 packed-refs
+  - 📂 xweatherforcast/
+  - 📄 Contact.html
+  - 📄 Games.html
+  - 📄 Home.html
+  - 📄 navbar.html
+  - 📄 Projects.html
+  - 📄 style.css
+  - 📄 style.css-Nova
+  - 📄 style2.css
+- 📄 AI_Development_Guide_Simple_Version.docx
+- 📄 AI_Development_Guide_v1_and_v2.docx
+- 📄 AI5_Creation_Documentation.docx
+- 📄 Contact.html
+- 📄 Games.html
+- 📄 index.html
+- 📄 MyProject_ws.code-workspace
+- 📄 navbar.html
+- 📄 portfolio.css
+- 📄 portfolio.js
+- 📄 Projects.html
+- 📄 requirements.txt
+- 📄 style.css
+- 📄 style.css-Nova
+- 📄 style2.css
+
+
+## JS Dependencies
+
+### \portfolio.js
+No dependencies found
+
+### \app\pages.js
+No dependencies found
+
+### \lesson_plan_generator\src\lesson_planner_p2.js
+No dependencies found
+
+### \lesson_plan_generator\src\lesson_planner_p1.js
+No dependencies found
+
+### \extracted-weather\WeatherForecast-main\src\app\page.js
+Dependencies:
+- ./components/BackButton
+- react
+- next/navigation
+- ./page.module.css
+
+## PY Dependencies
+
+### \api\chat.py
+Dependencies:
+- json
+- os
+- re
+- requests
+- http.server
+- BaseHTTPRequestHandler
+- urllib.parse
+- quote
+
+### \api\submit_feedback.py
+Dependencies:
+- json
+- os
+- smtplib
+- datetime
+- email.message
+- EmailMessage
+- http.server
+- BaseHTTPRequestHandler
+
+### \lesson_plan_generator\src\tools.py
+Dependencies:
+- PyPDF2
+- csv
+- googletrans
+- Translator
+- the
+
+### \lesson_plan_generator\src\core.py
+Dependencies:
+- logging
+- typing
+- Dict,
+- .tools
+- parse_pdf,
+
+### \ai\ai6\JARVIS-AI\Main.py
+Dependencies:
+- Frontend.GUI
+- (
+- Backend.Model
+- FirstLayerDMM
+- Backend.RealtimeSearchEngine
+- RealtimeSearchEngine
+- Backend.Automation
+- Automation
+- Backend.SpeechToText
+- SpeechRecognition
+- Backend.Chatbot
+- Chatbot
+- Backend.TextToSpeech
+- TextToSpeech
+- Backend.screen_analysis
+- analyze_once
+- Backend.CameraAnalysis
+- dotenv
+- dotenv_values
+- asyncio
+- run
+- time
+- sleep
+- subprocess
+- os
+- threading
+- json
+
+## TSX Dependencies
+
+### \RealityAI_Rubric_Generator\src\ui\RubricForm.tsx
+Dependencies:
+- react
+- ../logic/parseUpload
+- ../logic/fetchUrlText
+- ../logic/buildRubric
+- ../export/toPdf
+- ../export/toDocsx
+
+### \RealityAI_Rubric_Generator\src\main.tsx
+Dependencies:
+- react
+- react-dom/client
+- ./App
+
+### \RealityAI_Rubric_Generator\src\App.tsx
+Dependencies:
+- react
+- ./ui/RubricForm
+
+## TS Dependencies
+
+### \RealityAI_Rubric_Generator\src\types\pptx-parser.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\pdfjs-dist.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\papaparse.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\mammoth.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\jspdf.d.ts
+No dependencies found
+
+## H Dependencies
+
+### \ai\ai6\JARVIS-AI\.venv\Lib\site-packages\cffi\_embedding.h
+Dependencies:
+- _cffi_errors.h
+
+### \ai\ai6\JARVIS-AI\.venv\Lib\site-packages\cffi\_cffi_include.h
+Dependencies:
+- Python.h
+- stddef.h
+- parse_c_type.h
+
+### \ai\ai6\JARVIS-AI\.venv\Lib\site-packages\cffi\_cffi_errors.h
+No dependencies found
+
+### \ai\ai6\JARVIS-AI\.venv\Lib\site-packages\cffi\parse_c_type.h
+No dependencies found
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\_surface.h
+Dependencies:
+- _pygame.h
+- surface.h
+
+## C Dependencies
+
+### \ai\ai6\JARVIS-AI\.venv\Lib\site-packages\zope\interface\_zope_interface_coptimizations.c
+Dependencies:
+- Python.h
+- structmember.h
+
+
+
+## Project Directory Structure
+
+- 📂 ai/
+  - 📂 ai1/
+    - 📂 public/
+      - 📄 ai.html
+    - 📂 scripts/
+      - 📄 ai.js
+    - 📂 styles/
+      - 📄 styles_ai.css
+    - 📄 Ai.html
+  - 📂 ai2/
+    - 📂 public/
+      - 📄 ai2.html
+    - 📂 scripts/
+      - 📄 ai2.js
+    - 📂 styles/
+      - 📄 styles_ai2.css
+    - 📄 Ai2_ORGANIZED_BACKUP.html
+    - 📄 Ai2_WORKING_BACKUP.html
+  - 📂 ai3/
+    - 📂 public/
+      - 📄 AI_v3.html
+    - 📂 scripts/
+      - 📄 ai_v3_main.js
+    - 📂 styles/
+      - 📄 ai_v3_styles.css
+    - 📄 AI_v3_ORGANIZED_BACKUP.html
+    - 📄 AI_v3.html
+    - 📄 app.py
+    - 📄 requirements.txt
+  - 📂 ai4/
+    - 📂 public/
+      - 📄 AI_v4.html
+    - 📂 scripts/
+      - 📄 ai_v4_main.js
+    - 📂 styles/
+      - 📄 ai_v4_styles.css
+    - 📄 AI_v4_ORGANIZED_BACKUP.html
+    - 📄 AI_v4.html
+  - 📂 ai5/
+    - 📂 ai5 files/
+      - 📂 public/
+        ...
+      - 📄 Check_JARVIS_Voices.bat
+    - 📂 JARVIS/
+      - 📂 CFX_UI_J.A.R.V.I.S/
+        ...
+      - 📂 GHV4_UI_J.A.R.V.I.S/
+        ...
+      - 📂 ProffieOS_V2_Voicepack_J.A.R.V.I.S/
+        ...
+      - 📂 SN4_UI_J.A.R.V.I.S/
+        ...
+      - 📂 Xeno2_UI_J.A.R.V.I.S/
+        ...
+      - 📂 Xeno3_UI_J.A.R.V.I.S/
+        ...
+      - 📄 boot.wav
+    - 📂 Jarvis-main/
+      - 📂 __pycache__/
+        ...
+      - 📂 Audio/
+        ...
+      - 📄 Jarvis RGB Effects Plugin Profile
+      - 📄 jarvis.py
+      - 📄 phrases.txt
+      - 📄 speaker_sample.wav
+      - 📄 Start_Voice_Bridge.bat
+      - 📄 voice_bridge.py
+    - 📂 public/
+      - 📄 AI_v5_JARVIS_CLEAN.html
+      - 📄 AI_v5_JARVIS.html
+      - 📄 AI_v5_nova.html
+    - 📂 scripts/
+      - 📄 nova_conversation_flow.js
+      - 📄 nova_integration.js
+      - 📄 nova_kb_store.js
+      - 📄 nova_main.js
+      - 📄 nova_page_mobile_call.js
+      - 📄 nova_page_ui.js
+      - 📄 nova_page_voice_fix.js
+      - 📄 nova_runtime_ai.js
+      - 📄 nova_runtime_chat.js
+      - 📄 nova_runtime_files.js
+      - 📄 nova_runtime_ui_events.js
+      - 📄 nova_runtime_ui_voice.js
+      - 📄 nova_runtime_voice_tools.js
+      - 📄 nova_voice_before_interrupt.js
+      - 📄 nova_voice.js
+    - 📂 styles/
+      - 📄 nova_styles.css
+    - 📄 voice_checker.html
+  - 📂 ai6/
+    - 📂 JARVIS-AI/
+      - 📂 Backend/
+        ...
+      - 📂 Data/
+        ...
+      - 📂 Frontend/
+        ...
+      - 📄 LICENSE
+      - 📄 Main.py
+      - 📄 Requirements.txt
+- 📂 api/
+  - 📂 __pycache__/
+    - 📄 chat.cpython-312.pyc
+    - 📄 submit_feedback.cpython-312.pyc
+  - 📄 chat.py
+  - 📄 submit_feedback.py
+- 📂 app/
+  - 📄 pages.html
+  - 📄 pages.js
+- 📂 docs/
+  - 📄 KennethO-Resume-Software-Engineer.pdf
+- 📂 extracted-weather/
+  - 📂 WeatherForecast-main/
+    - 📂 public/
+      - 📄 file.svg
+      - 📄 globe.svg
+      - 📄 next.svg
+      - 📄 vercel.svg
+      - 📄 window.svg
+    - 📂 src/
+      - 📂 app/
+        ...
+    - 📄 eslint.config.mjs
+    - 📄 next.config.mjs
+- 📂 Images/
+  - 📄 main.JPG
+- 📂 lesson_plan_generator/
+  - 📂 prompt/
+    - 📄 lesson_plan_prompt.txt
+  - 📂 public/
+    - 📄 app.py
+    - 📄 lesson_plan.docx
+    - 📄 lesson_planner_p1_backup_6_25_2025.html
+    - 📄 lesson_planner_p1.html
+    - 📄 lesson_planner_p2_backup_6_25_2025.html
+    - 📄 lesson_planner_p2.html
+  - 📂 src/
+    - 📄 core.py
+    - 📄 lesson_planner_p1.js
+    - 📄 lesson_planner_p2.js
+    - 📄 tools.py
+  - 📂 styles/
+    - 📄 style_p1.css
+    - 📄 style_p2.css
+  - 📄 Lesson Plan Generator.docx
+  - 📄 requirements.txt
+- 📂 presentation_generator/
+  - 📂 public/
+    - 📄 pg_p1.html
+    - 📄 pg_p2_smart.html
+    - 📄 pg_p2.html
+    - 📄 pg_p3.html
+  - 📂 src/
+    - 📄 pg_p1.js
+    - 📄 pg_p2.js
+    - 📄 pg_p3.js
+  - 📂 styles/
+    - 📄 style_p1.css
+    - 📄 style_p2.css
+- 📂 public/
+- 📂 RandomFact/
+  - 📄 randfact.html
+  - 📄 randfact2.html
+  - 📄 scripts.js
+  - 📄 scripts2.js
+  - 📄 style3_2.css
+  - 📄 style3.css
+- 📂 RealityAI_Lesson_Planner/
+  - 📂 public/
+    - 📄 app.py
+    - 📄 lesson_plan.docx
+    - 📄 lesson_planner_p1_backup_6_25_2025.html
+    - 📄 lesson_planner_p1.html
+    - 📄 lesson_planner_p2_backup_6_25_2025.html
+    - 📄 lesson_planner_p2.html
+  - 📂 src/
+    - 📄 core.py
+    - 📄 tools.py
+  - 📄 requirements.txt
+- 📂 RealityAI_Rubric_Generator/
+  - 📂 __pycache__/
+    - 📄 __init__.cpython-312.pyc
+    - 📄 core.cpython-312.pyc
+    - 📄 test_core.cpython-312-pytest-7.4.4.pyc
+    - 📄 test_tools.cpython-312-pytest-7.4.4.pyc
+    - 📄 tools.cpython-312.pyc
+  - 📂 public/
+    - 📄 rubric_gen_p1.html
+    - 📄 rubric_template_p2.html
+  - 📂 src/
+    - 📂 export/
+      - 📄 toDocsx.ts
+      - 📄 toPdf.ts
+    - 📂 logic/
+      - 📄 buildRubric.ts
+      - 📄 fetchUrlText.ts
+      - 📄 parseUpload.ts
+    - 📂 types/
+      - 📄 cheerio.d.ts
+      - 📄 html-to-docx.d.ts
+      - 📄 html2canvas.d.ts
+      - 📄 jspdf.d.ts
+      - 📄 mammoth.d.ts
+      - 📄 papaparse.d.ts
+      - 📄 pdfjs-dist.d.ts
+      - 📄 pptx-parser.d.ts
+    - 📂 ui/
+      - 📄 RubricForm.tsx
+    - 📄 App.tsx
+    - 📄 i18n.js
+    - 📄 main.tsx
+    - 📄 rubric.js
+  - 📂 test-results/
+  - 📂 tests/
+    - 📄 rubric_generation.test.js
+  - 📄 __init__.py
+  - 📄 core.py
+  - 📄 instructions
+  - 📄 test_core.py
+  - 📄 test_tools.py
+  - 📄 tools.py
+- 📂 TicTacToe/
+  - 📄 tictactoe.css
+  - 📄 tictactoe.html
+  - 📄 tictactoe.js
+- 📂 ToughLuckv7/
+  - 📂 __pycache__/
+    - 📄 ToughLuckGameplay.cpython-312.pyc
+    - 📄 ToughLuckResults.cpython-312.pyc
+    - 📄 ToughLuckStart.cpython-312.pyc
+  - 📂 game-server/
+    - 📂 templates/
+      - 📄 index.html
+      - 📄 UserGameplay.html
+      - 📄 UserGUI.html
+      - 📄 UserResults.html
+      - 📄 UserStart.html
+    - 📄 app.py
+    - 📄 feedback.txt
+    - 📄 server.js
+  - 📂 public/
+    - 📄 game-logic.js
+    - 📄 UserGameplay.html
+    - 📄 UserGUI.html
+    - 📄 UserResults.html
+    - 📄 UserStart.html
+  - 📂 src/
+    - 📂 __pycache__/
+      - 📄 ToughLuckGameplay.cpython-312.pyc
+      - 📄 ToughLuckResults.cpython-312.pyc
+      - 📄 ToughLuckStart.cpython-312.pyc
+    - 📄 TLIntro.py
+    - 📄 ToughLuckGameplay.py
+    - 📄 ToughLuckGameplayUpdated.py
+    - 📄 ToughLuckResults.py
+    - 📄 ToughLuckStart.py
+  - 📄 test_game.html
+- 📂 website-mirror/
+  - 📂 hooks/
+    - 📄 applypatch-msg.sample
+    - 📄 commit-msg.sample
+    - 📄 fsmonitor-watchman.sample
+    - 📄 post-update.sample
+    - 📄 pre-applypatch.sample
+    - 📄 pre-commit.sample
+    - 📄 pre-merge-commit.sample
+    - 📄 pre-push.sample
+    - 📄 pre-rebase.sample
+    - 📄 pre-receive.sample
+    - 📄 prepare-commit-msg.sample
+    - 📄 push-to-checkout.sample
+    - 📄 sendemail-validate.sample
+    - 📄 update.sample
+  - 📂 info/
+    - 📄 exclude
+    - 📄 refs
+  - 📂 objects/
+    - 📂 info/
+      - 📄 commit-graph
+      - 📄 packs
+    - 📂 pack/
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.bitmap
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.idx
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.pack
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.rev
+  - 📂 refs/
+    - 📂 heads/
+    - 📂 tags/
+  - 📄 config
+  - 📄 description
+  - 📄 HEAD
+  - 📄 packed-refs
+- 📂 website-recovery/
+  - 📂 app/
+    - 📄 pages.html
+    - 📄 pages.js
+  - 📂 docs/
+    - 📄 Kenneth-Okwu-Full-Stack Developer I.pdf
+  - 📂 Images/
+    - 📄 main.JPG
+  - 📂 lesson_plan_generator/
+  - 📂 RandomFact/
+    - 📄 randfact.html
+    - 📄 randfact2.html
+    - 📄 scripts.js
+    - 📄 scripts2.js
+    - 📄 style3_2.css
+    - 📄 style3.css
+  - 📂 RealityAI_Lesson_Planner/
+    - 📂 public/
+      - 📄 app.py
+      - 📄 lesson_plan.docx
+      - 📄 lesson_planner_p1_backup_6_25_2025.html
+      - 📄 lesson_planner_p1.html
+      - 📄 lesson_planner_p2_backup_6_25_2025.html
+      - 📄 lesson_planner_p2.html
+    - 📂 src/
+      - 📄 core.py
+      - 📄 tools.py
+    - 📄 requirements.txt
+  - 📂 RealityAI_Rubric_Generator/
+  - 📂 ToughLuckv7/
+    - 📂 __pycache__/
+      - 📄 ToughLuckGameplay.cpython-312.pyc
+      - 📄 ToughLuckResults.cpython-312.pyc
+      - 📄 ToughLuckStart.cpython-312.pyc
+    - 📂 game-server/
+      - 📂 templates/
+        ...
+      - 📄 app.py
+      - 📄 feedback.txt
+      - 📄 server.js
+    - 📂 src/
+      - 📂 __pycache__/
+        ...
+      - 📄 TLIntro.py
+      - 📄 ToughLuckGameplay.py
+      - 📄 ToughLuckGameplayUpdated.py
+      - 📄 ToughLuckResults.py
+      - 📄 ToughLuckStart.py
+    - 📄 test_game.html
+  - 📂 WeatherForcaster/
+    - 📂 pages/
+      - 📄 index.js
+    - 📂 public/
+      - 📄 WF_p1.html
+    - 📂 src/
+      - 📄 App.js
+      - 📄 WeatherPage.js
+    - 📂 styles/
+      - 📄 styles.css
+  - 📂 website-mirror/
+    - 📂 hooks/
+      - 📄 applypatch-msg.sample
+      - 📄 commit-msg.sample
+      - 📄 fsmonitor-watchman.sample
+      - 📄 post-update.sample
+      - 📄 pre-applypatch.sample
+      - 📄 pre-commit.sample
+      - 📄 pre-merge-commit.sample
+      - 📄 pre-push.sample
+      - 📄 pre-rebase.sample
+      - 📄 pre-receive.sample
+      - 📄 prepare-commit-msg.sample
+      - 📄 push-to-checkout.sample
+      - 📄 sendemail-validate.sample
+      - 📄 update.sample
+    - 📂 info/
+      - 📄 exclude
+      - 📄 refs
+    - 📂 objects/
+      - 📂 info/
+        ...
+      - 📂 pack/
+        ...
+    - 📄 config
+    - 📄 description
+    - 📄 HEAD
+    - 📄 packed-refs
+  - 📂 xweatherforcast/
+  - 📄 Contact.html
+  - 📄 Games.html
+  - 📄 Home.html
+  - 📄 navbar.html
+  - 📄 Projects.html
+  - 📄 style.css
+  - 📄 style.css-Nova
+  - 📄 style2.css
+- 📄 AI_Development_Guide_Simple_Version.docx
+- 📄 AI_Development_Guide_v1_and_v2.docx
+- 📄 AI5_Creation_Documentation.docx
+- 📄 Contact.html
+- 📄 Games.html
+- 📄 index.html
+- 📄 MyProject_ws.code-workspace
+- 📄 navbar.html
+- 📄 portfolio.css
+- 📄 portfolio.js
+- 📄 Projects.html
+- 📄 requirements.txt
+- 📄 style.css
+- 📄 style.css-Nova
+- 📄 style2.css
+
+
+## PY Dependencies
+
+### \RealityAI_Rubric_Generator\test_tools.py
+Dependencies:
+- pytest
+- RealityAI_Rubric_Generator.tools
+- parse_input,
+- RealityAI_Rubric_Generator.core
+- executor
+
+### \RealityAI_Rubric_Generator\test_core.py
+Dependencies:
+- pytest
+- RealityAI_Rubric_Generator.core
+- executor
+
+### \RealityAI_Rubric_Generator\tools.py
+Dependencies:
+- typing
+- Dict,
+
+### \RealityAI_Rubric_Generator\__init__.py
+No dependencies found
+
+### \website-recovery\RealityAI_Lesson_Planner\src\tools.py
+Dependencies:
+- PyPDF2
+- csv
+- googletrans
+- Translator
+- the
+
+## JS Dependencies
+
+### \RealityAI_Rubric_Generator\tests\rubric_generation.test.js
+Dependencies:
+- @playwright/test
+
+### \extracted-weather\WeatherForecast-main\src\app\page.js
+Dependencies:
+- ./components/BackButton
+- react
+- next/navigation
+- ./page.module.css
+
+### \extracted-weather\WeatherForecast-main\src\app\layout.js
+Dependencies:
+- next/font/google
+- ./globals.css
+
+### \presentation_generator\src\pg_p3.js
+No dependencies found
+
+### \presentation_generator\src\pg_p2.js
+No dependencies found
+
+## TSX Dependencies
+
+### \RealityAI_Rubric_Generator\src\ui\RubricForm.tsx
+Dependencies:
+- react
+- ../logic/parseUpload
+- ../logic/fetchUrlText
+- ../logic/buildRubric
+- ../export/toPdf
+- ../export/toDocsx
+
+### \RealityAI_Rubric_Generator\src\main.tsx
+Dependencies:
+- react
+- react-dom/client
+- ./App
+
+### \RealityAI_Rubric_Generator\src\App.tsx
+Dependencies:
+- react
+- ./ui/RubricForm
+
+## TS Dependencies
+
+### \RealityAI_Rubric_Generator\src\types\pptx-parser.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\pdfjs-dist.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\papaparse.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\mammoth.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\jspdf.d.ts
+No dependencies found
+
+## H Dependencies
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\_surface.h
+Dependencies:
+- _pygame.h
+- surface.h
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\_pygame.h
+Dependencies:
+- pgplatform.h
+- Python.h
+- SDL.h
+- include/_pygame.h
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\_camera.h
+Dependencies:
+- _pygame.h
+- camera.h
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\_blit_info.h
+Dependencies:
+- _surface.h
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\surface.h
+Dependencies:
+- SDL.h
+- pygame.h
+
+## C Dependencies
+
+### \ai\ai6\JARVIS-AI\.venv\Lib\site-packages\zope\interface\_zope_interface_coptimizations.c
+Dependencies:
+- Python.h
+- structmember.h
+
+
+
+## Project Directory Structure
+
+- 📂 ai/
+  - 📂 ai1/
+    - 📂 public/
+      - 📄 ai.html
+    - 📂 scripts/
+      - 📄 ai.js
+    - 📂 styles/
+      - 📄 styles_ai.css
+    - 📄 Ai.html
+  - 📂 ai2/
+    - 📂 public/
+      - 📄 ai2.html
+    - 📂 scripts/
+      - 📄 ai2.js
+    - 📂 styles/
+      - 📄 styles_ai2.css
+    - 📄 Ai2_ORGANIZED_BACKUP.html
+    - 📄 Ai2_WORKING_BACKUP.html
+  - 📂 ai3/
+    - 📂 public/
+      - 📄 AI_v3.html
+    - 📂 scripts/
+      - 📄 ai_v3_main.js
+    - 📂 styles/
+      - 📄 ai_v3_styles.css
+    - 📄 AI_v3_ORGANIZED_BACKUP.html
+    - 📄 AI_v3.html
+    - 📄 app.py
+    - 📄 requirements.txt
+  - 📂 ai4/
+    - 📂 public/
+      - 📄 AI_v4.html
+    - 📂 scripts/
+      - 📄 ai_v4_main.js
+    - 📂 styles/
+      - 📄 ai_v4_styles.css
+    - 📄 AI_v4_ORGANIZED_BACKUP.html
+    - 📄 AI_v4.html
+  - 📂 ai5/
+    - 📂 ai5 files/
+      - 📂 public/
+        ...
+      - 📄 Check_JARVIS_Voices.bat
+    - 📂 JARVIS/
+      - 📂 CFX_UI_J.A.R.V.I.S/
+        ...
+      - 📂 GHV4_UI_J.A.R.V.I.S/
+        ...
+      - 📂 ProffieOS_V2_Voicepack_J.A.R.V.I.S/
+        ...
+      - 📂 SN4_UI_J.A.R.V.I.S/
+        ...
+      - 📂 Xeno2_UI_J.A.R.V.I.S/
+        ...
+      - 📂 Xeno3_UI_J.A.R.V.I.S/
+        ...
+      - 📄 boot.wav
+    - 📂 Jarvis-main/
+      - 📂 __pycache__/
+        ...
+      - 📂 Audio/
+        ...
+      - 📄 Jarvis RGB Effects Plugin Profile
+      - 📄 jarvis.py
+      - 📄 phrases.txt
+      - 📄 speaker_sample.wav
+      - 📄 Start_Voice_Bridge.bat
+      - 📄 voice_bridge.py
+    - 📂 public/
+      - 📄 AI_v5_JARVIS_CLEAN.html
+      - 📄 AI_v5_JARVIS.html
+      - 📄 AI_v5_nova.html
+    - 📂 scripts/
+      - 📄 nova_conversation_flow.js
+      - 📄 nova_integration.js
+      - 📄 nova_kb_store.js
+      - 📄 nova_main.js
+      - 📄 nova_page_mobile_call.js
+      - 📄 nova_page_ui.js
+      - 📄 nova_page_voice_fix.js
+      - 📄 nova_runtime_ai.js
+      - 📄 nova_runtime_chat.js
+      - 📄 nova_runtime_files.js
+      - 📄 nova_runtime_ui_events.js
+      - 📄 nova_runtime_ui_voice.js
+      - 📄 nova_runtime_voice_tools.js
+      - 📄 nova_voice_before_interrupt.js
+      - 📄 nova_voice.js
+    - 📂 styles/
+      - 📄 nova_styles.css
+    - 📄 voice_checker.html
+  - 📂 ai6/
+    - 📂 JARVIS-AI/
+      - 📂 Backend/
+        ...
+      - 📂 Data/
+        ...
+      - 📂 Frontend/
+        ...
+      - 📄 LICENSE
+      - 📄 Main.py
+      - 📄 Requirements.txt
+- 📂 api/
+  - 📂 __pycache__/
+    - 📄 chat.cpython-312.pyc
+  - 📄 chat.py
+- 📂 app/
+  - 📄 pages.html
+  - 📄 pages.js
+- 📂 docs/
+  - 📄 Kenneth-Okwu-Software Engineer (32).pdf
+- 📂 extracted-weather/
+  - 📂 WeatherForecast-main/
+    - 📂 public/
+      - 📄 file.svg
+      - 📄 globe.svg
+      - 📄 next.svg
+      - 📄 vercel.svg
+      - 📄 window.svg
+    - 📂 src/
+      - 📂 app/
+        ...
+    - 📄 eslint.config.mjs
+    - 📄 next.config.mjs
+- 📂 Images/
+  - 📄 main.JPG
+- 📂 lesson_plan_generator/
+  - 📂 prompt/
+    - 📄 lesson_plan_prompt.txt
+  - 📂 public/
+    - 📄 app.py
+    - 📄 lesson_plan.docx
+    - 📄 lesson_planner_p1_backup_6_25_2025.html
+    - 📄 lesson_planner_p1.html
+    - 📄 lesson_planner_p2_backup_6_25_2025.html
+    - 📄 lesson_planner_p2.html
+  - 📂 src/
+    - 📄 core.py
+    - 📄 lesson_planner_p1.js
+    - 📄 lesson_planner_p2.js
+    - 📄 tools.py
+  - 📂 styles/
+    - 📄 style_p1.css
+    - 📄 style_p2.css
+  - 📄 Lesson Plan Generator.docx
+  - 📄 requirements.txt
+- 📂 presentation_generator/
+  - 📂 public/
+    - 📄 pg_p1.html
+    - 📄 pg_p2_smart.html
+    - 📄 pg_p2.html
+    - 📄 pg_p3.html
+  - 📂 src/
+    - 📄 pg_p1.js
+    - 📄 pg_p2.js
+    - 📄 pg_p3.js
+  - 📂 styles/
+    - 📄 style_p1.css
+    - 📄 style_p2.css
+- 📂 public/
+- 📂 RandomFact/
+  - 📄 randfact.html
+  - 📄 randfact2.html
+  - 📄 scripts.js
+  - 📄 scripts2.js
+  - 📄 style3_2.css
+  - 📄 style3.css
+- 📂 RealityAI_Lesson_Planner/
+  - 📂 public/
+    - 📄 app.py
+    - 📄 lesson_plan.docx
+    - 📄 lesson_planner_p1_backup_6_25_2025.html
+    - 📄 lesson_planner_p1.html
+    - 📄 lesson_planner_p2_backup_6_25_2025.html
+    - 📄 lesson_planner_p2.html
+  - 📂 src/
+    - 📄 core.py
+    - 📄 tools.py
+  - 📄 requirements.txt
+- 📂 RealityAI_Rubric_Generator/
+  - 📂 __pycache__/
+    - 📄 __init__.cpython-312.pyc
+    - 📄 core.cpython-312.pyc
+    - 📄 test_core.cpython-312-pytest-7.4.4.pyc
+    - 📄 test_tools.cpython-312-pytest-7.4.4.pyc
+    - 📄 tools.cpython-312.pyc
+  - 📂 public/
+    - 📄 rubric_gen_p1.html
+    - 📄 rubric_template_p2.html
+  - 📂 src/
+    - 📂 export/
+      - 📄 toDocsx.ts
+      - 📄 toPdf.ts
+    - 📂 logic/
+      - 📄 buildRubric.ts
+      - 📄 fetchUrlText.ts
+      - 📄 parseUpload.ts
+    - 📂 types/
+      - 📄 cheerio.d.ts
+      - 📄 html-to-docx.d.ts
+      - 📄 html2canvas.d.ts
+      - 📄 jspdf.d.ts
+      - 📄 mammoth.d.ts
+      - 📄 papaparse.d.ts
+      - 📄 pdfjs-dist.d.ts
+      - 📄 pptx-parser.d.ts
+    - 📂 ui/
+      - 📄 RubricForm.tsx
+    - 📄 App.tsx
+    - 📄 i18n.js
+    - 📄 main.tsx
+    - 📄 rubric.js
+  - 📂 test-results/
+  - 📂 tests/
+    - 📄 rubric_generation.test.js
+  - 📄 __init__.py
+  - 📄 core.py
+  - 📄 instructions
+  - 📄 test_core.py
+  - 📄 test_tools.py
+  - 📄 tools.py
+- 📂 TicTacToe/
+  - 📄 tictactoe.css
+  - 📄 tictactoe.html
+  - 📄 tictactoe.js
+- 📂 ToughLuckv7/
+  - 📂 __pycache__/
+    - 📄 ToughLuckGameplay.cpython-312.pyc
+    - 📄 ToughLuckResults.cpython-312.pyc
+    - 📄 ToughLuckStart.cpython-312.pyc
+  - 📂 game-server/
+    - 📂 templates/
+      - 📄 index.html
+      - 📄 UserGameplay.html
+      - 📄 UserGUI.html
+      - 📄 UserResults.html
+      - 📄 UserStart.html
+    - 📄 app.py
+    - 📄 feedback.txt
+    - 📄 server.js
+  - 📂 public/
+    - 📄 game-logic.js
+    - 📄 UserGameplay.html
+    - 📄 UserGUI.html
+    - 📄 UserResults.html
+    - 📄 UserStart.html
+  - 📂 src/
+    - 📂 __pycache__/
+      - 📄 ToughLuckGameplay.cpython-312.pyc
+      - 📄 ToughLuckResults.cpython-312.pyc
+      - 📄 ToughLuckStart.cpython-312.pyc
+    - 📄 TLIntro.py
+    - 📄 ToughLuckGameplay.py
+    - 📄 ToughLuckGameplayUpdated.py
+    - 📄 ToughLuckResults.py
+    - 📄 ToughLuckStart.py
+  - 📄 test_game.html
+- 📂 website-mirror/
+  - 📂 hooks/
+    - 📄 applypatch-msg.sample
+    - 📄 commit-msg.sample
+    - 📄 fsmonitor-watchman.sample
+    - 📄 post-update.sample
+    - 📄 pre-applypatch.sample
+    - 📄 pre-commit.sample
+    - 📄 pre-merge-commit.sample
+    - 📄 pre-push.sample
+    - 📄 pre-rebase.sample
+    - 📄 pre-receive.sample
+    - 📄 prepare-commit-msg.sample
+    - 📄 push-to-checkout.sample
+    - 📄 sendemail-validate.sample
+    - 📄 update.sample
+  - 📂 info/
+    - 📄 exclude
+    - 📄 refs
+  - 📂 objects/
+    - 📂 info/
+      - 📄 commit-graph
+      - 📄 packs
+    - 📂 pack/
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.bitmap
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.idx
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.pack
+      - 📄 pack-4b11e5103d8cd83d4d20b0e5d1090140d1032a8a.rev
+  - 📂 refs/
+    - 📂 heads/
+    - 📂 tags/
+  - 📄 config
+  - 📄 description
+  - 📄 HEAD
+  - 📄 packed-refs
+- 📂 website-recovery/
+  - 📂 app/
+    - 📄 pages.html
+    - 📄 pages.js
+  - 📂 docs/
+    - 📄 Kenneth-Okwu-Full-Stack Developer I.pdf
+  - 📂 Images/
+    - 📄 main.JPG
+  - 📂 lesson_plan_generator/
+  - 📂 RandomFact/
+    - 📄 randfact.html
+    - 📄 randfact2.html
+    - 📄 scripts.js
+    - 📄 scripts2.js
+    - 📄 style3_2.css
+    - 📄 style3.css
+  - 📂 RealityAI_Lesson_Planner/
+    - 📂 public/
+      - 📄 app.py
+      - 📄 lesson_plan.docx
+      - 📄 lesson_planner_p1_backup_6_25_2025.html
+      - 📄 lesson_planner_p1.html
+      - 📄 lesson_planner_p2_backup_6_25_2025.html
+      - 📄 lesson_planner_p2.html
+    - 📂 src/
+      - 📄 core.py
+      - 📄 tools.py
+    - 📄 requirements.txt
+  - 📂 RealityAI_Rubric_Generator/
+  - 📂 ToughLuckv7/
+    - 📂 __pycache__/
+      - 📄 ToughLuckGameplay.cpython-312.pyc
+      - 📄 ToughLuckResults.cpython-312.pyc
+      - 📄 ToughLuckStart.cpython-312.pyc
+    - 📂 game-server/
+      - 📂 templates/
+        ...
+      - 📄 app.py
+      - 📄 feedback.txt
+      - 📄 server.js
+    - 📂 src/
+      - 📂 __pycache__/
+        ...
+      - 📄 TLIntro.py
+      - 📄 ToughLuckGameplay.py
+      - 📄 ToughLuckGameplayUpdated.py
+      - 📄 ToughLuckResults.py
+      - 📄 ToughLuckStart.py
+    - 📄 test_game.html
+  - 📂 WeatherForcaster/
+    - 📂 pages/
+      - 📄 index.js
+    - 📂 public/
+      - 📄 WF_p1.html
+    - 📂 src/
+      - 📄 App.js
+      - 📄 WeatherPage.js
+    - 📂 styles/
+      - 📄 styles.css
+  - 📂 website-mirror/
+    - 📂 hooks/
+      - 📄 applypatch-msg.sample
+      - 📄 commit-msg.sample
+      - 📄 fsmonitor-watchman.sample
+      - 📄 post-update.sample
+      - 📄 pre-applypatch.sample
+      - 📄 pre-commit.sample
+      - 📄 pre-merge-commit.sample
+      - 📄 pre-push.sample
+      - 📄 pre-rebase.sample
+      - 📄 pre-receive.sample
+      - 📄 prepare-commit-msg.sample
+      - 📄 push-to-checkout.sample
+      - 📄 sendemail-validate.sample
+      - 📄 update.sample
+    - 📂 info/
+      - 📄 exclude
+      - 📄 refs
+    - 📂 objects/
+      - 📂 info/
+        ...
+      - 📂 pack/
+        ...
+    - 📄 config
+    - 📄 description
+    - 📄 HEAD
+    - 📄 packed-refs
+  - 📂 xweatherforcast/
+  - 📄 Contact.html
+  - 📄 Games.html
+  - 📄 Home.html
+  - 📄 navbar.html
+  - 📄 Projects.html
+  - 📄 style.css
+  - 📄 style.css-Nova
+  - 📄 style2.css
+- 📄 AI_Development_Guide_Simple_Version.docx
+- 📄 AI_Development_Guide_v1_and_v2.docx
+- 📄 AI5_Creation_Documentation.docx
+- 📄 Contact.html
+- 📄 Games.html
+- 📄 index.html
+- 📄 MyProject_ws.code-workspace
+- 📄 navbar.html
+- 📄 Projects.html
+- 📄 requirements.txt
+- 📄 style.css
+- 📄 style.css-Nova
+- 📄 style2.css
+
+
+## JS Dependencies
+
+### \RandomFact\scripts2.js
+No dependencies found
+
+### \app\pages.js
+No dependencies found
+
+### \presentation_generator\src\pg_p3.js
+No dependencies found
+
+### \RandomFact\scripts.js
+No dependencies found
+
+### \extracted-weather\WeatherForecast-main\src\app\page.js
+Dependencies:
+- ./components/BackButton
+- react
+- next/navigation
+- ./page.module.css
+
+## PY Dependencies
+
+### \RealityAI_Lesson_Planner\src\tools.py
+Dependencies:
+- PyPDF2
+- csv
+- googletrans
+- Translator
+- the
+
+### \ai\ai6\JARVIS-AI\Main.py
+Dependencies:
+- Frontend.GUI
+- (
+- Backend.Model
+- FirstLayerDMM
+- Backend.RealtimeSearchEngine
+- RealtimeSearchEngine
+- Backend.Automation
+- Automation
+- Backend.SpeechToText
+- SpeechRecognition
+- Backend.Chatbot
+- Chatbot
+- Backend.TextToSpeech
+- TextToSpeech
+- Backend.screen_analysis
+- analyze_once
+- Backend.CameraAnalysis
+- dotenv
+- dotenv_values
+- asyncio
+- run
+- time
+- sleep
+- subprocess
+- os
+- threading
+- json
+
+### \api\chat.py
+Dependencies:
+- json
+- os
+- re
+- requests
+- http.server
+- BaseHTTPRequestHandler
+- urllib.parse
+- quote
+
+### \lesson_plan_generator\src\tools.py
+Dependencies:
+- PyPDF2
+- csv
+- googletrans
+- Translator
+- the
+
+### \RealityAI_Lesson_Planner\src\core.py
+Dependencies:
+- logging
+- typing
+- Dict,
+- .tools
+- parse_pdf,
+
+## TSX Dependencies
+
+### \RealityAI_Rubric_Generator\src\ui\RubricForm.tsx
+Dependencies:
+- react
+- ../logic/parseUpload
+- ../logic/fetchUrlText
+- ../logic/buildRubric
+- ../export/toPdf
+- ../export/toDocsx
+
+### \RealityAI_Rubric_Generator\src\main.tsx
+Dependencies:
+- react
+- react-dom/client
+- ./App
+
+### \RealityAI_Rubric_Generator\src\App.tsx
+Dependencies:
+- react
+- ./ui/RubricForm
+
+## TS Dependencies
+
+### \RealityAI_Rubric_Generator\src\types\pptx-parser.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\pdfjs-dist.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\papaparse.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\mammoth.d.ts
+No dependencies found
+
+### \RealityAI_Rubric_Generator\src\types\jspdf.d.ts
+No dependencies found
+
+## H Dependencies
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\_surface.h
+Dependencies:
+- _pygame.h
+- surface.h
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\_pygame.h
+Dependencies:
+- pgplatform.h
+- Python.h
+- SDL.h
+- include/_pygame.h
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\_camera.h
+Dependencies:
+- _pygame.h
+- camera.h
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\_blit_info.h
+Dependencies:
+- _surface.h
+
+### \ai\ai6\JARVIS-AI\.venv\Include\site\python3.12\pygame\surface.h
+Dependencies:
+- SDL.h
+- pygame.h
+
+## C Dependencies
+
+### \ai\ai6\JARVIS-AI\.venv\Lib\site-packages\zope\interface\_zope_interface_coptimizations.c
+Dependencies:
+- Python.h
+- structmember.h
+
+
 
 ## Project Directory Structure
 

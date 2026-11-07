@@ -75,6 +75,20 @@ This folder contains the N.O.V.A / JARVIS voice assistant project. It is split i
 - Handles mute, continue, chat, and settings controls.
 - Updates the mobile call state text and avatar styling.
 
+## `scripts/nova_passive_income.js` and `scripts/nova_secret_unlock.js`
+
+- In the JARVIS page, click the desktop arc reactor or mobile avatar three times quickly and enter `earn` to show or hide Passive Income. The same unlock accepts `apply` for Auto-Apply.
+- Income sources, manually recorded transactions, payout information, and unlock state are saved in the browser's local storage. Recording a payout does not transfer money.
+- The dashboard checks `/api/passive-income/sync` on opening and every 15 minutes while unpaused. No connector is included yet; enter confirmed earnings and expenses manually. Spending, account access, and contracts require approval.
+- Run `node tests\passive_income.test.js` from the `ai5` directory for the logic tests.
+
+### Digital Product Shop demo
+
+- The shop is a local, disconnected demo for creating, reviewing and approving or rejecting a product draft. It does not publish listings, connect to WooCommerce, access accounts, make purchases, or generate revenue. Demo approvals authorize nothing outside the demo. Product drafts are stored in browser local storage; avoid entering confidential information.
+- `backend/digital_product_shop.py` defines product revisions, action-specific approvals, order/refund/expense records and a fail-closed WooCommerce adapter interface. It does not implement a WooCommerce client, a webhook endpoint, credential storage, or a scheduler. `confirmed_ledger` rejects demo data; its caller must supply verified live records and perform durable reconciliation, including refunds and pagination.
+- Before enabling a real connection, implement server-side user authentication and authorization, encrypted server-only credential storage, signature verification and replay protection, durable tenant-scoped state, protected product delivery, reliable background processing and approval enforcement for every sensitive action. Do not send WooCommerce credentials to the browser or expose the adapter through the existing unauthenticated API.
+- Run `python tests\test_digital_product_shop.py` from the `ai5` directory to check the disconnected backend contracts.
+
 ## `scripts/nova_page_ui.js`
 
 - Page-level UI helpers pulled out of the HTML.

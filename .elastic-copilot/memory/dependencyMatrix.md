@@ -1,34 +1,39 @@
 # Dependency Matrix
 
-*Generated: 2026-08-14T02:31:57.901Z*
+*Generated: 2026-11-01T20:32:14.499Z*
 
 ## Summary
 
 - Files analyzed: 1000
-- File types: js, py, h, tsx, ts, c
+- File types: py, js, tsx, ts, h, c
 
 ## File Type Distribution
 
-- 44 js files
-- 904 py files
+- 841 py files
+- 91 js files
+- 6 tsx files
+- 26 ts files
 - 35 h files
-- 3 tsx files
-- 13 ts files
 - 1 c files
 
 ## Key Dependencies by Type
-
-### JS
-
-No common dependencies found
 
 ### PY
 
 No common dependencies found
 
-### H
+### JS
 
-No common dependencies found
+Top dependencies:
+- ./components/BackButton
+- react
+- next/navigation
+- ./page.module.css
+- next/font/google
+- ./globals.css
+- ../page.module.css
+- @playwright/test
+- next/server
 
 ### TSX
 
@@ -46,14 +51,18 @@ Top dependencies:
 ### TS
 
 Top dependencies:
+- html2canvas
+- jspdf
+- html-docx-js/dist/html-docx
 - mammoth
 - pdfjs-dist
 - pptx-parser
 - papaparse
 - cheerio
-- html2canvas
-- jspdf
-- html-docx-js/dist/html-docx
+
+### H
+
+No common dependencies found
 
 ### C
 

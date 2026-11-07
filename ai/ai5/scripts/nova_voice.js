@@ -269,7 +269,8 @@ function rememberSpokenText(text) {
 
 // True only while the user is actually mid-utterance; an open always-listening mic alone is not speech
 window.isUserMidSpeech = () => !!(interruptCapture || pendingTranscript || lastInterimTranscript || groqRecordingActive);
-window.isSpeechOutputBusy = () => isSpeechOutputBusy();
+// Assigning window.isSpeechOutputBusy replaces the global function declaration below, so export it directly
+window.isSpeechOutputBusy = isSpeechOutputBusy;
 
 function isSpeechOutputBusy() {
     // speechSynthesis.speaking is not checked: iOS can leave it stuck true, which would block the mic forever
@@ -3571,6 +3572,8 @@ function startAlwaysListeningTurn() {
         return;
     }
 
+    // Other voice flows can replace these callbacks; R+T needs the standard turn handlers.
+    setupSpeechRecognition();
     pendingTranscript = '';
     lastInterimTranscript = '';
     alwaysListeningTurnActive = true;

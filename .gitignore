@@ -72,3 +72,5 @@ website-mirror/
 MyProject_ws.code-workspace
 ai/ai3/AI_v3_ORGANIZED_BACKUP.html  
 ai/ai3/AI_v3.html 
+.vercel
+.env*
