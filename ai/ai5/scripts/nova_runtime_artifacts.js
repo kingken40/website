@@ -1,18 +1,21 @@
 // Conversation-requested downloadable files and images.
 
 const startedArtifactRequests = new Set();
+const startedArtifactTurns = new WeakSet();
 
 function detectRequestedArtifactFormats(userMessage) {
     let request = String(userMessage || '').trim();
     if (/^I've uploaded (?:a|an) /i.test(request)) request = request.split(/\r?\n\r?\n/).pop();
-    const asksToCreate = /\b(create|make|generate|draw|design|produce|prepare|export|convert|turn|save|download|attach|provide|give|write|build|render|paint|sketch|imagine|visuali[sz]e)\b/i.test(request)
+    const asksToCreate = /\b(create|make|generate|draw|design|produce|prepare|export|convert|turn|save|download|attach|provide|give|show|write|build|render|paint|sketch|imagine|visuali[sz]e)\b/i.test(request)
         || /\b(?:one|picture|image|photo|drawing|illustration|pic) (?:of|showing|with)\b/i.test(request);
-    const mentionsOutput = /\b(downloadable|download|file|document|pdf|docx?|word document|spreadsheet|csv|json|markdown|image|picture|pic|drawing|illustration|poster|photo|artwork|diagram|flowchart|infographic|graphic|chart|png|jpe?g|svg)\b/i.test(request)
+    const mentionsOutput = /\b(downloadable|download|file|document|pdf|docx?|word document|spreadsheet|csv|json|markdown|video|videos|vid|clip|animation|mp4|image|picture|pic|drawing|illustration|poster|photo|artwork|diagram|flowchart|infographic|graphic|chart|visuals?|png|jpe?g|svg)\b/i.test(request)
         || /^\s*(?:(?:can|could|will) you |please |nova,? |avon,? )*(?:do |get me |give me |show me |make |draw )?(?:me )?one (?:of|showing)\b/i.test(request);
     if (!asksToCreate || !mentionsOutput) return [];
 
     const formats = new Set();
-    const imageRequested = /\b(image|picture|pic|drawing|illustration|poster|photo|artwork|diagram|flowchart|infographic|graphic|chart|png|jpe?g)\b/i.test(request)
+    const videoRequested = /\b(?:create|make|generate|produce|render|build)\b[\s\S]*\b(?:video|videos|vid|video clip|animation|mp4)\b/i.test(request);
+    if (videoRequested) formats.add('mp4');
+    const imageRequested = /\b(image|picture|pic|drawing|illustration|poster|photo|artwork|diagram|flowchart|infographic|graphic|chart|visuals?|png|jpe?g)\b/i.test(request)
         || /\bone (?:of|showing)\b/i.test(request);
     const svgRequested = /\bsvg\b/i.test(request);
     const jpegRequested = /\bjpe?g\b/i.test(request);
@@ -27,17 +30,83 @@ function detectRequestedArtifactFormats(userMessage) {
     if (/\btext file\b|\btxt\b/i.test(request)) formats.add('txt');
 
     const requestedDocument = /\b(file|document|downloadable|download|export|save|spreadsheet|word document)\b/i.test(request);
-    if (requestedDocument && ![...formats].some(format => ['pdf', 'docx', 'md', 'html', 'csv', 'json', 'txt'].includes(format))) {
+    if (requestedDocument && ![...formats].some(format => ['mp4', 'pdf', 'docx', 'md', 'html', 'csv', 'json', 'txt'].includes(format))) {
         formats.add('pdf');
     }
 
     return [...formats];
 }
 
+function videoDurationRequest(text) {
+    const words = { five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11,
+        twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17,
+        eighteen: 18, nineteen: 19, twenty: 20, thirty: 30, sixty: 60 };
+    const pattern = /\b(\d+(?:\.\d+)?|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|sixty|half)\s*(?:[- ]\s*)?(?:a\s+)?(seconds?|secs?|minutes?|mins?)\b/gi;
+    let match;
+    let seconds = null;
+    while ((match = pattern.exec(String(text || '')))) {
+        const value = match[1].toLowerCase();
+        const number = value === 'half' ? 0.5 : (words[value] || Number(value));
+        seconds = number * (/^m/i.test(match[2]) ? 60 : 1);
+    }
+    const bare = /\b(?:make|change|set)\s+(?:it|that|one)\s+(?:to\s+)?(\d+(?:\.\d+)?|five|ten|fifteen|twenty|thirty)\s*[.!]*$/i.exec(String(text || ''));
+    if (bare) seconds = words[bare[1].toLowerCase()] || Number(bare[1]);
+    if (seconds === null && /\b(?:longer|long(?:er)?\s+(?:video|clip|one|version))\b/i.test(String(text || ''))) seconds = 10;
+    return seconds;
+}
+
+function resolveVideoArtifactRequest(userMessage, assistantReply, history) {
+    const request = String(userMessage || '').trim();
+    if (detectRequestedArtifactFormats(request).includes('mp4')) {
+        return /\?/.test(String(assistantReply || '')) &&
+            /\b(?:what|which|theme|subject|topic|focus|scene|describe|details?)\b/i.test(assistantReply)
+            ? null : request;
+    }
+    if (!request || request.length > 500 ||
+        /^(?:no\b|nope\b|cancel\b|stop\b|never\s*mind\b|forget\b|actually\b|instead\b|thanks?\b|what\b|how\b|why\b|who\b|when\b|where\b|tell me\b|find\b|search\b|please (?:stop|cancel|find|search)\b)/i.test(request)) return null;
+    if (!Array.isArray(history)) return null;
+    let index = history.length - 1;
+    if (history[index] && history[index].sender !== 'user') index--;
+    if (history[index]?.sender !== 'user' || history[index].text !== userMessage) return null;
+    const followup = /\b(?:make|generate|create|produce|render|give|do)\b[\s\S]*\b(?:it|that|one|version|longer)\b|\b(?:longer|shorter)\s+(?:one|version|video|clip)\b/i.test(request);
+    if (followup && videoDurationRequest(request) !== null) {
+        for (let previous = index - 1; previous >= Math.max(0, index - 12); previous--) {
+            const video = history[previous]?.videoArtifact;
+            if (history[previous]?.sender === 'user' && video && typeof video.prompt === 'string') {
+                const current = video.duration || (video.numFrames ? (video.numFrames - 1) / 16 : 5);
+                const followupRequest = /\blonger\b/i.test(request) && !/\b(?:\d+|five|ten|twenty)\s*[- ]?\s*(?:seconds?|secs?|minutes?)\b/i.test(request)
+                    ? `${request} (${current < 10 ? 10 : current < 20 ? 20 : 21} seconds)` : request;
+                return `${video.prompt}\n\nNew video duration request: ${followupRequest}`;
+            }
+        }
+        return null;
+    }
+    if (/\?/.test(request)) return null;
+    if (/^(?:(?:please|nova|avon)[,\s]+)*(?:(?:make|generate|create)(?:\s+me)?\s+)?(?:a\s+)?longer\s+(?:one|video|version|clip)[.!]*$/i.test(request)) {
+        let previous = index - 1;
+        while (previous >= 0 && history[previous].sender !== 'user') previous--;
+        const video = history[previous]?.videoArtifact;
+        if (video && typeof video.prompt === 'string' && video.numFrames === 81) {
+            return `${video.prompt}\n\nMake a longer version.`;
+        }
+        return null;
+    }
+    const question = history[index - 1];
+    const original = history[index - 2];
+    if (!question || !['Nova', 'Avon'].includes(question.sender) ||
+        !/\?/.test(question.text || '') ||
+        !/\b(?:what|which|theme|subject|topic|focus|scene|describe|details?)\b/i.test(question.text || '') ||
+        !original || original.sender !== 'user' ||
+        !detectRequestedArtifactFormats(original.text).includes('mp4')) return null;
+    if (/\?/.test(String(assistantReply || '')) &&
+        /\b(?:what|which|theme|subject|topic|focus|scene|describe|details?)\b/i.test(assistantReply)) return null;
+    return `${original.text}\n\nVideo idea: ${request}`;
+}
+
 function artifactBaseName(request) {
     const words = String(request || '')
         .toLowerCase()
-        .replace(/\b(?:please|create|make|generate|draw|design|produce|prepare|export|convert|turn|save|downloadable|download|file|document|as|a|an|the|me|for|into|to|pdf|docx?|word|spreadsheet|csv|json|markdown|md|html|text|txt|image|picture|illustration|poster|photo|artwork|png|jpe?g|svg)\b/g, ' ')
+        .replace(/\b(?:please|create|make|generate|draw|design|produce|prepare|export|convert|turn|save|downloadable|download|file|document|as|a|an|the|me|for|into|to|pdf|docx?|word|spreadsheet|csv|json|markdown|md|html|text|txt|image|picture|illustration|poster|photo|artwork|visual|example|png|jpe?g|svg)\b/g, ' ')
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '')
         .slice(0, 48);
@@ -262,7 +331,11 @@ function createDocumentArtifact(format, title, content) {
 }
 
 function artifactPromptFromConversation(userMessage, original = false) {
-    const request = String(userMessage || '').trim().replace(/^(?:hey |ok |okay )?(?:n\.?o\.?v\.?a|a\.?v\.?o\.?n\.?|nova|avon)[,:]?\s*/i, '').slice(0, 1500);
+    const message = String(userMessage || '').trim();
+    const transcript = message.match(/TRANSCRIPT\s*\n([\s\S]*?)\nEND AUDIO ANALYSIS PACKET/i);
+    const request = (transcript
+        ? `Create a visual example for the main idea in this audio transcript: ${transcript[1].slice(0, 1200)}`
+        : message.replace(/^(?:hey |ok |okay )?(?:n\.?o\.?v\.?a|a\.?v\.?o\.?n\.?|nova|avon)[,:]?\s*/i, '')).slice(0, 1500);
     return original
         ? `Create an original, high-quality image inspired by this request, using original character and vehicle designs rather than trademarked ones: ${request}`
         : `Create a high-quality image: ${request}`;
@@ -271,6 +344,9 @@ function artifactPromptFromConversation(userMessage, original = false) {
 const IMAGE_REFUSAL_PATTERN = /\b(?:can(?:['’]|no)?t|cannot|unable|isn['’]t within|not within|don['’]t have|not able)\b[^.]*\b(?:images?|pictures?|art|visuals?)\b|\b(?:images?|pictures?|art|visuals?)\b[^.]*\b(?:isn['’]t|is not|aren['’]t|are not|not)\s+(?:within|possible|something i can|available)\b/i;
 
 function normalizeImageReply(userMessage, reply) {
+    if (detectRequestedArtifactFormats(userMessage).includes('mp4') && /\b(?:can(?:not|'t)|unable|restricted|not able|no video-generation service)\b[\s\S]{0,150}\b(?:videos?|still images?|video-generation)\b/i.test(String(reply || ''))) {
+        return 'I’ll start preparing the video; its status will appear in the chat.';
+    }
     if (!detectRequestedArtifactFormats(userMessage).some(format => format === 'png' || format === 'jpg')) return reply;
     return IMAGE_REFUSAL_PATTERN.test(String(reply || '')) ? 'Right away. Generating your image now.' : reply;
 }
@@ -396,22 +472,157 @@ function addArtifactStatusCard(title, formats) {
     card.className = 'message nova-message artifact-message';
     card.setAttribute('role', 'status');
     const label = formats.map(format => format.toUpperCase()).join(', ');
-    card.innerHTML = `<div class="artifact-heading"><i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i><strong>Preparing your ${label}…</strong></div><div class="artifact-status">${xmlEscape(title)}</div>`;
+    const video = formats.includes('mp4');
+    card.innerHTML = `<div class="artifact-heading"><i class="fas fa-wand-magic-sparkles" aria-hidden="true"></i><strong>${video ? 'Generating video…' : `Preparing your ${label}…`}</strong></div><div class="artifact-status">${video ? 'Submitting your request. This may take several minutes; keep this tab open.' : xmlEscape(title)}</div>`;
     chatMessages.appendChild(card);
     chatMessages.scrollTop = chatMessages.scrollHeight;
     return card;
 }
 
 function addArtifactDownload(card, artifact, filename) {
-    const url = URL.createObjectURL(artifact.blob);
+    const url = artifact.url || URL.createObjectURL(artifact.blob);
     if (!card.querySelector('.artifact-download-list')) {
         card.innerHTML = '<div class="artifact-heading"><i class="fas fa-circle-check" aria-hidden="true"></i><strong>Your downloadable file is ready</strong></div><div class="artifact-download-list"></div>';
     }
     const item = document.createElement('div');
     item.className = 'artifact-download-item';
-    item.innerHTML = `${['png', 'jpg', 'svg'].includes(artifact.extension) ? `<img class="artifact-image-preview" src="${url}" alt="${xmlEscape(filename)}">` : ''}<div class="artifact-status">${xmlEscape(filename)}</div><a class="artifact-download-link" href="${url}" download="${xmlEscape(filename)}"><i class="fas fa-download" aria-hidden="true"></i> Download ${artifact.extension.toUpperCase()}</a>`;
+    item.innerHTML = `${['png', 'jpg', 'svg'].includes(artifact.extension) ? `<img class="artifact-image-preview" src="${url}" alt="${xmlEscape(filename)}">` : artifact.extension === 'mp4' ? `<video class="artifact-image-preview" controls playsinline src="${xmlEscape(url)}"></video>` : ''}<div class="artifact-status">${xmlEscape(filename)}</div><a class="artifact-download-link" href="${xmlEscape(url)}" ${artifact.url ? 'target="_blank" rel="noopener noreferrer"' : `download="${xmlEscape(filename)}"`}><i class="fas fa-download" aria-hidden="true"></i> ${artifact.url ? 'Open' : 'Download'} ${artifact.extension.toUpperCase()}</a>`;
     card.querySelector('.artifact-download-list').appendChild(item);
     card.setAttribute('role', 'group');
+    if (artifact.extension === 'mp4' && artifact.duration) {
+        const video = item.querySelector('video');
+        const status = item.querySelector('.artifact-status');
+        video.addEventListener('loadedmetadata', () => {
+            if (!Number.isFinite(video.duration)) return;
+            const actual = video.duration.toFixed(1);
+            status.textContent = `${filename} — ${actual}s (requested ${artifact.duration}s)`;
+            if (Math.abs(video.duration - artifact.duration) > 0.6) {
+                card.setAttribute('role', 'alert');
+                status.textContent += '. The provider returned a different duration; check the job before retrying.';
+            }
+        }, { once: true });
+        video.addEventListener('error', () => {
+            status.textContent = `${filename} — Could not verify video duration or playback. Open the MP4 link and check the existing job before retrying.`;
+            card.setAttribute('role', 'alert');
+        }, { once: true });
+    }
+}
+
+async function generateVideo(userMessage, card) {
+    const key = sessionStorage.getItem('fal_video_api_key') || '';
+    if (!key) throw new Error('Add your fal.ai video API key in Settings before generating a video.');
+    const request = async body => {
+        let response;
+        try {
+            response = await fetch('/api/video', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Video-Key': key },
+                body: JSON.stringify(body)
+            });
+        } catch (error) {
+            throw new Error('Could not reach the video endpoint. The job may have been submitted; check fal.ai before retrying.');
+        }
+        let payload;
+        try {
+            payload = await response.json();
+        } catch (error) {
+            if (!(error instanceof SyntaxError)) throw error;
+            if (!response.ok && (response.status === 404 || response.status === 405)) {
+                throw new Error(`Video endpoint unavailable (HTTP ${response.status}). Start or restart the AI5 dev server or deploy the video API, then reload this page.`);
+            }
+            throw new Error(`Video endpoint returned an empty or invalid response (HTTP ${response.status}). The job may have been submitted; check fal.ai before retrying.`);
+        }
+        if (!response.ok) throw new Error(payload?.error?.message || payload?.error || `Video service returned HTTP ${response.status}.`);
+        if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+            throw new Error(`Video endpoint returned an invalid response (HTTP ${response.status}). Check fal.ai before retrying.`);
+        }
+        return payload;
+    };
+    const text = String(userMessage);
+    const transcript = text.match(/TRANSCRIPT\s*\n([\s\S]*?)\nEND AUDIO ANALYSIS PACKET/i);
+    const originalPrompt = transcript
+        ? `${text.slice(text.lastIndexOf('END AUDIO ANALYSIS PACKET') + 'END AUDIO ANALYSIS PACKET'.length).trim()}\n\nContext from the transcript: ${transcript[1].slice(0, 4000)}`
+        : text;
+    const tones = [
+        { words: /\b(?:funny|humorous|comedic|comedy|silly)\b/i, direction: 'Make the situation itself funny through an absurd event, physical comedy, visual gag or punchline. Do not rely on laughter, smiling or reactions alone to create humor; retain any expressions the user explicitly requests.', scene: [
+            'A tiny robot proudly carries a towering stack of boxes, then a single feather lands on top and the boxes unfold into a neat staircase.',
+            'A magician pulls an enormous umbrella from a tiny hat, and it opens to reveal a miniature rain cloud.',
+            'A wind-up toy marches across a table, trips on a ribbon, and accidentally rolls out a red carpet.'
+        ] },
+        { words: /\b(?:scary|frightening|spooky|creepy)\b/i, direction: 'Build suspense through atmosphere, visual tension and an unsettling event.', scene: 'In a dim hallway, a shadow slowly moves against the light while a door creaks open by itself.' },
+        { words: /\b(?:epic|majestic|grand)\b/i, direction: 'Create a sense of scale and dramatic momentum through the setting and action.', scene: 'A lone traveler crosses a vast mountain ridge as a brilliant sunrise breaks through the clouds.' },
+        { words: /\b(?:chaotic|chaos)\b/i, direction: 'Convey escalating chaos through multiple visible, interacting actions.', scene: 'A gust of wind sends colorful papers and umbrellas spinning across a busy town square.' },
+        { words: /\b(?:sad|melancholy|sorrowful)\b/i, direction: 'Convey sadness through a poignant visual moment and restrained atmosphere.', scene: 'A small paper boat drifts away from an empty bench in the rain.' },
+        { words: /\b(?:wholesome|heartwarming|heart-warming)\b/i, direction: 'Convey warmth through a kind action and an uplifting visual moment.', scene: 'A small robot shelters a sprouting flower from the rain with a leaf.' },
+        { words: /\b(?:peaceful|calming|serene)\b/i, direction: 'Convey calm through gentle movement and a tranquil atmosphere.', scene: 'Morning mist drifts slowly over a still lake as sunlight reaches the shore.' },
+        { words: /\b(?:mysterious|mystery)\b/i, direction: 'Create intrigue through an unexplained visual event and atmospheric details.', scene: 'A glowing key appears on a deserted table as a distant door slowly opens.' }
+    ];
+    const requestedTones = tones.filter(tone => {
+        const match = tone.words.exec(originalPrompt);
+        return match && !/\b(?:not|no|never|without|avoid)\s+(?:a\s+)?$/i.test(originalPrompt.slice(0, match.index));
+    });
+    const broadPattern = /^(?:(?:hey|please|nova|avon|can you|could you)\s*[, ]+)*(?:create|make|generate|produce|render|build)\s+(?:(?:me|a|an|the|short|long|longer|very|really|downloadable|5[\s-]*seconds?|10[\s-]*seconds?|funny|humorous|comedic|comedy|silly|scary|frightening|spooky|creepy|epic|majestic|grand|chaotic|sad|melancholy|sorrowful|wholesome|heartwarming|heart-warming|peaceful|calming|serene|mysterious)\s+)*(?:video|videos|vid|clip|animation|mp4)(?:\s+(?:that(?:'s| is)|which is)\s+(?:very\s+|really\s+)?(?:funny|humorous|comedic|silly|scary|spooky|epic|chaotic|sad|wholesome|heartwarming|peaceful|mysterious))?(?:\s+not\s+just\s+(?:someone|a person)\s+laughing)?[.!?]*$/i;
+    const clarification = originalPrompt.split(/\n\nVideo idea: /);
+    const broadRequest = broadPattern.test(originalPrompt.trim()) ||
+        (clarification.length === 2 && broadPattern.test(clarification[0].trim()) &&
+         /^(?:something|a scene that is|a scene that's)\s+(?:very\s+|really\s+)?(?:funny|humorous|comedic|silly|scary|spooky|epic|chaotic|sad|wholesome|heartwarming|peaceful|mysterious)[.!]*$/i.test(clarification[1].trim()));
+    const directions = requestedTones.map(tone => tone.direction);
+    if (broadRequest && requestedTones.length === 1) {
+        const scenes = requestedTones[0].scene;
+        const scene = Array.isArray(scenes) ? scenes[Math.floor(Math.random() * scenes.length)] : scenes;
+        directions.push(`Suggested scene: ${scene}`);
+    }
+    const guidance = directions.length ? `\n\nCreative direction: ${directions.join(' ')} Preserve the user's stated subjects, constraints and exclusions.` : '';
+    if (originalPrompt.length + guidance.length > 12000) {
+        throw new Error('The video request is too long to include its creative direction. Shorten it and try again.');
+    }
+    const prompt = originalPrompt + guidance;
+    const duration = videoDurationRequest(text) ?? 5;
+    if (!Number.isInteger(duration) || duration < 5 || duration > 20 ||
+        (duration > 10 && duration % 2 !== 0)) {
+        throw new Error('Supported video lengths are 5–10 seconds in whole seconds, or 12, 14, 16, 18, or 20 seconds. No job was submitted.');
+    }
+    const model = duration > 10 ? 'ltx' : 'wan';
+    const numFrames = duration <= 10 ? duration * 16 + 1 : null;
+    if (model === 'ltx' && !window.confirm(`A ${duration}-second video uses fal.ai LTX 2.3 Fast at 1080p (estimated $${(duration * 0.06).toFixed(2)} at $0.06/second). Pricing may change. Generate this new video?`)) {
+        throw new Error('Video generation cancelled; no job was submitted.');
+    }
+    const labelBeforeSubmit = card.querySelector?.('.artifact-status');
+    if (labelBeforeSubmit) labelBeforeSubmit.textContent = `Submitting an approximately ${duration}-second video${model === 'ltx' ? ' using LTX 2.3 Fast' : ''}. This may take several minutes; keep this tab open.`;
+    const body = model === 'ltx' ? { action: 'create', prompt, model, duration }
+        : { action: 'create', prompt, model, num_frames: numFrames };
+    const submitted = await request(body);
+    const id = submitted.request_id;
+    if (typeof id !== 'string' || !/^[a-f0-9-]{36}$/i.test(id)) throw new Error('Video provider did not return a valid job ID. The job may have been submitted; check fal.ai before retrying.');
+    const submittedLabel = card.querySelector('.artifact-status');
+    if (submittedLabel) submittedLabel.textContent = `Video submitted. This may take several minutes; keep this tab open. (Job ${id})`;
+    const deadline = Date.now() + 15 * 60 * 1000;
+    while (Date.now() < deadline) {
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        let status;
+        try {
+            status = await request({ action: 'status', request_id: id, model });
+        } catch (error) {
+            throw new Error(`${error.message} Job ID: ${id}. Check fal.ai before retrying.`);
+        }
+        const label = card.querySelector('.artifact-status');
+        if (label) label.textContent = `Video ${status.status === 'IN_QUEUE' ? 'queued' : status.status === 'IN_PROGRESS' ? 'generating' : 'processing'}. This may take several minutes; keep this tab open. (Job ${id})`;
+        if (status.error) throw new Error(`Video generation failed: ${status.error}`);
+        if (status.status === 'COMPLETED') {
+            let result;
+            try {
+                result = await request({ action: 'result', request_id: id, model });
+            } catch (error) {
+                throw new Error(`${error.message} Job ID: ${id}. Check fal.ai before retrying.`);
+            }
+            let url;
+            try { url = new URL(result.video?.url); } catch (error) { throw new Error(`Video provider returned no valid video URL. Job ID: ${id}. Check fal.ai before retrying.`); }
+            if (url.protocol !== 'https:') throw new Error(`Video provider returned an insecure video URL. Job ID: ${id}. Check fal.ai before retrying.`);
+            return { url: url.href, extension: 'mp4', mime: 'video/mp4', numFrames, duration };
+        }
+        if (!['IN_QUEUE', 'IN_PROGRESS'].includes(status.status)) throw new Error(`Unexpected video job status: ${status.status || 'missing'}. Job ${id}.`);
+    }
+    throw new Error(`Video is still processing. Job ID: ${id}. Check the job with fal.ai before retrying.`);
 }
 
 function showArtifactError(card, error) {
@@ -422,16 +633,22 @@ function showArtifactError(card, error) {
 
 function maybeCreateRequestedArtifact(userMessage, assistantReply) {
     const formats = detectRequestedArtifactFormats(userMessage);
+    const videoRequest = resolveVideoArtifactRequest(userMessage, assistantReply,
+        typeof chatHistory !== 'undefined' ? chatHistory : null);
+    if (formats.includes('mp4') && !videoRequest) formats.splice(formats.indexOf('mp4'), 1);
+    if (videoRequest && !formats.includes('mp4')) formats.push('mp4');
     if (!formats.length) return;
 
-    const userTurnCount = typeof chatHistory !== 'undefined' && Array.isArray(chatHistory)
-        ? chatHistory.filter(message => message.sender === 'user').length
-        : 0;
-    const requestKey = `${userTurnCount}:${String(userMessage).trim().toLowerCase()}`;
-    if (startedArtifactRequests.has(requestKey)) return;
-    startedArtifactRequests.add(requestKey);
-    if (startedArtifactRequests.size > 100) {
-        startedArtifactRequests.delete(startedArtifactRequests.values().next().value);
+    const requestHistory = typeof chatHistory !== 'undefined' && Array.isArray(chatHistory) ? chatHistory : null;
+    const userTurn = requestHistory ? [...requestHistory].reverse().find(message => message.sender === 'user') : null;
+    if (userTurn) {
+        if (startedArtifactTurns.has(userTurn)) return;
+        startedArtifactTurns.add(userTurn);
+    } else {
+        const requestKey = String(userMessage).trim().toLowerCase();
+        if (startedArtifactRequests.has(requestKey)) return;
+        startedArtifactRequests.add(requestKey);
+        if (startedArtifactRequests.size > 100) startedArtifactRequests.delete(startedArtifactRequests.values().next().value);
     }
 
     const title = artifactBaseName(userMessage);
@@ -451,7 +668,9 @@ function maybeCreateRequestedArtifact(userMessage, assistantReply) {
             for (const format of formats) {
                 try {
                     let artifact;
-                    if (format === 'png' || format === 'jpg') {
+                    if (format === 'mp4') {
+                        artifact = await generateVideo(videoRequest, card);
+                    } else if (format === 'png' || format === 'jpg') {
                         const imageBlob = await generateImageWithRetries(userMessage);
                         artifact = {
                             blob: format === 'jpg' ? await convertImageToJpeg(imageBlob) : imageBlob,
@@ -462,6 +681,9 @@ function maybeCreateRequestedArtifact(userMessage, assistantReply) {
                         artifact = createDocumentArtifact(format, title, assistantReply);
                     }
                     addArtifactDownload(card, artifact, `${title}.${artifact.extension}`);
+                    if (format === 'mp4' && userTurn && userTurn.text === userMessage) {
+                        userTurn.videoArtifact = { prompt: videoRequest, numFrames: artifact.numFrames };
+                    }
                     generatedCount += 1;
                 } catch (error) {
                     failures.push(`${format.toUpperCase()}: ${error.message || 'creation failed'}`);

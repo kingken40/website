@@ -903,6 +903,7 @@ let autoPilotRunId = 0;
 let autoModeWakeResolver = null;
 let autoModeLastVideoWakeAt = 0;
 let autoModeVisualMemory = [];
+let autoModeLastVisualSampleAt = 0;
 
 function watchAutoModeVideoFrames(video) {
     if (!video?.requestVideoFrameCallback) return;
@@ -944,12 +945,16 @@ function pruneAutoModeVisualMemory(now = Date.now()) {
 }
 
 function rememberAutoModeVisualContext(assistant) {
+    const now = Date.now();
+    if (now - autoModeLastVisualSampleAt < 5000) return;
     const item = {
-        at: Date.now(),
+        at: now,
+        screenTarget: window.getScreenShareTarget?.(),
         screen: window.getScreenShareFrame?.(assistant, 320, 0.4) || null,
         camera: window.getVisionFrame?.(320, 0.4) || null
     };
     if (item.screen || item.camera) {
+        autoModeLastVisualSampleAt = now;
         autoModeVisualMemory.push(item);
         pruneAutoModeVisualMemory(item.at);
     }
@@ -957,9 +962,11 @@ function rememberAutoModeVisualContext(assistant) {
 
 window.getAutoModeVisualContext = function (assistant) {
     pruneAutoModeVisualMemory();
-    return autoModeVisualMemory.slice(-2).map(item => ({
+    return autoModeVisualMemory.filter(item => Date.now() - item.at >= 3000).slice(-2).map(item => ({
         secondsAgo: Math.max(1, Math.round((Date.now() - item.at) / 1000)),
-        screen: window.getScreenShareTarget?.() && item.screen ? item.screen : null,
+        screen: window.getScreenShareTarget?.() && item.screen &&
+            (item.screenTarget === 'both' || item.screenTarget === assistant) &&
+            (window.getScreenShareTarget() === 'both' || window.getScreenShareTarget() === assistant) ? item.screen : null,
         camera: window.isAiVisionActive?.() && item.camera ? item.camera : null
     })).filter(item => item.screen || item.camera);
 };
@@ -967,6 +974,7 @@ window.getAutoModeVisualContext = function (assistant) {
 window.clearAutoModeVisualMemory = function (source) {
     if (!source) {
         autoModeVisualMemory = [];
+        autoModeLastVisualSampleAt = 0;
         return;
     }
     autoModeVisualMemory.forEach(item => { item[source] = null; });
@@ -1059,9 +1067,10 @@ function getScreenChangeRatio(previous, current) {
 const AUTO_MODE_PROMPT = `UNIFIED AUTO MODE CHECK
 Use all context currently available: the shared screen (digital activity), webcam (physical context), recent visual frames (what changed recently), and recent conversation or speech transcripts (what the user said and asked). Do not assume a source is available unless its image or context is attached.
 First infer the user's activity only as far as the evidence supports: reading, coding, watching, working, studying, troubleshooting, stuck, or inactive. A static screen alone does not mean the user is inactive; reading, watching, and focused work often look still. Treat visible motion as possible video or ordinary work, not automatically a request for help.
-Speak only when a specific observation is timely and useful: a relevant error or warning, a likely blocked step, a meaningful result, a decision point, or a concise suggestion tied to the user's goal. Ask a short, relevant question when it helps. Otherwise stay quiet, especially while the user appears focused.
-Use recent frames to understand transitions and avoid repeating or contradicting earlier observations. Refer only to what is actually visible or said; treat uncertain interpretations as uncertain. Never click, search, submit, take actions, or claim to have done so.
-Return exactly NO_ACTION when an interruption is not justified. Otherwise return one brief, natural spoken remark of at most two sentences. Be warm, clear, and unobtrusive; use dry wit only when appropriate.`;
+If the visible evidence suggests the user is watching a video, compare the time-labeled frames to follow visible changes. An occasional brief, context-specific reaction to a genuinely funny, surprising, confusing, or interesting moment is welcome, even when no help is needed. Do not constantly narrate, describe every frame, interrupt dialogue, or force a joke. Use the selected assistant's personality naturally, including subtle, intelligent mischief if Sly is selected, without mocking the user.
+Otherwise speak only when a specific observation is timely and useful: a relevant error or warning, a likely blocked step, a meaningful result, a decision point, or a concise suggestion tied to the user's goal. Ask a short, relevant question when it helps. Otherwise stay quiet, especially while the user appears focused.
+Use recent frames to understand transitions and avoid repeating or contradicting earlier observations. Frames are sparse snapshots, not continuous video. Use only visible content, captions, and conversation or transcripts actually supplied; never imply you heard video audio or know dialogue or events between frames. Treat uncertain interpretations as uncertain. Never click, search, submit, take actions, or claim to have done so.
+Return exactly NO_ACTION when an interruption is not justified. Otherwise return one brief, natural spoken remark of at most two sentences.`;
 
 // One shared gate for every proactive feature (Auto Mode, AI Vision) so only one evaluation runs at a time
 // and remarks never cluster: after any of them speaks, all of them wait MIN_GAP_MS.
@@ -1235,11 +1244,9 @@ async function runAutoModeCheckIn(runId, state) {
         return false;
     }
 
-    // Visible screen activity within the idle window means they are watching or working: keep monitoring,
-    // but only for one extra window so a constantly changing screen can't block check-ins forever.
+    // Ongoing visual activity may be a video or focused work, not a reason to interrupt.
     if (!welcomeBackMs && (window.getScreenShareTarget?.() || window.isAiVisionActive?.()) &&
-        now - state.lastVisualChangeAt < AUTO_MODE_CHECKIN_IDLE_MS &&
-        now - idleSince < AUTO_MODE_CHECKIN_IDLE_MS * 2) {
+        now - state.lastVisualChangeAt < AUTO_MODE_CHECKIN_IDLE_MS) {
         state.nextEvaluationAt = now + AUTO_MODE_CHECKIN_RECHECK_MS;
         return false;
     }
@@ -1280,6 +1287,7 @@ async function runAutoModeCheckIn(runId, state) {
         const reply = resolveAutoModeCheckInReply(replyResult?.reply);
         if (isRepeatedRemark(reply, state.recentRemarks) ||
             autoModeLastInteractionAt > state.evaluationStartedAt ||
+            Date.now() < window.proactiveGate.snoozeUntil ||
             isResponseInFlight || window.isSpeaking || window.voiceInterruptInProgress) {
             return false;
         }
@@ -1334,14 +1342,13 @@ async function runAutoModeLoop(runId) {
 
         if (await runAutoModeCheckIn(runId, checkInState)) continue;
         if (!autoModeActive || runId !== autoModeRunId) return;
-        if (document.hidden) continue;
-
         const assistant = getAutoModeAssistant();
         if (!assistant && !window.getScreenShareTarget?.() && !window.isAiVisionActive?.() && Date.now() - autoModeLastHintAt > 30000) {
             autoModeLastHintAt = Date.now();
             showNotification('Auto Mode is on: share your screen or turn on AI Vision to give it more to react to.', 3500);
         }
         if (!assistant) continue;
+        if (document.hidden && !window.getScreenShareTarget?.()) continue;
 
         let screenSignature = null;
         let cameraSignature = null;
@@ -1356,6 +1363,7 @@ async function runAutoModeLoop(runId) {
         if (!screenSignature && !cameraSignature) continue;
 
         const now = Date.now();
+        rememberAutoModeVisualContext(assistant);
         const screenPollRatio = screenSignature ? getScreenChangeRatio(lastPolledScreen, screenSignature) : 0;
         const cameraPollRatio = cameraSignature ? getScreenChangeRatio(lastPolledCamera, cameraSignature) : 0;
         lastPolledScreen = screenSignature;
@@ -1375,7 +1383,7 @@ async function runAutoModeLoop(runId) {
             now - checkInState.startedAt >= AUTO_MODE_POLL_MS);
         const activeMotionReviewDue = Boolean(screenSignature && lastEvaluationAt > 0 &&
             screenMotion >= 0.06 &&
-            now - lastEvaluationAt >= 60000 &&
+            now - lastEvaluationAt >= 20000 &&
             screenChangeRatio >= 0.12);
         // Use video-frame callbacks to wake this loop on fresh media; compare pixels only after activity settles.
         const screenSettled = Boolean(screenSignature &&
@@ -1432,11 +1440,14 @@ async function runAutoModeLoop(runId) {
             }
             const changeHint = changeHints.join(' ');
             const motionHint = activeMotionReviewDue
-                ? 'The screen has remained active since the last review. Distinguish watching or ordinary work from a meaningful issue; do not interrupt normal activity.'
+                ? 'The screen has remained active since the last review. Distinguish watching a video from ordinary work using the visible evidence. React only to a distinctive moment, not motion by itself.'
                 : timing.level === 'high' ? 'Visual activity is high; wait for a meaningful, settled moment and do not interrupt ordinary motion.' : '';
             const repeatHint = recentRemarks.length
                 ? `You already said: ${recentRemarks.map(remark => `"${remark}"`).join('; ')}. Do not repeat or rephrase these.`
                 : '';
+            const evaluatedScreenStream = screenShareStream;
+            const evaluationStartedAt = Date.now();
+            const interactionAtStart = autoModeLastInteractionAt;
             const replyResult = await generateAIResponse(`${AUTO_MODE_PROMPT}\n${changeHint} ${motionHint}\n${repeatHint}`.trim(), currentPersonality, {
                 assistant,
                 modelOverride: assistant === 'other' ? groupChatModel : undefined,
@@ -1447,7 +1458,9 @@ async function runAutoModeLoop(runId) {
                 autoModeEvaluation: true
             });
             if (!autoModeActive || runId !== autoModeRunId) return;
-            rememberAutoModeVisualContext(assistant);
+            if (evaluatedScreenStream !== screenShareStream ||
+                (cameraSignature && !window.isAiVisionActive?.()) ||
+                (activeMotionReviewDue && Date.now() - evaluationStartedAt > 30000)) continue;
 
             const reply = String(replyResult?.reply || '').trim();
             if (!reply || /^NO_ACTION(?:\s|[.!:—-]|$)/i.test(reply)) {
@@ -1455,12 +1468,15 @@ async function runAutoModeLoop(runId) {
                 continue;
             }
             if (isRepeatedRemark(reply, recentRemarks)) continue;
-            if (Date.now() - autoModeLastInteractionAt < 3500 ||
+            if (autoModeLastInteractionAt !== interactionAtStart ||
+                Date.now() < window.proactiveGate.snoozeUntil ||
+                Date.now() - autoModeLastInteractionAt < 3500 ||
                 isResponseInFlight ||
                 window.isListening ||
                 window.isSpeaking ||
                 window.voiceInterruptInProgress ||
-                window.speechSynthesis?.speaking) {
+                window.speechSynthesis?.speaking ||
+                document.getElementById('messageInput')?.value.trim()) {
                 continue;
             }
 

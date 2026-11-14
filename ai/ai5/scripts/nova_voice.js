@@ -50,6 +50,86 @@ let currentBridgeAudio = null;
 let lastBridgeFailureNoticeMs = 0;
 let speechOutputWatchdog = null;
 let speechPlaybackGeneration = 0;
+let speechPlaybackState = 'idle';
+let pendingSpeechContinuation = null;
+let bridgeRequestController = null;
+let readingTracker = null;
+
+function setSpeechPlaybackState(state) {
+    speechPlaybackState = state;
+    for (const id of ['speechResumeBtn', 'mobileSpeechResumeBtn', 'speechPauseBtn', 'mobileSpeechPauseBtn', 'speechStopBtn', 'mobileSpeechStopBtn']) {
+        const button = document.getElementById(id);
+        if (!button) continue;
+        const isPlay = id.includes('Resume');
+        const isPause = id.includes('Pause');
+        button.disabled = isPlay ? !window.lastSpeechText || state === 'playing' || state === 'preparing'
+            : isPause ? state !== 'playing' && state !== 'preparing'
+            : state === 'idle' || state === 'stopped';
+    }
+}
+
+function clearReadingHighlight() {
+    const marked = readingTracker?.marked;
+    if (marked?.parentNode) {
+        const parent = marked.parentNode;
+        parent.replaceChild(document.createTextNode(marked.textContent), marked);
+        parent.normalize();
+    }
+    if (readingTracker) readingTracker.marked = null;
+}
+
+function findReadingMessage(text, assistant) {
+    const messages = document.querySelectorAll('.message[data-message-id]');
+    for (let i = messages.length - 1; i >= 0; i--) {
+        const message = messages[i];
+        if (message.dataset.originalText === text &&
+            (assistant === 'other' ? message.dataset.sender === 'Avon' : message.dataset.sender !== 'Avon')) {
+            return message.querySelector('.message-content[data-speech-content="true"]');
+        }
+    }
+    return null;
+}
+
+function startReadingTracker(content, offset = 0) {
+    clearReadingHighlight();
+    readingTracker = content ? { content, offset, marked: null } : null;
+}
+
+function markReadingWord(chunk, charIndex) {
+    if (!readingTracker?.content?.isConnected) return;
+    const spoken = chunk.slice(charIndex).match(/^[\p{L}\p{N}]+(?:[.'’\-][\p{L}\p{N}]+)*/u);
+    if (!spoken) return;
+    const normalize = value => String(value).toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+    const target = normalize(spoken[0]);
+    if (!target) return;
+    clearReadingHighlight();
+    const walker = document.createTreeWalker(readingTracker.content, NodeFilter.SHOW_TEXT);
+    let node;
+    let base = 0;
+    let skippedWords = 0;
+    while ((node = walker.nextNode())) {
+        const text = node.nodeValue || '';
+        const words = text.matchAll(/\b(?:Dr|Mr|Mrs)\.|[\p{L}\p{N}]+(?:[.'’\-][\p{L}\p{N}]+)*/giu);
+        for (const word of words) {
+            if (base + word.index < readingTracker.offset) continue;
+            const friendly = typeof window.makeSpeechFriendly === 'function' ? window.makeSpeechFriendly(word[0]) : word[0];
+            if (normalize(friendly) !== target) {
+                if (++skippedWords >= 3) return;
+                continue;
+            }
+            const range = document.createRange();
+            range.setStart(node, word.index);
+            range.setEnd(node, word.index + word[0].length);
+            const mark = document.createElement('span');
+            mark.className = 'speech-current-word';
+            range.surroundContents(mark);
+            readingTracker.marked = mark;
+            readingTracker.offset = base + word.index + word[0].length;
+            return;
+        }
+        base += text.length;
+    }
+}
 
 function isUsableSpeechVoice(voice) {
     return !!(voice && typeof voice.name === 'string' && typeof voice.lang === 'string');
@@ -130,7 +210,7 @@ function reconcileSpeechOutputState() {
     return !!(browserSpeechActive || bridgeAudioActive || packAudioActive);
 }
 
-async function playViaLocalVoiceBridge(text, onEndCallback) {
+async function playViaLocalVoiceBridge(text, onEndCallback, playbackGeneration) {
     if (!localVoiceBridgeEnabled) {
         return false;
     }
@@ -140,10 +220,13 @@ async function playViaLocalVoiceBridge(text, onEndCallback) {
         return false;
     }
 
+    const controller = new AbortController();
+    bridgeRequestController = controller;
     try {
         const response = await fetch(`${bridgeUrl}/speak`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            signal: controller.signal,
             body: JSON.stringify({
                 text,
                 voice_name: getBridgeVoiceName(),
@@ -157,6 +240,7 @@ async function playViaLocalVoiceBridge(text, onEndCallback) {
         }
 
         const audioBlob = await response.blob();
+        if (playbackGeneration !== speechPlaybackGeneration) return true;
         if (!audioBlob || audioBlob.size === 0) {
             throw new Error('Bridge returned empty audio');
         }
@@ -175,8 +259,11 @@ async function playViaLocalVoiceBridge(text, onEndCallback) {
         updateSpeakingUI(true);
 
         audio.onended = function () {
+            if (playbackGeneration !== speechPlaybackGeneration) return;
             URL.revokeObjectURL(audioUrl);
             currentBridgeAudio = null;
+            clearReadingHighlight();
+            setSpeechPlaybackState('idle');
             isSpeaking = false;
             window.isSpeaking = false;
             isSpeechOutputActive = false;
@@ -188,8 +275,11 @@ async function playViaLocalVoiceBridge(text, onEndCallback) {
         };
 
         audio.onerror = function (event) {
+            if (playbackGeneration !== speechPlaybackGeneration) return;
             URL.revokeObjectURL(audioUrl);
             currentBridgeAudio = null;
+            clearReadingHighlight();
+            setSpeechPlaybackState('idle');
             isSpeaking = false;
             window.isSpeaking = false;
             isSpeechOutputActive = false;
@@ -201,11 +291,22 @@ async function playViaLocalVoiceBridge(text, onEndCallback) {
             if (onEndCallback) onEndCallback();
         };
 
-        await audio.play();
+        if (speechPlaybackState !== 'paused') {
+            await audio.play();
+            if (playbackGeneration !== speechPlaybackGeneration) {
+                audio.pause();
+                return true;
+            }
+            if (speechPlaybackState === 'paused') audio.pause();
+            else setSpeechPlaybackState('playing');
+        }
         return true;
     } catch (error) {
+        if (playbackGeneration !== speechPlaybackGeneration || error.name === 'AbortError') return true;
+        if (speechPlaybackState === 'paused' && currentBridgeAudio) return true;
         if (currentBridgeAudio) {
             currentBridgeAudio.pause();
+            URL.revokeObjectURL(currentBridgeAudio.src);
             currentBridgeAudio = null;
         }
         clearSpeechOutputState();
@@ -216,6 +317,8 @@ async function playViaLocalVoiceBridge(text, onEndCallback) {
         }
         console.warn('🔊 Local voice bridge unavailable, falling back to browser TTS:', error.message);
         return false;
+    } finally {
+        if (bridgeRequestController === controller) bridgeRequestController = null;
     }
 }
 
@@ -788,6 +891,13 @@ function joinTranscriptParts(...parts) {
     return parts.map(part => String(part || '').trim()).filter(Boolean).join(' ');
 }
 
+function consumeVoiceTurnTranscript() {
+    const transcript = joinTranscriptParts(pendingTranscript, lastInterimTranscript);
+    pendingTranscript = '';
+    lastInterimTranscript = '';
+    return transcript;
+}
+
 // Mobile browsers sometimes re-send a final result already captured; ignore exact repeats.
 function isRepeatedTranscript(existing, incoming) {
     const a = String(existing || '').trim().toLowerCase();
@@ -848,10 +958,8 @@ function setupSpeechRecognition() {
             hotkeyReleasePendingStart = false;
             isListening = false;
             window.isListening = false;
-            const transcript = [pendingTranscript.trim(), lastInterimTranscript.trim()]
-                .filter(Boolean).join(' ').trim();
-            pendingTranscript = '';
-            lastInterimTranscript = '';
+            const transcript = consumeVoiceTurnTranscript();
+            hotkeyListening = false;
             recreateRecognition(true);
             if (transcript) {
                 console.log('⌨️ Processing command:', transcript);
@@ -860,6 +968,7 @@ function setupSpeechRecognition() {
             } else {
                 console.log('⌨️ No transcript captured');
                 updateVoiceStatus(getDefaultReadyStatus());
+                if (wakeWordEnabled && !alwaysListeningHotkeyMode) scheduleWakeListeningRecovery();
             }
             return;
         }
@@ -870,10 +979,7 @@ function setupSpeechRecognition() {
             alwaysListeningTurnActive = false;
             isListening = false;
             window.isListening = false;
-            const transcript = [pendingTranscript.trim(), lastInterimTranscript.trim()]
-                .filter(Boolean).join(' ').trim();
-            pendingTranscript = '';
-            lastInterimTranscript = '';
+            const transcript = consumeVoiceTurnTranscript();
             if (transcript) {
                 console.log('🎙️ Always-listening turned-on captured:', transcript);
                 isWakeWordSession = true;
@@ -960,10 +1066,8 @@ function setupSpeechRecognition() {
         if (pttReleaseMode) {
             pttReleaseMode = false;
             hotkeyReleasePendingStart = false;
-            const transcript = [pendingTranscript.trim(), lastInterimTranscript.trim()]
-                .filter(Boolean).join(' ').trim();
-            pendingTranscript = '';
-            lastInterimTranscript = '';
+            const transcript = consumeVoiceTurnTranscript();
+            hotkeyListening = false;
             recreateRecognition(true);
             if (transcript) {
                 console.log('⌨️ Processing command (error recovery):', transcript);
@@ -974,6 +1078,7 @@ function setupSpeechRecognition() {
                     showVoiceNotification('Network error - please press R and repeat', 3000);
                 }
                 updateVoiceStatus(getDefaultReadyStatus());
+                if (wakeWordEnabled && !alwaysListeningHotkeyMode) scheduleWakeListeningRecovery();
             }
             return;
         }
@@ -1940,9 +2045,23 @@ function enqueueAssistantSpeech(text, assistant = 'nova', onEndCallback = null) 
     return assistantSpeechQueue;
 }
 
-function speakText(text, onEndCallback = null, assistant = 'nova', queueToken = null) {
+function speakText(text, onEndCallback = null, assistant = 'nova', queueToken = null, tracking = null) {
     speechPlaybackGeneration++;
     const speechRequestGeneration = speechPlaybackGeneration;
+    pendingSpeechContinuation = null;
+    if (bridgeRequestController) bridgeRequestController.abort();
+    if (currentBridgeAudio) {
+        currentBridgeAudio.pause();
+        URL.revokeObjectURL(currentBridgeAudio.src);
+        currentBridgeAudio = null;
+    }
+    if (currentPackAudio) {
+        currentPackAudio.pause();
+        currentPackAudio = null;
+    }
+    if (synthesis) synthesis.cancel();
+    if (synthesis?.paused) synthesis.resume();
+    clearSpeechOutputState();
     if (queueToken === null) {
         assistantSpeechQueueToken++;
         if (activeQueuedSpeechFinish) {
@@ -1958,6 +2077,7 @@ function speakText(text, onEndCallback = null, assistant = 'nova', queueToken = 
     synthesis = window.speechSynthesis || synthesis;
     if (!synthesis) {
         console.error('🔊 Speech synthesis not available');
+        setSpeechPlaybackState('idle');
         if (typeof onEndCallback === 'function') onEndCallback();
         return;
     }
@@ -1966,10 +2086,16 @@ function speakText(text, onEndCallback = null, assistant = 'nova', queueToken = 
         ? window.makeSpeechFriendly(text)
         : String(text || '');
     window.lastSpeechText = speechText;
+    window.lastSpeechAssistant = assistant;
+    window.lastSpeechOriginalText = text;
+    window.lastSpeechTracking = tracking;
     if (!speechText) {
+        setSpeechPlaybackState('idle');
         if (typeof onEndCallback === 'function') onEndCallback();
         return;
     }
+    startReadingTracker(tracking?.content || findReadingMessage(text, assistant), tracking?.offset || 0);
+    setSpeechPlaybackState('preparing');
     
     const shouldResumeWakeListening = wakeWordEnabled && (isWakeListening || isWakeWordSession);
 
@@ -2015,6 +2141,10 @@ function speakText(text, onEndCallback = null, assistant = 'nova', queueToken = 
             if (queueToken !== null) finalOnEndCallback();
             return;
         }
+        if (speechPlaybackState === 'paused') {
+            pendingSpeechContinuation = startSpeaking;
+            return;
+        }
         if (queueToken !== null && queueToken !== assistantSpeechQueueToken) {
             finalOnEndCallback();
             return;
@@ -2025,7 +2155,9 @@ function speakText(text, onEndCallback = null, assistant = 'nova', queueToken = 
             // Mobile browsers can skip onend after cancel(), which would leave this flag stuck and block all speech.
             isSpeaking = false;
             window.isSpeaking = false;
-            setTimeout(() => speakText(speechText, finalOnEndCallback, assistant, queueToken), 100);
+            setTimeout(() => {
+                if (speechRequestGeneration === speechPlaybackGeneration) startSpeaking();
+            }, 100);
             return;
         }
 
@@ -2037,11 +2169,16 @@ function speakText(text, onEndCallback = null, assistant = 'nova', queueToken = 
             }
         }
 
-        const usedBridge = assistant !== 'other' && await playViaLocalVoiceBridge(speechText, finalOnEndCallback);
+        const usedBridge = assistant !== 'other' && await playViaLocalVoiceBridge(speechText, finalOnEndCallback, speechRequestGeneration);
+        if (speechRequestGeneration !== speechPlaybackGeneration) return;
         if (usedBridge) {
             return;
         }
 
+        if (speechPlaybackState === 'paused') {
+            pendingSpeechContinuation = startSpeaking;
+            return;
+        }
         setupUtteranceAndSpeak(speechText, finalOnEndCallback, assistant);
     };
     
@@ -2087,17 +2224,26 @@ function setupUtteranceAndSpeak(text, onEndCallback, assistant = 'nova') {
     const completeSpeech = () => {
         if (speechFinished) return;
         speechFinished = true;
+        if (playbackGeneration !== speechPlaybackGeneration) return;
+        clearReadingHighlight();
+        setSpeechPlaybackState('idle');
         clearSpeechOutputState();
         if (onEndCallback) onEndCallback();
     };
 
     const speakNextChunk = () => {
-        if (speechFinished || playbackGeneration !== speechPlaybackGeneration || chunkIndex >= speechChunks.length) {
+        if (speechFinished || playbackGeneration !== speechPlaybackGeneration) return;
+        if (speechPlaybackState === 'paused') {
+            pendingSpeechContinuation = speakNextChunk;
+            return;
+        }
+        if (chunkIndex >= speechChunks.length) {
             completeSpeech();
             return;
         }
 
         const chunk = speechChunks[chunkIndex++];
+        const chunkReadingOffset = readingTracker?.offset;
         const utterance = new SpeechSynthesisUtterance(chunk);
         const attemptId = ++utteranceAttemptId;
         let chunkFinished = false;
@@ -2128,6 +2274,7 @@ function setupUtteranceAndSpeak(text, onEndCallback, assistant = 'nova') {
 
             utteranceAttemptId += 1;
             chunkIndex -= 1;
+            if (readingTracker && chunkReadingOffset !== undefined) readingTracker.offset = chunkReadingOffset;
             if (synthesis) synthesis.cancel();
             setTimeout(speakNextChunk, playbackFailureNotified ? 3000 : Math.max(250, 250 * chunkAttempts));
         };
@@ -2138,7 +2285,7 @@ function setupUtteranceAndSpeak(text, onEndCallback, assistant = 'nova') {
         };
         const armChunkWatchdog = (timeoutMs, reason) => {
             speechOutputWatchdog = setTimeout(() => {
-                if (synthesis?.paused) {
+                if (speechPlaybackState === 'paused' || synthesis?.paused) {
                     armChunkWatchdog(5000, reason);
                     return;
                 }
@@ -2190,7 +2337,12 @@ function setupUtteranceAndSpeak(text, onEndCallback, assistant = 'nova') {
     console.log('🔊 Voice settings - Rate:', utterance.rate, 'Pitch:', utterance.pitch, 'Volume:', utterance.volume);
     
     utterance.onstart = function() {
-        if (attemptId !== utteranceAttemptId) return;
+        if (attemptId !== utteranceAttemptId || playbackGeneration !== speechPlaybackGeneration) return;
+        if (speechPlaybackState === 'paused') {
+            synthesis.pause();
+        } else {
+            setSpeechPlaybackState('playing');
+        }
         clearChunkWatchdog();
         isSpeaking = true;
         window.isSpeaking = true;
@@ -2211,7 +2363,7 @@ function setupUtteranceAndSpeak(text, onEndCallback, assistant = 'nova') {
     };
     
     utterance.onend = function() {
-        if (attemptId !== utteranceAttemptId) return;
+        if (attemptId !== utteranceAttemptId || playbackGeneration !== speechPlaybackGeneration) return;
         clearChunkWatchdog();
         const expectedWordCount = chunk.trim().split(/\s+/).length;
         const minimumBoundaryCount = Math.ceil(expectedWordCount * 0.65);
@@ -2228,8 +2380,9 @@ function setupUtteranceAndSpeak(text, onEndCallback, assistant = 'nova') {
     };
 
     utterance.onboundary = function(event) {
-        if (attemptId === utteranceAttemptId && event.name === 'word') {
+        if (attemptId === utteranceAttemptId && playbackGeneration === speechPlaybackGeneration && speechPlaybackState !== 'paused' && event.name === 'word') {
             spokenWordBoundaryCount += 1;
+            markReadingWord(chunk, event.charIndex);
         }
     };
 
@@ -2263,6 +2416,11 @@ function setupUtteranceAndSpeak(text, onEndCallback, assistant = 'nova') {
 
 function stopSpeech() {
     speechPlaybackGeneration++;
+    pendingSpeechContinuation = null;
+    if (bridgeRequestController) bridgeRequestController.abort();
+    setSpeechPlaybackState('stopped');
+    clearReadingHighlight();
+    readingTracker = null;
     assistantSpeechQueueToken++;
     queuedAssistantSpeechActive = false;
     if (activeQueuedSpeechFinish) {
@@ -2271,6 +2429,7 @@ function stopSpeech() {
     if (currentBridgeAudio) {
         currentBridgeAudio.pause();
         currentBridgeAudio.currentTime = 0;
+        URL.revokeObjectURL(currentBridgeAudio.src);
         currentBridgeAudio = null;
     }
     if (currentPackAudio) {
@@ -2280,12 +2439,15 @@ function stopSpeech() {
     }
     if (synthesis) {
         synthesis.cancel();
+        if (synthesis.paused) synthesis.resume();
     }
     clearSpeechOutputState();
     stopSpeechInterruptListening(true);
 }
 
 function pauseSpeech() {
+    if (speechPlaybackState !== 'playing' && speechPlaybackState !== 'preparing') return;
+    setSpeechPlaybackState('paused');
     if (currentPackAudio) {
         currentPackAudio.pause();
         updateSpeakingUI(true);
@@ -2294,41 +2456,61 @@ function pauseSpeech() {
     if (currentBridgeAudio) {
         currentBridgeAudio.pause();
     }
-    if (synthesis && (isSpeaking || synthesis.speaking)) {
+    if (synthesis) {
         synthesis.pause();
         updateSpeakingUI(true);
     }
 }
 
 function resumeSpeech() {
+    if (speechPlaybackState === 'paused') {
+        setSpeechPlaybackState('preparing');
+        if (pendingSpeechContinuation) {
+            const resume = pendingSpeechContinuation;
+            pendingSpeechContinuation = null;
+            if (synthesis?.paused) synthesis.resume();
+            resume();
+            return;
+        }
+    }
     if (currentPackAudio && currentPackAudio.paused) {
-        currentPackAudio.play().catch(error => {
-            console.warn('Could not resume JARVIS voice-pack playback:', error);
+        const audio = currentPackAudio;
+        const generation = speechPlaybackGeneration;
+        audio.play().then(() => {
+            if (generation === speechPlaybackGeneration && currentPackAudio === audio && speechPlaybackState !== 'paused') setSpeechPlaybackState('playing');
+        }).catch(error => {
+            if (generation === speechPlaybackGeneration && currentPackAudio === audio && speechPlaybackState !== 'paused' && error.name !== 'AbortError') audio.onerror(error);
         });
         return;
     }
     if (currentBridgeAudio) {
-        currentBridgeAudio.play().catch(error => {
-            console.warn('Could not resume local voice playback:', error);
+        const audio = currentBridgeAudio;
+        const generation = speechPlaybackGeneration;
+        audio.play().then(() => {
+            if (generation === speechPlaybackGeneration && currentBridgeAudio === audio && speechPlaybackState !== 'paused') setSpeechPlaybackState('playing');
+        }).catch(error => {
+            if (generation === speechPlaybackGeneration && currentBridgeAudio === audio && speechPlaybackState !== 'paused' && error.name !== 'AbortError') audio.onerror(error);
         });
         return;
     }
     if (synthesis && synthesis.paused) {
         synthesis.resume();
+        setSpeechPlaybackState('playing');
         return;
     }
+    if (speechPlaybackState === 'preparing' || speechPlaybackState === 'playing') return;
     const activeText = window.lastSpeechText || '';
     if (activeText && !isSpeaking) {
-        speakText(activeText);
+        speakText(window.lastSpeechOriginalText || activeText, null, window.lastSpeechAssistant || 'nova', null, window.lastSpeechTracking);
     }
 }
 
-function speakTextFrom(text, characterOffset = 0, assistant = 'nova') {
-    const normalizedText = String(text || '').trim();
+function speakTextFrom(text, characterOffset = 0, assistant = 'nova', content = null) {
+    const normalizedText = String(text || '');
     if (!normalizedText) return;
     const safeOffset = Math.max(0, Math.min(Number(characterOffset) || 0, normalizedText.length));
-    const remainingText = normalizedText.slice(safeOffset).replace(/^\s+/, '');
-    speakText(remainingText || normalizedText, null, assistant);
+    const remainingText = normalizedText.slice(safeOffset);
+    speakText(remainingText || normalizedText, null, assistant, null, { content, offset: safeOffset });
 }
 
 window.pauseSpeech = pauseSpeech;
@@ -2336,6 +2518,7 @@ window.resumeSpeech = resumeSpeech;
 window.stopSpeech = stopSpeech;
 window.speakTextFrom = speakTextFrom;
 window.enqueueAssistantSpeech = enqueueAssistantSpeech;
+window.refreshSpeechPlaybackControls = () => setSpeechPlaybackState(speechPlaybackState);
 
 // Voice Sampling and Selection Functions
 function previewVoice(voice, sampleText = "Greetings, sir. This is how I sound. Do you approve of this voice selection?") {
@@ -2580,6 +2763,7 @@ function disableVoiceFeatures() {
 // Manual Voice Control Functions
 function startVoiceRecognition(options = {}) {
     const allowSpeechInterrupt = !!options.allowSpeechInterrupt;
+    if (options.shouldContinue && !options.shouldContinue()) return;
     console.log('🎤 startVoiceRecognition called - isVoiceSupported:', isVoiceSupported, 'hasPermission:', hasVoicePermission, 'recognition:', !!recognition);
     
     if (!hasUsableVoiceRecognition() || !hasVoicePermission) {
@@ -2620,7 +2804,9 @@ function startVoiceRecognition(options = {}) {
         isListening = false;
         window.isListening = false;
         try { recognition.abort(); } catch (e) {}
-        setTimeout(() => startVoiceRecognition(options), 250);
+        setTimeout(() => {
+            if (!options.shouldContinue || options.shouldContinue()) startVoiceRecognition(options);
+        }, 250);
         return;
     }
     pendingTranscript = '';
@@ -2924,196 +3110,142 @@ function setupSettingsEventListeners() {
 function setupVoiceButtons() {
     console.log('🎤 Setting up voice buttons (Push-to-Talk mode)...');
     console.log('🎤 Current state - isVoiceSupported:', isVoiceSupported, 'hasPermission:', hasVoicePermission);
-    
-    // Main voice button - push-to-talk mode
-    const voiceBtn = document.getElementById('voiceBtn');
-    console.log('🎤 Voice button element:', !!voiceBtn);
-    if (voiceBtn) {
-        // Ensure only one event listener per button by cloning
-        const newVoiceBtn = voiceBtn.cloneNode(true);
-        voiceBtn.parentNode.replaceChild(newVoiceBtn, voiceBtn);
-        
-        // Press and hold to talk
-        const startListening = async function(e) {
-            e.preventDefault();
-            console.log('🎤 Voice button pressed - starting listening...');
-            
-            // Ensure this is NOT a wake word session (push-to-talk mode)
+
+    let activeButton = null;
+    const bindPushToTalkButton = (originalButton, label) => {
+        if (!originalButton) return;
+        const button = originalButton.cloneNode(true);
+        originalButton.parentNode.replaceChild(button, originalButton);
+        let pressed = false;
+        let permissionPending = false;
+        let startRequested = false;
+        let pressGeneration = 0;
+        let lastTouchAt = 0;
+        let pendingStartReleaseTimeout = null;
+
+        const startListening = async event => {
+            event.preventDefault();
+            if (pressed || (activeButton && activeButton !== button)) return;
+            pressed = true;
+            activeButton = button;
+            const generation = ++pressGeneration;
+            const pressIsActive = () => pressed && activeButton === button && pressGeneration === generation;
+            console.log(`🎤 ${label} voice button pressed - starting listening...`);
             isWakeWordSession = false;
             window.isWakeWordSession = false;
-            console.log('🎤 Push-to-talk mode - isWakeWordSession = false');
-            
+
             if (!isVoiceSupported) {
                 showVoiceNotification('Voice recognition not supported in this browser', 3000);
+                pressed = false;
+                activeButton = null;
                 return;
             }
-            
+
             if (!hasVoicePermission) {
-                console.log('🎤 Requesting microphone permission...');
+                permissionPending = true;
                 const granted = await requestVoicePermission();
+                permissionPending = false;
+                if (!pressIsActive()) return;
                 if (!granted) {
-                    console.log('🎤 Permission denied');
+                    pressed = false;
+                    activeButton = null;
                     return;
                 }
-                console.log('🎤 Permission granted - starting listening now');
                 showVoiceNotification('Microphone ready! Listening...', 2000);
-                // Fall through to start listening immediately
             }
-            
-            newVoiceBtn.classList.add('recording');
+
+            if (!pressIsActive()) return;
+            button.classList.add('recording');
             updateVoiceStatus('Hold to speak - Release when done');
-            startVoiceRecognition();
+            hotkeyListening = true;
+            hotkeyReleasePendingStart = false;
+            pttReleaseMode = false;
+            startRequested = true;
+            startVoiceRecognition({
+                allowSpeechInterrupt: true,
+                shouldContinue: pressIsActive
+            });
         };
-        
-        const stopListening = function(e) {
-            e.preventDefault();
-            console.log('🎤 Voice button released - stopping listening...');
-            
-            newVoiceBtn.classList.remove('recording');
-            
-            if (isListening && recognition) {
-                try {
-                    recognition.stop();
-                    console.log('🎤 Recognition stopped - waiting for final results');
-                } catch (err) {
-                    console.log('🎤 Recognition already stopped');
-                }
-                
-                // Process after recognition has time to finalize
-                setTimeout(() => {
-                    if (pendingTranscript) {
-                        const transcript = pendingTranscript;
-                        pendingTranscript = '';
-                        isListening = false;
-                        window.isListening = false;
-                        console.log('🗣️ Processing command on button release:', transcript);
-                        updateVoiceStatus('Processing command...');
-                        processVoiceCommand(transcript);
-                    } else {
-                        console.log('🗣️ No transcript captured');
-                        isListening = false;
-                        window.isListening = false;
-                        
-                        // Restart wake listening if enabled
-                        if (wakeWordEnabled) {
-                            console.log('🎤 Restarting wake listening after button release');
-                            isWakeListening = true;
-                            window.isWakeListening = true;
-                            setTimeout(() => startWakeListening(), 1000);
-                        } else {
-                            updateVoiceStatus('Ready - Press and hold to speak');
-                        }
-                    }
-                }, 500);
-            }
-        };
-        
-        // Desktop events
-        newVoiceBtn.addEventListener('mousedown', startListening);
-        newVoiceBtn.addEventListener('mouseup', stopListening);
-        newVoiceBtn.addEventListener('mouseleave', stopListening);
-        
-        // Mobile events
-        newVoiceBtn.addEventListener('touchstart', startListening);
-        newVoiceBtn.addEventListener('touchend', stopListening);
-        newVoiceBtn.addEventListener('touchcancel', stopListening);
-        
-        console.log('✅ Main voice button (Push-to-Talk) event listeners attached');
-    }
-    
-    // Input voice button - push-to-talk mode
-    const voiceInputBtn = document.getElementById('voiceInputBtn');
-    if (voiceInputBtn) {
-        // Ensure only one event listener per button by cloning
-        const newVoiceInputBtn = voiceInputBtn.cloneNode(true);
-        voiceInputBtn.parentNode.replaceChild(newVoiceInputBtn, voiceInputBtn);
-        
-        const startListening = async function(e) {
-            e.preventDefault();
-            console.log('🎤 Input voice button pressed - starting listening...');
-            
-            // Ensure this is NOT a wake word session (push-to-talk mode)
-            isWakeWordSession = false;
-            window.isWakeWordSession = false;
-            console.log('🎤 Push-to-talk mode (input) - isWakeWordSession = false');
-            
-            if (!isVoiceSupported) {
-                showVoiceNotification('Voice recognition not supported in this browser', 3000);
+
+        const stopListening = event => {
+            event.preventDefault();
+            if (!pressed) return;
+            console.log(`🎤 ${label} voice button released - stopping listening...`);
+            pressed = false;
+            pressGeneration++;
+            if (activeButton === button) activeButton = null;
+            button.classList.remove('recording');
+
+            if (permissionPending || !startRequested) {
+                startRequested = false;
+                hotkeyListening = false;
+                updateVoiceStatus(getDefaultReadyStatus());
                 return;
             }
-            
-            if (!hasVoicePermission) {
-                console.log('🎤 Requesting microphone permission...');
-                const granted = await requestVoicePermission();
-                if (!granted) {
-                    console.log('🎤 Permission denied');
-                    return;
-                }
-                console.log('🎤 Permission granted - starting listening now');
-                showVoiceNotification('Microphone ready! Listening...', 2000);
-                // Fall through to start listening immediately
-            }
-            
-            newVoiceInputBtn.classList.add('recording');
-            updateVoiceStatus('Hold to speak - Release when done');
-            startVoiceRecognition();
-        };
-        
-        const stopListening = function(e) {
-            e.preventDefault();
-            console.log('🎤 Input voice button released - stopping listening...');
-            
-            newVoiceInputBtn.classList.remove('recording');
-            
+
+            startRequested = false;
+            pttReleaseMode = true;
+            updateVoiceStatus('Processing command...');
             if (isListening && recognition) {
+                hotkeyReleasePendingStart = false;
+                isListening = false;
+                window.isListening = false;
                 try {
                     recognition.stop();
-                    console.log('🎤 Recognition stopped - waiting for final results');
-                } catch (err) {
-                    console.log('🎤 Recognition already stopped');
+                } catch (error) {
+                    console.warn('Could not stop voice recognition after button release:', error);
                 }
-                
-                // Process after recognition has time to finalize
-                setTimeout(() => {
-                    if (pendingTranscript) {
-                        const transcript = pendingTranscript;
-                        pendingTranscript = '';
-                        isListening = false;
-                        window.isListening = false;
-                        console.log('🗣️ Processing command on button release:', transcript);
-                        updateVoiceStatus('Processing command...');
-                        processVoiceCommand(transcript);
-                    } else {
-                        console.log('🗣️ No transcript captured');
-                        isListening = false;
-                        window.isListening = false;
-                        
-                        // Restart wake listening if enabled
-                        if (wakeWordEnabled) {
-                            console.log('🎤 Restarting wake listening after input button release');
-                            isWakeListening = true;
-                            window.isWakeListening = true;
-                            setTimeout(() => startWakeListening(), 1000);
-                        } else {
-                            updateVoiceStatus('Ready - Press and hold to speak');
-                        }
+            } else {
+                hotkeyReleasePendingStart = true;
+                const releaseGeneration = pressGeneration;
+                clearTimeout(pendingStartReleaseTimeout);
+                pendingStartReleaseTimeout = setTimeout(() => {
+                    if (pressGeneration === releaseGeneration && hotkeyReleasePendingStart && pttReleaseMode) {
+                        hotkeyReleasePendingStart = false;
+                        pttReleaseMode = false;
+                        hotkeyListening = false;
+                        updateVoiceStatus(getDefaultReadyStatus());
                     }
-                }, 500);
+                }, 2500);
             }
         };
-        
-        // Desktop events
-        newVoiceInputBtn.addEventListener('mousedown', startListening);
-        newVoiceInputBtn.addEventListener('mouseup', stopListening);
-        newVoiceInputBtn.addEventListener('mouseleave', stopListening);
-        
-        // Mobile events
-        newVoiceInputBtn.addEventListener('touchstart', startListening);
-        newVoiceInputBtn.addEventListener('touchend', stopListening);
-        newVoiceInputBtn.addEventListener('touchcancel', stopListening);
-        
-        console.log('✅ Input voice button (Push-to-Talk) event listeners attached');
-    }
+
+        if (window.PointerEvent) {
+            button.addEventListener('pointerdown', event => {
+                if (event.button !== undefined && event.button !== 0) return;
+                startListening(event);
+                try { button.setPointerCapture(event.pointerId); } catch (error) {
+                    console.warn('Could not capture voice-button pointer:', error);
+                }
+            });
+            button.addEventListener('pointerup', stopListening);
+            button.addEventListener('pointercancel', stopListening);
+            button.addEventListener('lostpointercapture', stopListening);
+        } else {
+            button.addEventListener('mousedown', event => {
+                if (Date.now() - lastTouchAt > 800) startListening(event);
+            });
+            button.addEventListener('mouseup', stopListening);
+            button.addEventListener('mouseleave', stopListening);
+            button.addEventListener('touchstart', event => {
+                lastTouchAt = Date.now();
+                startListening(event);
+            }, { passive: false });
+            button.addEventListener('touchend', stopListening);
+            button.addEventListener('touchcancel', stopListening);
+        }
+
+        button.addEventListener('keydown', event => {
+            if ((event.key === ' ' || event.key === 'Enter') && !event.repeat) startListening(event);
+        });
+        button.addEventListener('keyup', event => {
+            if (event.key === ' ' || event.key === 'Enter') stopListening(event);
+        });
+        console.log(`✅ ${label} voice button (Push-to-Talk) event listeners attached`);
+    };
+
+    bindPushToTalkButton(document.getElementById('voiceBtn'), 'Main');
+    bindPushToTalkButton(document.getElementById('voiceInputBtn'), 'Input');
     
     // Wake word toggle button
     // ====== WAKE WORD BUTTON - DISABLED/COMMENTED OUT ======
@@ -4205,11 +4337,13 @@ function chooseJarvisPackClip(pack, text = '') {
 function playJarvisPackSample(text = '', onEndCallback = null) {
     const pack = getSelectedJarvisPack();
     if (!pack) return false;
+    const playbackGeneration = speechPlaybackGeneration;
 
     const clipCandidates = chooseJarvisPackClip(pack, text);
     let candidateIndex = 0;
 
     const tryPlayNext = () => {
+        if (playbackGeneration !== speechPlaybackGeneration) return false;
         if (candidateIndex >= clipCandidates.length) {
             console.warn('🔊 No playable JARVIS clip found in pack:', pack.name);
             return false;
@@ -4219,8 +4353,18 @@ function playJarvisPackSample(text = '', onEndCallback = null) {
         const src = `${pack.basePath}/${clip}`;
         const audio = new Audio(src);
         currentPackAudio = audio;
+        let failed = false;
 
         audio.onplay = function () {
+            if (playbackGeneration !== speechPlaybackGeneration || currentPackAudio !== audio) {
+                audio.pause();
+                return;
+            }
+            if (speechPlaybackState === 'paused') {
+                audio.pause();
+                return;
+            }
+            setSpeechPlaybackState('playing');
             lastJarvisPackClipByPack[pack.id] = clip;
             isSpeaking = true;
             window.isSpeaking = true;
@@ -4231,44 +4375,49 @@ function playJarvisPackSample(text = '', onEndCallback = null) {
         };
 
         audio.onended = function () {
+            if (playbackGeneration !== speechPlaybackGeneration || currentPackAudio !== audio) return;
             isSpeaking = false;
             window.isSpeaking = false;
             isSpeechOutputActive = false;
             window.isSpeechOutputActive = false;
             updateSpeakingUI(false);
             currentPackAudio = null;
+            setSpeechPlaybackState('idle');
+            clearReadingHighlight();
             if (onEndCallback) onEndCallback();
         };
 
-        audio.onerror = function () {
-            // Try next clip candidate
+        audio.onerror = function (error) {
+            if (playbackGeneration !== speechPlaybackGeneration || currentPackAudio !== audio || failed) return;
+            failed = true;
+            console.warn('🔊 JARVIS pack clip failed:', src, error);
+            if (speechPlaybackState === 'paused') {
+                pendingSpeechContinuation = () => {
+                    if (!tryPlayNext()) finishPackFailure();
+                };
+                return;
+            }
             if (!tryPlayNext()) {
-                // Final failure - cleanup and callback
-                isSpeaking = false;
-                window.isSpeaking = false;
-                isSpeechOutputActive = false;
-                window.isSpeechOutputActive = false;
-                updateSpeakingUI(false);
-                currentPackAudio = null;
-                if (onEndCallback) onEndCallback();
+                finishPackFailure();
             }
         };
 
-        audio.play().catch(() => {
-            if (!tryPlayNext()) {
-                isSpeaking = false;
-                window.isSpeaking = false;
-                isSpeechOutputActive = false;
-                window.isSpeechOutputActive = false;
-                updateSpeakingUI(false);
-                currentPackAudio = null;
-                if (onEndCallback) onEndCallback();
-            }
+        audio.play().catch(error => {
+            if (speechPlaybackState === 'paused' || error.name === 'AbortError') return;
+            audio.onerror(error);
         });
 
         return true;
     };
 
+    const finishPackFailure = () => {
+        currentPackAudio = null;
+        clearSpeechOutputState();
+        clearReadingHighlight();
+        setSpeechPlaybackState('idle');
+        showVoiceNotification('Unable to play the selected voice pack.', 4500);
+        if (onEndCallback) onEndCallback();
+    };
     return tryPlayNext();
 }
 

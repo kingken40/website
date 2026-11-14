@@ -350,6 +350,19 @@ body {
     color: #ff9d9d;
 }
 
+.speech-control-btn:disabled,
+.mobile-ctrl-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.message-content .speech-current-word {
+    text-decoration: underline;
+    text-decoration-color: #ffd700;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 0.2em;
+}
+
 .message-content[data-speech-content="true"] {
     cursor: text;
     user-select: text;

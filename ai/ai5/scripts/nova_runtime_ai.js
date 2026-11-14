@@ -144,6 +144,9 @@ function buildWebTaskMessage(userMessage, webContext = '') {
     const responseLengthGuidance = shortResponseModeEnabled
         ? 'Keep the answer concise by default. For a simple factual lookup, answer in one sentence and include a compact inline citation with the source title and clickable URL. Avoid unnecessary headings and omit a separate "Where to get more" section unless the user asks for detailed research.'
         : 'Every internet-derived factual claim must have an inline clickable markdown citation when possible.\nAlways finish with "Sources & References" containing the source title and full clickable markdown URL for every source used.\nAlso include "Where to get more" with useful official pages, documentation, or further reading.';
+    const videoResourceGuidance = _VIDEO_RESOURCE_REQUEST_RE.test(_getUserRequestForWebIntent(userMessage))
+        ? '\nFor this video request, prioritize actual watchable videos from reputable educational sources. Return a short bulleted list with the video title, a direct verified video-page link from the live results, and one sentence on its relevance. Do not substitute general articles, invent links, or imply a link was verified when it was not.'
+        : '';
     return `${userMessage}${futureEventGuidance}${superBowlGuidance}${liveContext}
 
 WEB SEARCH TASK:
@@ -151,6 +154,7 @@ Use the live web context to answer accurately and naturally.
 Prefer primary and official sources, and distinguish facts from interpretation.
 ${conciseLiveAnswerGuidance}
 ${responseLengthGuidance}
+${videoResourceGuidance}
 Never invent a URL or citation, and never claim you cannot browse.`;
 }
 
@@ -417,6 +421,31 @@ function isAreYouUpCheck(userMessage) {
     return /^\s*(?:(?:hey|yo)\s+)?(?:n\.?o\.?v\.?a\.?|a\.?v\.?o\.?n\.?)?[\s,:-]*(?:are\s+)?you\s+up\s*[?!.]*\s*$/i.test(String(userMessage || ''));
 }
 
+function tryVideoAfterChatFailure(userMessage, personality, responseSender, options) {
+    if (options.proactiveEvaluation || typeof resolveVideoArtifactRequest !== 'function' ||
+        typeof detectRequestedArtifactFormats !== 'function' || typeof window.maybeCreateRequestedArtifact !== 'function') return false;
+    const history = typeof chatHistory !== 'undefined' ? chatHistory : null;
+    const videoRequest = resolveVideoArtifactRequest(userMessage, '', history);
+    if (!videoRequest) return false;
+    const formats = detectRequestedArtifactFormats(videoRequest);
+    if (formats.length !== 1 || formats[0] !== 'mp4') return false;
+
+    const reply = 'The chat service is unavailable, but I will attempt your video request. Watch the status card for the result.';
+    removeThinkingIndicator();
+    addMessage(reply, responseSender);
+    window.maybeCreateRequestedArtifact(userMessage, reply);
+    conversationHistory.push({ role: 'assistant', speaker: responseSender, content: reply, personality, timestamp: new Date().toISOString() });
+    if (typeof window.speakText === 'function') {
+        const onEnd = window.isWakeWordSession && typeof window.restoreWakeListeningAfterResponse === 'function'
+            ? () => { window.restoreWakeListeningAfterResponse(); }
+            : () => {};
+        speakAssistantResponse(reply, responseSender, onEnd);
+    } else if (window.isWakeWordSession && typeof window.restoreWakeListeningAfterResponse === 'function') {
+        window.restoreWakeListeningAfterResponse();
+    }
+    return true;
+}
+
 // Enhanced AI integration with multi-provider support and improved error handling
 async function generateAIResponse(userMessage, personality, options = {}) {
     console.log('?? Generating AI response for personality:', personality);
@@ -456,16 +485,17 @@ async function generateAIResponse(userMessage, personality, options = {}) {
         console.log('?? No user API key configured � trying server proxy (/api/chat)...');
         try {
             const proxyResult = await generateViaServerProxy(userMessage, personality, options);
-            const reply = proxyResult.reply;
+            let reply = proxyResult.reply;
             const responseModel = proxyResult.model || lastResponseModel || currentModel;
             if (options.proactiveEvaluation) return { reply, model: responseModel };
+            reply = window.normalizeImageReply?.(userMessage, reply) ?? reply;
             if (!options.noveltyRetry && isNoveltyReplyDuplicate(userMessage, reply)) {
                 console.log('?? Novelty reply duplicated prior memory - retrying with stronger instruction');
                 await generateAIResponse(userMessage, personality, { ...options, noveltyRetry: true, skipUserHistory: true });
                 return;
             }
             removeThinkingIndicator();
-            addMessage(window.normalizeImageReply?.(userMessage, reply) ?? reply, responseSender, null, responseModel);
+            addMessage(reply, responseSender, null, responseModel);
             window.maybeCreateRequestedArtifact?.(userMessage, reply);
             conversationHistory.push({ role: 'assistant', speaker: responseSender, content: reply, personality, timestamp: new Date().toISOString(), model: responseModel });
             recordNoveltyResponse(userMessage, reply, responseModel);
@@ -489,6 +519,7 @@ async function generateAIResponse(userMessage, personality, options = {}) {
                 return;
             }
             console.warn('?? Server proxy unavailable:', proxyErr.message);
+            if (tryVideoAfterChatFailure(userMessage, personality, responseSender, options)) return;
             // Server proxy failed � fall through to show the most useful message we can
             removeThinkingIndicator();
             if (/503|No AI API key configured on server/i.test(proxyErr.message)) {
@@ -718,11 +749,12 @@ async function generateAIResponse(userMessage, personality, options = {}) {
         }
         const payloadSources = _extractSourcesFromProviderPayload(responseData);
         const mergedSources = _mergeSourceLists(collectedWebSources, payloadSources);
-        const reply = _correctSuperBowlDateReply(
+        let reply = _correctSuperBowlDateReply(
             _ensureWebSourcesInReply(rawReply, mergedSources, shouldUseWeb),
             userMessage
         );
         if (options.proactiveEvaluation) return { reply, model: responseModel };
+        reply = window.normalizeImageReply?.(userMessage, reply) ?? reply;
         console.log('?', currentProvider.toUpperCase(), 'Response Success - Length:', reply.length, 'characters');
         console.log('?? Personality:', personality);
 
@@ -736,7 +768,7 @@ async function generateAIResponse(userMessage, personality, options = {}) {
         removeThinkingIndicator();
         
         // Add response to chat
-        addMessage(window.normalizeImageReply?.(userMessage, reply) ?? reply, responseSender, null, responseModel);
+        addMessage(reply, responseSender, null, responseModel);
         window.maybeCreateRequestedArtifact?.(userMessage, reply);
         
         // Save to conversation history
@@ -789,6 +821,8 @@ async function generateAIResponse(userMessage, personality, options = {}) {
                 console.error('?? Slim-context retry failed:', retryError);
             }
         }
+
+        if (tryVideoAfterChatFailure(userMessage, personality, responseSender, options)) return;
         
         // AUTO-FALLBACK: If OpenRouter fails and user has an OpenAI key, retry with OpenAI
         const isOpenRouterProvider = currentProvider === 'openrouter';
@@ -917,6 +951,8 @@ async function generateAIResponse(userMessage, personality, options = {}) {
 // ============================================================
 
 const _WEB_URL_RE = /https?:\/\/[^\s<>"{}|\\^`[\]]+/g;
+const _VIDEO_RESOURCE_REQUEST_RE = /\b(?:videos?|video links?|tutorial videos?)\b/i;
+const _VIDEO_RESOURCE_ACTION_RE = /\b(?:find|search|look(?:\s+up)?|show|give|provide|recommend|link|links|relevant|useful)\b/i;
 
 // Explicit web intent: URL present OR clear search/browse keywords
 const _WEB_INTENT_RE = /\b(search(?:\s+(?:for|the\s+web|online))?|look\s*(?:it\s+)?up|browse|visit|go\s+to|open\s+(?:the\s+)?(?:site|page|link|url|website)|fetch|check\s+(?:the\s+)?(?:website|page|site)|(?:their|its|the)\s+(?:website|webpage|web\s+page|site)|(?:find|get)\s+(?:online|on\s+the\s+web|current|real.?time|live)|latest\s+news|current\s+news|real.?time|what(?:'?s?|\s+is)\s+(?:on|at)\s+(?:the\s+)?(?:website|site|page)|download(?:able|s)?|installer|setup\s+file|github\s+release|official\s+download|apk|exe|dmg|zip\s+file|pdf\s+download|dataset|what(?:'?s?|\s+is)\s+(?:current|new|happening|going\s+on|trending|breaking)\s*(?:in|with|at|on|for)?|what(?:'?s?|\s+is)\s+(?:new\s+)?(?:in|with|at|on)\s+\w|update\s+on\s+|news\s+(?:about|on|for)|(?:latest|recent)\s+(?:on|in|about|from)|today\s+in|this\s+week\s+in|what'?s?\s+new|whats\s+new|whats\s+(?:current|happening|going)\s+|what\s+is\s+(?:current|happening|going))\b/i;
@@ -964,10 +1000,37 @@ async function _retryWithJinaFallback(rawReply, userMessage) {
     }
 }
 function _detectWebIntent(message) {
-    const urls = message.match(_WEB_URL_RE) || [];
+    const request = _getUserRequestForWebIntent(message);
+    if (!request) return null;
+    if (typeof detectRequestedArtifactFormats === 'function' && detectRequestedArtifactFormats(request).includes('mp4') &&
+        !/\b(?:find|search|recommend|links?)\b/i.test(request)) return null;
+    const urls = request.match(_WEB_URL_RE) || [];
     if (urls.length) return { type: 'url', urls };
-    if (_WEB_INTENT_RE.test(message)) return { type: 'search', query: message };
+    if (_VIDEO_RESOURCE_REQUEST_RE.test(request) && _VIDEO_RESOURCE_ACTION_RE.test(request)) {
+        return { type: 'search', query: _buildVideoResourceSearchQuery(message, request) };
+    }
+    if (_WEB_INTENT_RE.test(request)) return { type: 'search', query: request };
     return null;
+}
+
+function _getUserRequestForWebIntent(message) {
+    const text = String(message || '');
+    const packetEnd = text.lastIndexOf('END AUDIO ANALYSIS PACKET');
+    return packetEnd < 0 ? text.trim() : text.slice(packetEnd + 'END AUDIO ANALYSIS PACKET'.length).trim();
+}
+
+function _buildVideoResourceSearchQuery(message, request = _getUserRequestForWebIntent(message)) {
+    const text = String(message || '');
+    const transcriptMatch = text.match(/TRANSCRIPT\s*\n([\s\S]*?)\nEND AUDIO ANALYSIS PACKET/i);
+    if (!transcriptMatch) return `${request} educational video tutorial`;
+
+    const transcriptExcerpt = transcriptMatch[1]
+        .replace(/^\s*\[[^\]]+\]\s*/gm, '')
+        .replace(/^\s*Speaker [^:]+:\s*/gim, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 700);
+    return `${request} relevant educational video tutorial: ${transcriptExcerpt}`;
 }
 
 function _tokenizeForLocalMatch(text) {
@@ -1004,20 +1067,23 @@ function _hasLikelyLocalKnowledge(message) {
 }
 
 function _resolveWebIntent(message) {
+    const request = _getUserRequestForWebIntent(message);
+    if (!request) return null;
+    if (typeof detectRequestedArtifactFormats === 'function' && detectRequestedArtifactFormats(request).includes('mp4') &&
+        !/\b(?:find|search|recommend|links?)\b/i.test(request)) return null;
     const explicit = _detectWebIntent(message);
     if (explicit) return explicit;
 
-    const text = String(message || '').trim();
-    if (!text || _LOCAL_TASK_RE.test(text) || _CASUAL_CHAT_RE.test(text)) return null;
+    if (_LOCAL_TASK_RE.test(request) || _CASUAL_CHAT_RE.test(request)) return null;
 
-    const factualRequest = _FACT_LOOKUP_RE.test(text) || _EDUCATIONAL_LOOKUP_RE.test(text);
+    const factualRequest = _FACT_LOOKUP_RE.test(request) || _EDUCATIONAL_LOOKUP_RE.test(request);
     if (!factualRequest) return null;
 
-    if (_hasLikelyLocalKnowledge(text)) {
+    if (_hasLikelyLocalKnowledge(request)) {
         return null;
     }
 
-    return { type: 'auto', query: text };
+    return { type: 'auto', query: request };
 }
 
 function _buildWebSearchQuery(query) {
@@ -1359,8 +1425,8 @@ function prepareOpenAIMessages(userMessage, personality, options = {}) {
     let personalityInstructions = '';
     if (isAudioBackedRequest) {
         personalityInstructions = isSlimContext
-            ? 'Analyze the uploaded audio transcript faithfully. Preserve timestamps and speaker labels when present, summarize the key ideas, and answer the user�s specific question without inventing missing words or identities.'
-            : 'Treat the uploaded audio transcript as a primary source. First understand its setting (lecture, classroom, meeting, interview, or conversation) from the content. Preserve timestamps and speaker labels when present, clearly separate what was said from your interpretation, and never invent speaker identities. When the packet says LECTURE MODE: ACTIVE, follow its LECTURE MODE PROTOCOL section by section so the user truly understands what was taught, then offer to quiz them. For meetings or interviews, identify decisions, action items, owners, and unresolved questions.';
+            ? 'Analyze the uploaded audio transcript faithfully. Use separate Markdown headings and concise bullets, never one dense paragraph. Preserve timestamps and detected speaker labels; identify likely roles only as inferences and never invent names. Answer the user�s specific question without inventing missing words or identities.'
+            : 'Treat the uploaded audio transcript as a primary source. Format the response for scanning: put each Markdown heading on its own line, use short paragraphs and bullets, and never collapse the breakdown into one paragraph. Preserve timestamps and detected speaker labels. Include a speaker roster with likely roles clearly labelled as inferences; never invent names, words, or identities. Separate transcript facts from your interpretation. When the packet says LECTURE MODE: ACTIVE, follow its structured LECTURE MODE PROTOCOL and include a useful visual aid when it clarifies a concept. If the user asks for video resources, use live search and provide only verified links from the results with a short note explaining each link. For meetings or interviews, list decisions, action items, owners, and unresolved questions.';
     } else if (personality === 'interview') {
         personalityInstructions = `You are a realistic job interviewer and interview coach running a mock interview.
 Setup: if the job title, company, job description, or interview type (behavioral, technical, coding, general) is missing, ask for it briefly before starting. Use any resume or background the user provided (including Knowledge Base content) to personalize questions.
@@ -1428,7 +1494,7 @@ If live web blocks are included, treat them as current evidence and use them dir
             options.conversationPartner
                 ? `For this continuation, you are responding directly to ${options.conversationPartner}'s message. Address ${options.conversationPartner} as your fellow assistant, preserve the topic and context, and do not claim to be them.`
                 : '',
-            'Conversation history is provided in chronological order. Address your reply to the user; never narrate or reproduce speaker labels, timestamps, or transcript metadata.',
+            'Conversation history is provided in chronological order. Address your reply to the user; never narrate or reproduce speaker labels, timestamps, or transcript metadata unless an audio-analysis request explicitly asks you to identify speakers or preserve transcript timestamps.',
             personalityInstructions,
             novaStyleContext,
             identityContext,
@@ -1444,7 +1510,9 @@ If live web blocks are included, treat them as current evidence and use them dir
             '',
             'Rules:',
             '- Complete your thought before ending a response. Never end mid-sentence, after a trailing comma, or with an unfinished clause. If space is limited, give a concise complete answer instead of beginning extra content you cannot finish.',
-            ultraShortResponseModeEnabled
+            isAudioBackedRequest
+                ? `Audio analysis formatting takes precedence over general response-length settings: use separate Markdown headings and concise bullets, preserve detected speaker labels and timestamps, and never collapse the breakdown into one paragraph. Keep it as brief as possible while still covering the user's request.${isSlimContext ? ' In compact context, prioritize the answer, speaker identification when available, and the most important points.' : ''}`
+                : ultraShortResponseModeEnabled
                 ? '- Even-shorter response mode is enabled and overrides every other length instruction: reply with a single very short sentence (about 10 words or fewer; a few words or just the answer is ideal). No introductions, lists, headings, examples, caveats, pleasantries, or follow-up offers, unless the user explicitly asks for more detail.'
                 : shortResponseModeEnabled
                 ? '- Shorter response mode is enabled and overrides other length preferences: reply in one or two short sentences maximum, giving only exactly what was asked. No introductions, lists, headings, examples, caveats, or follow-up offers, unless the user explicitly asks for more detail.'
@@ -1454,6 +1522,7 @@ If live web blocks are included, treat them as current evidence and use them dir
             '- You CAN set reminders. If asked about reminders or what you can do, explain: say "set a reminder to <task> at <time>" (for example "set a reminder to call mom at 5pm", "remind me to stretch in 10 minutes", or "set a reminder to submit homework tomorrow at 9am"). Add hourly, daily, weekly or "every 30 minutes" to repeat it until cancelled (for example "remind me to drink water hourly"). You will confirm it with its number and then speak and post it when due. Users say "reminders" or "show reminders" to list them (numbered 1-n), "remove reminder 2" to delete one, or "clear my reminders"; they are also listed in Settings. Never claim you cannot set reminders. Never say a reminder was set, moved, or rescheduled unless the app already confirmed it with a numbered "Reminder N set" message; if the user asks for one in a way you are unsure was handled, tell them to say "remind me to <task> at <time>" and check "show reminders".',
             '- You CAN see the user\'s shared screen and webcam when they turn on Screen Share or AI Vision: the app attaches the current frames as images to their message. When an image is attached, look at it and answer from what is visible. Never say you cannot see their screen or camera while images are attached; if the user says they are sharing but no image is attached, say the share seems not to be coming through and ask them to toggle it off and on.',
             '- You CAN generate and display images. When the user asks you to create, draw, or generate an image or picture, the system creates it with an image model and shows it in the chat with a download link. Reply with one short line about what you are creating, and never say you cannot generate images.',
+            '- For explicit requests to create a video, the app can submit a video-generation job if the user has configured a fal.ai key. Say briefly that the job will be attempted and its status will appear in chat; never claim it is completed before the app shows the result. For requests to find videos, search for relevant links instead.',
             '- Treat the current date/time in REAL-TIME CONTEXT as authoritative. Interpret "next" and "upcoming" relative to that date; never describe a past event or expired date as the next occurrence. For schedules and future events, verify the year and date against an official source, and say when a future date cannot be confirmed.',
             '- You have real-time web search capability. Proactively search when a question is factual, educational, research-oriented, current, uncertain, asks for a definition/explanation/comparison, or would benefit from reliable external evidence. Do not wait for the user to say "look it up"; do not search for simple greetings, casual conversation, or tasks fully grounded in the user-provided text/files.',
             '- NEVER say you cannot browse, cannot search the web, or do not have internet access. If a search fails, be transparent that live verification failed rather than presenting unverified current claims as certain.',
@@ -1561,7 +1630,7 @@ If live web blocks are included, treat them as current evidence and use them dir
         : options.proactiveEvaluation && options.idleCheckIn
         ? `[Auto Mode idle check-in as ${personaLabel}: this request is only made after at least 90 seconds without user interaction or meaningful visual change. Give one gentle, friendly, relevant check-in of at most two sentences. Do not return NO_ACTION just because the screen is static or the user's state is uncertain. Avoid claiming they are inactive or describing unseen activity. Do not take actions.]`
         : options.proactiveEvaluation
-        ? `[Unified Auto Mode as ${personaLabel}: consider the current screen and camera images, any labeled recent visual images, and recent conversation or speech transcripts together. Infer whether the user is reading, coding, watching, working, stuck, or inactive only when supported by evidence. Do not treat a still screen or silence as inactivity. Avoid interrupting focused activity; return exactly NO_ACTION unless a specific, timely observation or question would genuinely help. If speaking, make one brief, natural remark of at most two sentences. Never claim to take actions.]`
+        ? `[Unified Auto Mode as ${personaLabel}: consider the current screen and camera images, labeled recent visual images, and available conversation or speech transcripts together. Infer activity only when supported by evidence; stillness or silence does not imply inactivity. If visible evidence suggests video viewing, an occasional distinctive, timely reaction can be appropriate, but do not narrate or invent audio, dialogue, or unseen events. Otherwise avoid interrupting focused activity unless a specific observation or question would help. Return exactly NO_ACTION when nothing merits an interruption. If speaking, make one brief natural remark in your selected personality, at most two sentences. Never claim to take actions.]`
         : presetConfig
             ? `[Voice requirement for this reply: answer as ${personaLabel} in a clearly "${presetConfig.name}" personality - ${presetConfig.instructions} ${PERSONALITY_INFLUENCE_LEVELS[getPersonalityInfluence(assistantKey)].text} Regardless of how earlier replies sounded.                 ${replyLengthText('Reply with one very short sentence (about 10 words or fewer), only the answer.', 'Answer in one or two short sentences maximum, only what was asked.',             'Give a full, detailed answer.')}${youUpNote}${solutionOfferNote}]`
                         : `[Voice requirement for this reply: answer as ${personaLabel} in your own distinct core persona, not a generic assistant voice. ${replyLengthText('Reply with one very short sentence (about 10 words or fewer), only the answer.', 'Answer in one or two short sentences maximum, only what was asked.',                         'Give a full, detailed answer.')}${youUpNote}${solutionOfferNote}]`).replace(/\]$/, `${directModeNote}]`);
@@ -1575,7 +1644,7 @@ If live web blocks are included, treat them as current evidence and use them dir
     const frameParts = [];
     let frameNotes = '';
     if (screenFrame) {
-        frameNotes += '\n\n[The user is sharing their screen; the attached image IS their current screen. You can see it. Describe or use what is visible when relevant.]';
+        frameParts.push({ type: 'text', text: '[The user is sharing their screen; the attached image IS their current screen. You can see it. Describe or use what is visible when relevant.]' });
         frameParts.push({ type: 'image_url', image_url: { url: screenFrame } });
     }
     const shareTarget = window.getScreenShareTarget?.();
@@ -1583,16 +1652,16 @@ If live web blocks are included, treat them as current evidence and use them dir
         frameNotes += '\n\n[Screen sharing is on but no frame could be captured just now. Tell the user briefly that the screen is not coming through and to toggle sharing off and on.]';
     }
     if (cameraFrame) {
-        frameNotes += '\n\n[AI Vision is on: the attached image is a live frame from the user\'s webcam. You can see the user, their hands, what they hold or point at, their surroundings, and their posture. Use it when relevant: notice confusion or engagement and adapt your pacing, name objects or diagrams they show you, and give gentle posture or ergonomic feedback when asked or clearly useful. Describe only what is visible, treat expression readings as tentative, never identify people by their face, and never infer health or other sensitive traits. If the image is dark or blocked, say so.]';
+        frameParts.push({ type: 'text', text: '[AI Vision is on: the attached image is a live frame from the user\'s webcam. You can see the user, their hands, what they hold or point at, their surroundings, and their posture. Use it when relevant: notice confusion or engagement and adapt your pacing, name objects or diagrams they show you, and give gentle posture or ergonomic feedback when asked or clearly useful. Describe only what is visible, treat expression readings as tentative, never identify people by their face, and never infer health or other sensitive traits. If the image is dark or blocked, say so.]' });
         frameParts.push({ type: 'image_url', image_url: { url: cameraFrame } });
     }
     recentVisualFrames.forEach((frame, index) => {
         if (frame.screen) {
-            frameNotes += `\n\n[Recent screen frame ${index + 1}, captured about ${frame.secondsAgo} seconds ago. Compare with the current screen to understand what changed.]`;
+            frameParts.push({ type: 'text', text: `[Recent screen frame ${index + 1}, captured about ${frame.secondsAgo} seconds ago. Compare with the current screen to understand what changed.]` });
             frameParts.push({ type: 'image_url', image_url: { url: frame.screen } });
         }
         if (frame.camera) {
-            frameNotes += `\n\n[Recent camera frame ${index + 1}, captured about ${frame.secondsAgo} seconds ago. Compare with the current camera view only when relevant.]`;
+            frameParts.push({ type: 'text', text: `[Recent camera frame ${index + 1}, captured about ${frame.secondsAgo} seconds ago. Compare with the current camera view only when relevant.]` });
             frameParts.push({ type: 'image_url', image_url: { url: frame.camera } });
         }
     });
@@ -1603,7 +1672,7 @@ If live web blocks are included, treat them as current evidence and use them dir
                 { type: 'text', text: `${userMessage}${frameNotes}\n\n${addresseeNote}\n\n${styleReminder}` },
                 ...frameParts
             ]
-            : `${userMessage}\n\n${addresseeNote ? addresseeNote + '\n\n' : ''}${styleReminder}`
+            : `${userMessage}${frameNotes}\n\n${addresseeNote ? addresseeNote + '\n\n' : ''}${styleReminder}`
     });
     
     // Save user message to history

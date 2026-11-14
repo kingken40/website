@@ -4,6 +4,7 @@ from urllib.parse import urlparse
 
 from api.chat import handler as chat_handler
 from api.models import handler as models_handler
+from api.video import handler as video_handler
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 PORT = int(os.getenv('PORT', '3000'))
@@ -34,6 +35,8 @@ class DevHandler(SimpleHTTPRequestHandler):
     def do_POST(self):
         if urlparse(self.path).path == '/api/chat':
             return chat_handler.do_POST(self)
+        if urlparse(self.path).path == '/api/video':
+            return video_handler.do_POST(self)
         self.send_error(404)
 
     def do_OPTIONS(self):

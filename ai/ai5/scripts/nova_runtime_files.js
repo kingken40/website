@@ -351,15 +351,17 @@ function normalizeAudioTranscript(data) {
     return { transcript, segments: formattedSegments };
 }
 
-const LECTURE_MODE_PROTOCOL = `LECTURE MODE PROTOCOL. Your goal is that the user fully understands what was taught. Answer with these sections, in order, using only what the transcript supports:
-1. Overview: course/topic, who is teaching, and the learning goal of the session.
-2. Segment summaries: split the lecture at topic shifts (use timestamps and block markers). For each segment give the time range, a title, and a 2-4 sentence summary.
-3. Key concepts: each important term, definition, rule, or formula, explained in plain language and tied to its segment.
-4. Instructor examples: every example, analogy, demo, or case the instructor used, and what idea it was meant to illustrate.
-5. Confusing or unclear explanations: flag spots where the instructor was vague, skipped steps, contradicted or corrected themselves, rushed, left a question unanswered, or where students sounded confused. Give the timestamp, say why it is unclear, and then give a clearer explanation of your own, labelled as your explanation.
-6. Emphasis and exam cues: points the instructor stressed ("this is important", "remember", "on the exam"), repeated ideas, assignments, and deadlines. Pauses are shown as [pause Ns]; treat long pauses as possible emphasis or thinking time, but you cannot hear tone, so say "appears to" rather than claiming it.
-7. Study guide: a short summary, key terms glossary, a concept outline, 6-10 practice questions with answers, common mistakes, and what to review or ask the instructor.
-Finish by offering to quiz the user, re-explain any segment, or turn the study guide into a PDF.`;
+const LECTURE_MODE_PROTOCOL = `LECTURE MODE PROTOCOL. Your goal is that the user fully understands what was taught. Make the response easy to scan: use Markdown headings on separate lines, short paragraphs, and actual bullet or numbered lists. Never put the entire breakdown in one paragraph or join section headings to the preceding sentence. Keep each point focused and supported by the transcript.
+1. Recording and speakers: give the topic and learning goal, then list each detected speaker label, their likely role, and brief evidence. Mark roles as inferences, not facts; never invent names. If only one speaker is distinguishable, say so.
+2. Overview: identify the course/topic, instructor when supported, and session goal.
+3. Segment summaries: split at topic shifts. Use a heading or bullet per segment with timestamp range, a short title, and a 2-4 sentence summary.
+4. Key concepts: list each important term, definition, rule, or formula, explain it plainly, and tie it to a segment.
+5. Instructor examples: list each example, analogy, demo, or case and what it illustrates.
+6. Confusing or unclear explanations: list each relevant spot with timestamp, why it is unclear, and a clearer explanation explicitly labelled as your explanation. Include unanswered questions or student confusion when audible.
+7. Emphasis and exam cues: list stressed or repeated points, assignments, and deadlines. Pauses are shown as [pause Ns]; treat long pauses as possible emphasis or thinking time, but say "may indicate" rather than claiming to hear tone.
+8. Visual examples and useful videos: when a visual would clarify a concept, include a concise labelled text diagram or describe the relevant image to create. When the user asks for video resources, use only actual links present in live search results, prefer reputable educational sources, and briefly explain why each is relevant. If the user asks to generate a video, the app can attempt it with a configured video provider; never claim it has completed before the app shows it.
+9. Study guide: include a short recap, key-term glossary, concept outline, 6-10 practice questions with answers when the recording has enough content, common mistakes, and what to review or ask the instructor.
+Finish with a brief offer to quiz the user, re-explain a timestamp, or turn the study guide into a PDF. Do not force every section when the recording does not support it; say when information is unavailable.`;
 
 function buildAudioStudyPacket(audioFile, transcriptResult) {
     const transcript = String(transcriptResult?.transcript || '').trim();
@@ -414,7 +416,7 @@ File: ${audioFile.name}
 ${isLecture ? 'LECTURE MODE: ACTIVE (this looks like a lecture)' : 'LECTURE MODE: STANDBY (switch to ACTIVE if the user says "this is a lecture" or the content is clearly a lecture)'}
 ${isLecture ? 'A recorded lecture/classroom audio file was uploaded.' : 'An audio recording was uploaded.'}
 If LECTURE MODE is ACTIVE and the user did not ask something narrower, follow the protocol below. If they ask a specific question, answer it first, using the transcript.
-Otherwise provide a clear summary, main claims or decisions, action items, and important moments. Meetings and interviews: list decisions, owners, and open questions.
+Otherwise provide a readable, structured breakdown with Markdown headings on separate lines and concise bullets, never a single wall of text. Include a speaker roster when labels are available, with inferred roles clearly marked; otherwise say speaker labels were unavailable. For meetings and interviews, list decisions, action items, owners, and open questions.
 Preserve timestamps and speaker labels, separate what was said from your interpretation, and never invent words, timestamps, or facts.
 ${speakerNote}
 
@@ -750,8 +752,18 @@ function buildSafeMessageLink(url, label) {
 function formatMessageContent(text) {
     if (!text) return '';
     
-    let formatted = text;
+    let formatted = String(text).replace(/\r\n?/g, '\n');
     const placeholders = [];
+
+    // Models sometimes place Markdown headings inline with horizontal rules or prose.
+    formatted = formatted
+        .replace(/[ \t]*---+[ \t]*(?=#{1,6}\s)/g, '\n\n')
+        .replace(/[ \t]+(?=#{1,6}\s)/g, '\n\n')
+        .replace(/^(#{1,6}\s+(?:\d+[.:]\s*)?[^*\n]+?)\s+(?=\*\*[^*\n]+:\*\*)/gm, '$1\n')
+        .replace(/^(#{1,6})\s+(.+?)\s*$/gm, (match, hashes, title) => {
+            const cleanTitle = title.replace(/^\*\*([\s\S]*)\*\*$/, '$1');
+            return `\n\n${storePlaceholder(`<strong>${escapeHtml(cleanTitle)}</strong>`)}\n\n`;
+        });
 
     function storePlaceholder(value) {
         placeholders.push(value);

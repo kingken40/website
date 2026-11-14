@@ -277,6 +277,11 @@
                         <input type="password" id="openaiApiKey" placeholder="Enter your OpenAI API key" style="width: 100%; padding: 0.5rem; background: rgba(0, 170, 255, 0.1); border: 1px solid rgba(0, 170, 255, 0.3); border-radius: 5px; color: #00aaff;">
                         <small style="display: block; margin-top: 0.5rem; color: rgba(255, 255, 255, 0.6);">Used as fallback if OpenRouter is unavailable. Get your key at <a href="https://platform.openai.com/api-keys" target="_blank" style="color: #FFD700;">platform.openai.com/api-keys</a></small>
                     </div>
+                    <div class="setting-group" style="margin-top: 1rem;">
+                        <label for="falVideoApiKey">fal.ai API Key (Video Generation)</label>
+                        <input type="password" id="falVideoApiKey" autocomplete="off" placeholder="Enter your fal.ai API key" style="width: 100%; padding: 0.5rem; background: rgba(0, 170, 255, 0.1); border: 1px solid rgba(0, 170, 255, 0.3); border-radius: 5px; color: #00aaff;">
+                        <small style="display: block; margin-top: 0.5rem; color: rgba(255, 255, 255, 0.6);">Stored for this browser tab only. Video generation uses your fal.ai credits and may incur charges.</small>
+                    </div>
                     <div class="setting-group">
                         <button id="saveApiKey" style="padding: 0.6rem 1.2rem; background: linear-gradient(135deg, #FFD700, #FFA500); border: none; border-radius: 5px; color: #1a1a2e; font-weight: 600; cursor: pointer; transition: all 0.3s;">Save API Keys</button>
                         <span id="apiKeySaved" style="margin-left: 1rem; color: #4CAF50; display: none;">âœ“ Saved!</span>
@@ -695,6 +700,7 @@
     <!-- Scripts -->
     <script src="../scripts/nova_kb_store.js"></script>
     <script src="../scripts/nova_conversation_flow.js"></script>
+    <script src="../scripts/nova_runtime_artifacts.js"></script>
     <script src="../scripts/nova_runtime_ai.js"></script>
     <script src="../scripts/nova_runtime_ui_voice.js"></script>
     <script src="../scripts/nova_runtime_ui_events.js"></script>

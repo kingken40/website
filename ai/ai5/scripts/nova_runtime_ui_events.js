@@ -76,6 +76,7 @@ function setupEventListeners() {
     [speechStopBtn, mobileSpeechStopBtn].forEach(button => {
         button?.addEventListener('click', () => window.stopSpeech?.());
     });
+    window.refreshSpeechPlaybackControls?.();
 
     const avonVoiceSelect = document.getElementById('avonVoiceSelection');
     const previewAvonVoiceBtn = document.getElementById('previewAvonVoiceBtn');
@@ -337,7 +338,7 @@ function setupEventListeners() {
         const fullText = messageContent.textContent || '';
         const wordStart = fullText.slice(0, offset).search(/\S+$/);
         const sender = messageContent.closest('.message')?.dataset.sender;
-        window.speakTextFrom?.(fullText, wordStart < 0 ? offset : wordStart, sender === 'Avon' ? 'other' : 'nova');
+        window.speakTextFrom?.(fullText, wordStart < 0 ? offset : wordStart, sender === 'Avon' ? 'other' : 'nova', messageContent);
     };
 
     document.addEventListener('click', (event) => {
@@ -1253,6 +1254,7 @@ function setupApiKeyManagement() {
     const saveApiKeyBtn = document.getElementById('saveApiKey');
     const openrouterApiKeyInput = document.getElementById('openrouterApiKey');
     const openaiApiKeyInput = document.getElementById('openaiApiKey');
+    const falVideoApiKeyInput = document.getElementById('falVideoApiKey');
     const apiKeySavedMsg = document.getElementById('apiKeySaved');
     const settingsBtn = document.getElementById('settingsBtn');
     const settingsModal = document.getElementById('settingsModal');
@@ -1260,6 +1262,7 @@ function setupApiKeyManagement() {
     // Load saved API keys into inputs when settings open
     if (settingsBtn && settingsModal) {
         settingsBtn.addEventListener('click', () => {
+            if (falVideoApiKeyInput) falVideoApiKeyInput.value = sessionStorage.getItem('fal_video_api_key') || '';
             if (openrouterApiKeyInput) {
                 const savedKey = localStorage.getItem('openrouter_api_key');
                 if (savedKey && savedKey.trim() !== '') {
@@ -1281,6 +1284,15 @@ function setupApiKeyManagement() {
     if (saveApiKeyBtn) {
         saveApiKeyBtn.addEventListener('click', () => {
             let saved = false;
+            if (falVideoApiKeyInput) {
+                const videoKey = falVideoApiKeyInput.value.trim();
+                if (videoKey) {
+                    sessionStorage.setItem('fal_video_api_key', videoKey);
+                    saved = true;
+                } else {
+                    sessionStorage.removeItem('fal_video_api_key');
+                }
+            }
             
             // Save OpenRouter API key (primary)
             if (openrouterApiKeyInput) {
@@ -1313,7 +1325,7 @@ function setupApiKeyManagement() {
             }
             
             if (!saved) {
-                alert('Please enter at least the OpenRouter API key');
+                alert('Please enter an API key.');
                 return;
             }
             

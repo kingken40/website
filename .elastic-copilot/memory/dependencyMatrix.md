@@ -1,6 +1,6 @@
 # Dependency Matrix
 
-*Generated: 2026-11-01T20:32:14.499Z*
+*Generated: 2026-11-14T00:21:22.217Z*
 
 ## Summary
 
@@ -9,11 +9,11 @@
 
 ## File Type Distribution
 
-- 841 py files
-- 91 js files
-- 6 tsx files
-- 26 ts files
-- 35 h files
+- 775 py files
+- 145 js files
+- 9 tsx files
+- 39 ts files
+- 31 h files
 - 1 c files
 
 ## Key Dependencies by Type
@@ -31,9 +31,10 @@ Top dependencies:
 - ./page.module.css
 - next/font/google
 - ./globals.css
-- ../page.module.css
 - @playwright/test
-- next/server
+- ../page.module.css
+- axios
+- ./styles/styles.css
 
 ### TSX
 
@@ -51,14 +52,14 @@ Top dependencies:
 ### TS
 
 Top dependencies:
-- html2canvas
-- jspdf
-- html-docx-js/dist/html-docx
 - mammoth
 - pdfjs-dist
 - pptx-parser
 - papaparse
 - cheerio
+- html2canvas
+- jspdf
+- html-docx-js/dist/html-docx
 
 ### H
 

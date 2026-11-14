@@ -28,6 +28,258 @@ const test = (name, fn) => tests.push({ name, fn });
 // ---------- Audio transcription and lecture mode ----------
 const filesSrc = read('nova_runtime_files.js');
 const audio = load(slice(filesSrc, 'function formatAudioTimestamp', 'function encodeMonoWav'));
+const formatter = load(
+    `function escapeHtml(text) { return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }\n${slice(filesSrc, 'function stripHtmlTags', '// Generate continuation prompt')}`
+);
+const voiceSrc = read('nova_voice.js');
+const voiceTranscript = load(
+    slice(voiceSrc, 'function joinTranscriptParts', '// Mobile browsers sometimes re-send'),
+    { pendingTranscript: 'final words', lastInterimTranscript: 'unfinished ending' }
+);
+
+test('consumeVoiceTurnTranscript preserves final and interim speech exactly once', () => {
+    assert.strictEqual(voiceTranscript.consumeVoiceTurnTranscript(), 'final words unfinished ending');
+    assert.strictEqual(voiceTranscript.consumeVoiceTurnTranscript(), '');
+});
+
+test('push-to-talk buttons handle pointer cancellation and permission-release races', () => {
+    assert.ok(voiceSrc.includes("button.addEventListener('pointercancel', stopListening)"));
+    assert.ok(voiceSrc.includes("button.addEventListener('lostpointercapture', stopListening)"));
+    assert.ok(voiceSrc.includes('shouldContinue: pressIsActive'));
+    assert.ok(voiceSrc.includes('const transcript = consumeVoiceTurnTranscript();'));
+    assert.ok(!voiceSrc.includes("newVoiceBtn.addEventListener('touchstart', startListening)"));
+});
+
+function makePlaybackHarness() {
+    const timers = [];
+    const utterances = [];
+    const synth = {
+        paused: false,
+        speaking: false,
+        getVoices: () => [],
+        cancel() { this.speaking = false; },
+        pause() { this.paused = true; },
+        resume() { this.paused = false; },
+        speak(utterance) { utterances.push(utterance); this.speaking = true; }
+    };
+    const sandbox = load(`
+        let speechPlaybackGeneration = 0, speechPlaybackState = 'idle', pendingSpeechContinuation = null;
+        let bridgeRequestController = null, currentBridgeAudio = null, currentPackAudio = null, readingTracker = null;
+        let synthesis = window.speechSynthesis, isSpeaking = false, isSpeechOutputActive = false;
+        let wakeWordEnabled = false, isWakeListening = false, isWakeWordSession = false;
+        let recognition = null, isListening = false, alwaysListeningHotkeyMode = false;
+        let interruptListeningEnabled = false, hasVoicePermission = false, isVoiceSupported = true;
+        let restartPending = false, selectedVoiceMode = 'tts', selectedJarvisPackId = null;
+        let currentVoiceSettings = { rate: 1, pitch: 1, volume: 1 }, speechOutputWatchdog = null;
+        let activeSpeechOutputText = '', speechInterruptTriggered = false;
+        ${slice(voiceSrc, 'let assistantSpeechQueue =', '// Voice Sampling and Selection Functions')}
+    `, {
+        console: { log() {}, warn() {}, error() {} },
+        window: { speechSynthesis: synth },
+        document: {},
+        localStorage: { getItem: () => null },
+        SpeechSynthesisUtterance: function(text) { this.text = text; },
+        setTimeout: (fn, delay) => { const timer = { fn, delay, cancelled: false }; timers.push(timer); return timer; },
+        clearTimeout: timer => { if (timer) timer.cancelled = true; },
+        clearSpeechOutputState() { vm.runInContext('isSpeaking = false; isSpeechOutputActive = false;', sandbox); },
+        clearReadingHighlight() {},
+        startReadingTracker() {},
+        findReadingMessage: () => null,
+        markReadingWord(chunk, index) { sandbox.boundaries.push([chunk, index]); },
+        setSpeechPlaybackState(state) { vm.runInContext(`speechPlaybackState = '${state}'`, sandbox); },
+        stopSpeechInterruptListening() {},
+        updateSpeakingUI() {},
+        isUsableSpeechVoice: () => false,
+        normalizeVoiceTranscript: text => text,
+        rememberSpokenText() {},
+        showVoiceNotification() {}
+    });
+    sandbox.boundaries = [];
+    return {
+        sandbox, synth, utterances,
+        runTimer(delay) {
+            const timer = timers.find(item => !item.cancelled && item.delay === delay);
+            assert.ok(timer, `missing ${delay}ms timer`);
+            timer.cancelled = true;
+            return timer.fn();
+        }
+    };
+}
+
+test('playback pause and stop prevent delayed starts and chunk retries', async () => {
+    const { sandbox, synth, utterances, runTimer } = makePlaybackHarness();
+    sandbox.speakText('First second third fourth.', null, 'other');
+    sandbox.pauseSpeech();
+    await runTimer(600);
+    assert.strictEqual(utterances.length, 0, 'pause blocks pending start');
+    sandbox.resumeSpeech();
+    assert.strictEqual(utterances.length, 1, 'play resumes the pending start');
+    const first = utterances[0];
+    first.onstart();
+    first.onboundary({ name: 'word', charIndex: 6 });
+    assert.deepStrictEqual(sandbox.boundaries[0], ['First second third fourth.', 6]);
+    sandbox.pauseSpeech();
+    assert.strictEqual(synth.paused, true);
+    sandbox.stopSpeech();
+    first.onerror({ error: 'interrupted' });
+    assert.strictEqual(utterances.length, 1, 'stale errors cannot restart after stop');
+    sandbox.resumeSpeech();
+    await runTimer(600);
+    assert.strictEqual(utterances.length, 2, 'play after stop starts the response again');
+});
+
+test('pause defers the next speech chunk and stop invalidates a delayed start', async () => {
+    const { sandbox, utterances, runTimer } = makePlaybackHarness();
+    sandbox.speakText('word '.repeat(60), null, 'other');
+    await runTimer(600);
+    utterances[0].onend();
+    sandbox.pauseSpeech();
+    runTimer(150);
+    assert.strictEqual(utterances.length, 1);
+    sandbox.resumeSpeech();
+    assert.strictEqual(utterances.length, 2);
+    sandbox.speakText('A new response', null, 'other');
+    sandbox.stopSpeech();
+    await runTimer(600);
+    assert.strictEqual(utterances.length, 2, 'stopped preparation cannot start later');
+});
+
+test('pause defers a failed speech chunk retry', async () => {
+    const { sandbox, utterances, runTimer } = makePlaybackHarness();
+    sandbox.speakText('retry this sentence', null, 'other');
+    await runTimer(600);
+    utterances[0].onerror({ error: 'network' });
+    sandbox.pauseSpeech();
+    runTimer(250);
+    assert.strictEqual(utterances.length, 1);
+    sandbox.resumeSpeech();
+    assert.strictEqual(utterances.length, 2);
+    sandbox.stopSpeech();
+    utterances[1].onerror({ error: 'interrupted' });
+    assert.strictEqual(utterances.length, 2);
+});
+
+test('stale bridge responses cannot create or play audio after stop', async () => {
+    let resolveFetch;
+    let createdAudio = 0;
+    const sandbox = load(`
+        let localVoiceBridgeEnabled = true, localVoiceBridgeUrl = 'http://localhost';
+        let speechPlaybackGeneration = 1, bridgeRequestController = null, currentBridgeAudio = null;
+        let speechPlaybackState = 'preparing', lastBridgeFailureNoticeMs = 0;
+        let currentVoiceSettings = { rate: 1, volume: 1 }, isSpeaking, isSpeechOutputActive;
+        let activeSpeechOutputText, speechInterruptTriggered;
+        ${slice(voiceSrc, 'async function playViaLocalVoiceBridge', '// Wake phrase detection')}
+    `, {
+        window: {}, AbortController,
+        fetch: () => new Promise(resolve => { resolveFetch = resolve; }),
+        normalizeBridgeUrl: value => value,
+        getBridgeVoiceName: () => null,
+        Audio: function() { createdAudio++; },
+        URL: { createObjectURL: () => 'blob:test', revokeObjectURL() {} },
+        console,
+        clearSpeechOutputState() {},
+        showVoiceNotification() {}
+    });
+    const pending = sandbox.playViaLocalVoiceBridge('hello', null, 1);
+    vm.runInContext('speechPlaybackGeneration++; bridgeRequestController.abort();', sandbox);
+    resolveFetch({ ok: true, blob: async () => ({ size: 10 }) });
+    assert.strictEqual(await pending, true);
+    assert.strictEqual(createdAudio, 0);
+});
+
+test('voice-pack errors retry only once when both media error paths fire', async () => {
+    const audios = [];
+    let rejectFirst;
+    const sandbox = load(`
+        let speechPlaybackGeneration = 1, speechPlaybackState = 'preparing', currentPackAudio = null;
+        let lastJarvisPackClipByPack = {}, isSpeaking, isSpeechOutputActive;
+        let pendingSpeechContinuation = null;
+        ${slice(voiceSrc, 'function playJarvisPackSample', 'window.JARVIS_AUDIO_PACKS =')}
+    `, {
+        window: {},
+        console: { log() {}, warn() {} },
+        getSelectedJarvisPack: () => ({ id: 'test', name: 'Test', basePath: 'pack' }),
+        chooseJarvisPackClip: () => ['first.wav', 'second.wav', 'third.wav'],
+        Audio: function(src) {
+            this.src = src;
+            this.pause = () => {};
+            this.play = () => audios.length === 1
+                ? new Promise((resolve, reject) => { rejectFirst = reject; })
+                : Promise.resolve();
+            audios.push(this);
+        },
+        setSpeechPlaybackState() {},
+        clearSpeechOutputState() {},
+        clearReadingHighlight() {},
+        updateSpeakingUI() {},
+        showVoiceNotification() {}
+    });
+    assert.strictEqual(sandbox.playJarvisPackSample('test'), true);
+    audios[0].onerror(new Error('media error'));
+    rejectFirst(new Error('play rejected'));
+    await Promise.resolve();
+    assert.strictEqual(audios.length, 2, 'the first clip advances to only one replacement');
+});
+
+test('reading tracker follows boundaries without jumping to distant repeated words', () => {
+    const nodes = [];
+    const content = {
+        isConnected: true,
+        replaceChild(replacement, old) {
+            const index = nodes.indexOf(old);
+            nodes.splice(index, 1, replacement);
+        },
+        normalize() {
+            const text = nodes.map(node => node.nodeValue === undefined ? node.textContent : node.nodeValue).join('');
+            nodes.splice(0, nodes.length, { nodeValue: text, parentNode: content });
+        }
+    };
+    nodes.push({ nodeValue: 'Dr. Smith said hello one two three hello.', parentNode: content });
+    let rangeStart, rangeEnd, rangeNode;
+    const document = {
+        createTextNode: text => ({ nodeValue: text, parentNode: content }),
+        createTreeWalker: () => {
+            let i = 0;
+            return { nextNode: () => nodes[i++] || null };
+        },
+        createElement: () => ({ parentNode: content }),
+        createRange: () => ({
+            setStart(node, offset) { rangeNode = node; rangeStart = offset; },
+            setEnd(node, offset) { rangeEnd = offset; },
+            surroundContents(mark) {
+                const index = nodes.indexOf(rangeNode);
+                const text = rangeNode.nodeValue;
+                mark.textContent = text.slice(rangeStart, rangeEnd);
+                nodes.splice(index, 1,
+                    { nodeValue: text.slice(0, rangeStart), parentNode: content },
+                    mark,
+                    { nodeValue: text.slice(rangeEnd), parentNode: content });
+            }
+        })
+    };
+    const sandbox = load(slice(voiceSrc, 'let readingTracker = null;', 'function isUsableSpeechVoice'), {
+        document, NodeFilter: { SHOW_TEXT: 4 },
+        window: { makeSpeechFriendly: text => text.replace('Dr.', 'Doctor') }
+    });
+    sandbox.startReadingTracker(content);
+    sandbox.markReadingWord('Doctor Smith', 0);
+    assert.strictEqual(nodes.find(node => node.className)?.textContent, 'Dr.');
+    sandbox.markReadingWord('Doctor Smith', 7);
+    assert.strictEqual(nodes.find(node => node.className)?.textContent, 'Smith');
+    sandbox.markReadingWord('hello', 0);
+    assert.strictEqual(nodes.find(node => node.className)?.textContent, 'hello');
+    sandbox.markReadingWord('hello', 0);
+    assert.strictEqual(nodes.find(node => node.className), undefined, 'must not jump past unrelated words');
+    assert.strictEqual(nodes.map(node => node.nodeValue || '').join(''), 'Dr. Smith said hello one two three hello.');
+});
+
+test('word tracker and playback controls are connected to both message interactions', () => {
+    const voice = read('nova_voice.js');
+    assert.ok(voice.includes('markReadingWord(chunk, event.charIndex)'));
+    assert.ok(voice.includes("mark.className = 'speech-current-word'"));
+    assert.ok(read('nova_runtime_ui_events.js').includes("sender === 'Avon' ? 'other' : 'nova', messageContent"));
+    assert.ok(read('nova_runtime_chat.js').includes("messageDiv.querySelector('.message-content[data-speech-content=\"true\"]')"));
+});
 
 test('normalizeAudioTranscript keeps real speaker labels and normalizes ids', () => {
     const result = audio.normalizeAudioTranscript({
@@ -82,8 +334,18 @@ test('buildAudioStudyPacket auto-detects lectures and puts the protocol before t
     assert.strictEqual(packet.isLecture, true);
     assert.ok(packet.content.includes('LECTURE MODE: ACTIVE'));
     assert.ok(packet.content.indexOf('LECTURE MODE PROTOCOL') < packet.content.indexOf('\nTRANSCRIPT\n'));
-    ['Segment summaries', 'Key concepts', 'Instructor examples', 'Confusing or unclear', 'Study guide']
+    ['Recording and speakers', 'Segment summaries', 'Key concepts', 'Instructor examples', 'Visual examples and useful videos', 'Study guide']
         .forEach(section => assert.ok(packet.content.includes(section), section));
+});
+
+test('formatMessageContent separates inline audio headings and preserves readable point lists', () => {
+    const formatted = formatter.formatMessageContent(
+        'Recording summary --- ## 1. Overview **Topic:** Discovery --- ## 2. Key points\n- Retrieval finds papers\n- The agent applies equations'
+    );
+    assert.ok(formatted.includes('Recording summary<br><br><strong>1. Overview</strong>'));
+    assert.ok(formatted.includes('<strong>Topic:</strong> Discovery'));
+    assert.ok(formatted.includes('Key points'));
+    assert.ok(formatted.includes('• Retrieval finds papers<br>• The agent applies equations'));
 });
 
 test('buildAudioStudyPacket stays in standby for non-lecture audio, and activateLectureMode flips it', () => {
@@ -112,10 +374,426 @@ test('buildAudioStudyPacket marks block boundaries and does not invent speakers'
 // ---------- Image generation detection ----------
 const artifactsSrc = read('nova_runtime_artifacts.js');
 const artifacts = load(slice(artifactsSrc, 'const startedArtifactRequests', 'const IMAGE_MODELS'));
+const videoGeneratorSrc = slice(artifactsSrc, 'function videoDurationRequest', 'function resolveVideoArtifactRequest') + slice(artifactsSrc, 'async function generateVideo', 'function showArtifactError');
 
 test('detectRequestedArtifactFormats recognizes image requests', () => {
     ['Nova, generate an image', 'one of the sun', 'draw a bumblebee picture', 'show me a picture of the moon']
         .forEach(text => assert.ok(artifacts.detectRequestedArtifactFormats(text).includes('png'), text));
+    assert.ok(artifacts.detectRequestedArtifactFormats('show me a visual example of an inverted pendulum').includes('png'));
+});
+
+test('video creation is distinguished from searching for existing videos', () => {
+    ['nova create a short video', 'make a short vid', 'generate an MP4 of the moon'].forEach(text =>
+        assert.deepStrictEqual([...artifacts.detectRequestedArtifactFormats(text)], ['mp4']));
+    assert.deepStrictEqual([...artifacts.detectRequestedArtifactFormats('find useful videos about pendulums')], []);
+    assert.deepStrictEqual([...artifacts.detectRequestedArtifactFormats('make a downloadable video')], ['mp4']);
+});
+
+test('video clarification uses the answer without triggering unrelated follow-ups', () => {
+    const history = [
+        { sender: 'user', text: 'make a short vid' },
+        { sender: 'Nova', text: 'What theme or focus would you like?' },
+        { sender: 'user', text: 'something funny' },
+        { sender: 'Nova', text: 'I will prepare that.' }
+    ];
+    assert.strictEqual(artifacts.resolveVideoArtifactRequest(history[0].text, history[1].text, history.slice(0, 2)), null);
+    assert.strictEqual(artifacts.resolveVideoArtifactRequest('something funny', history[3].text, history),
+        'make a short vid\n\nVideo idea: something funny');
+    assert.strictEqual(artifacts.resolveVideoArtifactRequest('something funny', 'What scene would you like?', history), null);
+    for (const text of ['cancel', 'what is the weather?', 'tell me a joke', 'thanks']) {
+        const turns = history.slice(0, 2).concat([{ sender: 'user', text }, { sender: 'Nova', text: 'Certainly.' }]);
+        assert.strictEqual(artifacts.resolveVideoArtifactRequest(text, 'Certainly.', turns), null);
+    }
+    const unrelated = [{ sender: 'user', text: 'hello' }, history[1], history[2], history[3]];
+    assert.strictEqual(artifacts.resolveVideoArtifactRequest('something funny', history[3].text, unrelated), null);
+});
+
+test('longer follow-up uses a recent successful video without losing its subject', () => {
+    const original = 'nova, generate a short funny video';
+    const history = [
+        { sender: 'user', text: original, videoArtifact: { prompt: original, numFrames: 81 } },
+        { sender: 'Nova', text: 'I will attempt the video.' },
+        { sender: 'user', text: 'a longer one' }
+    ];
+    assert.strictEqual(artifacts.resolveVideoArtifactRequest('a longer one', '', history), `${original}\n\nNew video duration request: a longer one (10 seconds)`);
+    assert.strictEqual(artifacts.resolveVideoArtifactRequest('a longer one', '', history.map(({videoArtifact, ...item}) => item)), null);
+    history[0].videoArtifact.numFrames = 161;
+    assert.strictEqual(artifacts.resolveVideoArtifactRequest('a longer one', '', history), `${original}\n\nNew video duration request: a longer one (20 seconds)`);
+    history[0].videoArtifact.numFrames = 81;
+    history.splice(2, 0, { sender: 'user', text: 'tell me a joke' }, { sender: 'Nova', text: 'Sure.' });
+    assert.strictEqual(artifacts.resolveVideoArtifactRequest('a longer one', '', history), `${original}\n\nNew video duration request: a longer one (10 seconds)`);
+});
+
+test('longer videos submit 161 frames without changing the default short video', async () => {
+    for (const [prompt, frames] of [['make a funny video', 81], ['make a longer video', 161], ['make a 10-second video', 161]]) {
+        const calls = [];
+        const sandbox = load(videoGeneratorSrc, {
+            URL, sessionStorage: { getItem: () => 'test-key' }, setTimeout: fn => fn(),
+            fetch: async (_url, options) => {
+                const body = JSON.parse(options.body);
+                calls.push(body);
+                const payload = body.action === 'create' ? { request_id: '764cabcf-b745-4b3e-ae38-1200304cf45b' }
+                    : body.action === 'status' ? { status: 'COMPLETED' } : { video: { url: 'https://storage.example/video.mp4' } };
+                return { ok: true, json: async () => payload };
+            }
+        });
+        const result = await sandbox.generateVideo(prompt, { querySelector: () => ({}) });
+        assert.strictEqual(calls[0].num_frames, frames);
+        assert.strictEqual(result.numFrames, frames);
+    }
+});
+
+test('natural duration requests and follow-ups keep the requested length', () => {
+    for (const [text, expected] of [
+        ['generate a 20 second video about earth', 20],
+        ['make it twenty seconds long', 20],
+        ['generate one thats 10 seconds actually', 10],
+        ['thats only 5 seconds, make it 20', 20],
+        ['make a video lasting half a minute', 30],
+        ['make it longer', 10]
+    ]) assert.strictEqual(artifacts.videoDurationRequest(text), expected, text);
+    const history = [
+        { sender: 'user', text: 'generate a 10 second video about earth', videoArtifact: { prompt: 'generate a 10 second video about earth', numFrames: 161 } },
+        { sender: 'Nova', text: 'Done.' },
+        { sender: 'user', text: 'thats a great vid there' },
+        { sender: 'Nova', text: 'Thank you.' },
+        { sender: 'user', text: 'make one thats 20 seconds' }
+    ];
+    const resolved = artifacts.resolveVideoArtifactRequest(history[4].text, '', history);
+    assert.ok(resolved.includes('about earth'));
+    assert.strictEqual(artifacts.videoDurationRequest(resolved), 20);
+});
+
+test('20-second requests submit once to the long model after confirmation and poll that model', async () => {
+    const calls = [];
+    const confirms = [];
+    const sandbox = load(videoGeneratorSrc, {
+        URL, window: { confirm: message => { confirms.push(message); return true; } },
+        sessionStorage: { getItem: () => 'test-key' }, setTimeout: fn => fn(),
+        fetch: async (_url, options) => {
+            const body = JSON.parse(options.body); calls.push(body);
+            return { ok: true, json: async () => body.action === 'create'
+                ? { request_id: '764cabcf-b745-4b3e-ae38-1200304cf45b' }
+                : body.action === 'status' ? { status: 'COMPLETED' } : { video: { url: 'https://storage.example/v.mp4' } } };
+        }
+    });
+    const result = await sandbox.generateVideo('generate a 20 second video about earth', { querySelector: () => ({}) });
+    assert.strictEqual(result.duration, 20);
+    assert.strictEqual(calls[0].duration, 20);
+    assert.deepStrictEqual(calls.map(call => call.model), ['ltx', 'ltx', 'ltx']);
+    assert.ok(confirms[0].includes('$1.20'));
+});
+
+test('unsupported and declined durations do not submit a provider request', async () => {
+    for (const [prompt, confirm] of [['make a 30 second video', true], ['make a 15 second video', true], ['make a 20 second video', false]]) {
+        let calls = 0;
+        const sandbox = load(videoGeneratorSrc, {
+            window: { confirm: () => confirm }, sessionStorage: { getItem: () => 'test-key' },
+            fetch: async () => { calls++; }
+        });
+        await assert.rejects(sandbox.generateVideo(prompt, {}), /no job was submitted/i);
+        assert.strictEqual(calls, 0);
+    }
+});
+
+test('download reports measured duration and warns when provider returns a short clip', () => {
+    const listeners = {};
+    const status = {};
+    const video = { duration: 5.1, addEventListener: (name, fn) => { listeners[name] = fn; } };
+    const item = { querySelector: selector => selector === 'video' ? video : status };
+    const list = { appendChild() {} };
+    const card = { querySelector: () => list, setAttribute: (name, value) => { card[name] = value; } };
+    const sandbox = load(slice(artifactsSrc, 'function addArtifactDownload', 'async function generateVideo'), {
+        document: { createElement: () => item }, xmlEscape: value => value
+    });
+    sandbox.addArtifactDownload(card, { url: 'https://storage.example/v.mp4', extension: 'mp4', duration: 20 }, 'earth.mp4');
+    listeners.loadedmetadata();
+    assert.ok(status.textContent.includes('5.1s (requested 20s)'));
+    assert.ok(status.textContent.includes('different duration'));
+    assert.strictEqual(card.role, 'alert');
+});
+
+test('descriptive video requests expand the tone while respecting specific prompts', async () => {
+    const expectations = [
+        ['generate a funny video', 'visual gag', 'Suggested scene: '],
+        ['nova, generate a short funny video', 'visual gag', 'Suggested scene: '],
+        ['generate a funny video not just someone laughing', 'visual gag', 'Suggested scene: '],
+        ["create a short video that's funny", 'visual gag', 'Suggested scene: '],
+        ['make a short vid\n\nVideo idea: something funny', 'visual gag', 'Suggested scene: '],
+        ['make a scary video', 'suspense', 'Suggested scene: In a dim hallway'],
+        ['make an epic video', 'scale and dramatic momentum', 'Suggested scene: A lone traveler'],
+        ['make a chaotic video', 'escalating chaos', 'Suggested scene: A gust'],
+        ['make a sad video', 'poignant visual moment', 'Suggested scene: A small paper boat'],
+        ['make a wholesome video', 'kind action', 'Suggested scene: A small robot'],
+        ['make a funny video of a cat wearing a red hat, no robots', 'visual gag', null],
+        ['make a funny video of a person laughing and smiling', 'visual gag', null],
+        ['make a funny video not just someone laughing, no robots', 'visual gag', null],
+        ['make a video of a cat that is not scary', null, null],
+        ['create a short video of a moon', null, null]
+    ];
+    for (const [prompt, direction, scene] of expectations) {
+        const calls = [];
+        const sandbox = load(videoGeneratorSrc, {
+            URL, sessionStorage: { getItem: () => 'test-key' }, setTimeout: fn => fn(),
+            fetch: async (_url, options) => {
+                const body = JSON.parse(options.body);
+                calls.push(body);
+                const payload = body.action === 'create' ? { request_id: '764cabcf-b745-4b3e-ae38-1200304cf45b' }
+                    : body.action === 'status' ? { status: 'COMPLETED' } : { video: { url: 'https://storage.example/video.mp4' } };
+                return { ok: true, json: async () => payload };
+            }
+        });
+        await sandbox.generateVideo(prompt, { querySelector: () => ({}) });
+        const sent = calls[0].prompt;
+        assert.ok(sent.startsWith(prompt), prompt);
+        assert.strictEqual(direction ? sent.includes(direction) : sent.includes('Creative direction:'), !!direction, prompt);
+        assert.strictEqual(sent.includes('Suggested scene:'), !!scene, prompt);
+        if (scene) assert.ok(sent.includes(scene), prompt);
+        if (direction === 'visual gag') {
+            assert.ok(sent.includes('Do not rely on laughter, smiling or reactions alone'));
+            assert.ok(sent.includes('retain any expressions the user explicitly requests'));
+        }
+        assert.ok(sent.length <= 12000);
+    }
+});
+
+test('video prompt rejects requests too long to preserve along with the creative direction', async () => {
+    let called = false;
+    const sandbox = load(videoGeneratorSrc, {
+        sessionStorage: { getItem: () => 'test-key' },
+        fetch: async () => { called = true; throw new Error('unexpected submission'); }
+    });
+    await assert.rejects(sandbox.generateVideo(`make a funny video ${'x'.repeat(11990)} do not use robots`, {}),
+        /too long to include its creative direction/);
+    assert.strictEqual(called, false);
+});
+
+test('artifact deduplication is scoped to the user turn, not the chat position', async () => {
+    const history = [{ sender: 'user', text: 'make a funny video' }, { sender: 'Nova', text: 'Starting.' }];
+    const cards = [];
+    const sandbox = load(artifactsSrc, {
+        chatHistory: history,
+        document: { getElementById: () => ({ appendChild: card => cards.push(card), scrollHeight: 0 }),
+            createElement: () => ({ setAttribute() {} }) },
+        showNotification() {}
+    });
+    sandbox.mockVideo = () => new Promise(() => {});
+    vm.runInContext('generateVideo = mockVideo;', sandbox);
+    sandbox.window.maybeCreateRequestedArtifact('make a funny video', 'Starting.');
+    sandbox.window.maybeCreateRequestedArtifact('make a funny video', 'Starting.');
+    assert.strictEqual(cards.length, 1);
+    sandbox.chatHistory = [{ sender: 'user', text: 'make a funny video' }, { sender: 'Nova', text: 'Starting.' }];
+    sandbox.window.maybeCreateRequestedArtifact('make a funny video', 'Starting.');
+    assert.strictEqual(cards.length, 2);
+});
+
+test('completed video enables a single contextual longer follow-up after chat failure', async () => {
+    const original = 'nova, generate a short funny video';
+    const history = [{ sender: 'user', text: original }, { sender: 'Nova', text: 'Starting.' }];
+    const prompts = [];
+    const sandbox = load(artifactsSrc, {
+        chatHistory: history,
+        document: { getElementById: () => ({ appendChild() {}, scrollHeight: 0 }),
+            createElement: () => ({ setAttribute() {} }) },
+        showNotification() {}
+    });
+    sandbox.mockVideo = async prompt => {
+        prompts.push(prompt);
+        return { url: 'https://storage.example/video.mp4', extension: 'mp4', numFrames: prompt.includes('longer') ? 161 : 81 };
+    };
+    vm.runInContext('generateVideo = mockVideo; addArtifactDownload = () => {};', sandbox);
+    sandbox.window.maybeCreateRequestedArtifact(original, 'Starting.');
+    await new Promise(resolve => setImmediate(resolve));
+    assert.strictEqual(history[0].videoArtifact.numFrames, 81);
+    history.push({ sender: 'user', text: 'a longer one' }, { sender: 'Nova', text: 'Starting.' });
+    sandbox.window.maybeCreateRequestedArtifact('a longer one', 'Starting.');
+    sandbox.window.maybeCreateRequestedArtifact('a longer one', 'Starting.');
+    await new Promise(resolve => setImmediate(resolve));
+    assert.deepStrictEqual(prompts, [original, `${original}\n\nNew video duration request: a longer one (10 seconds)`]);
+    assert.strictEqual(history[2].videoArtifact.numFrames, 161);
+});
+
+test('video clarification starts one job and immediately shows a generating status', async () => {
+    const cards = [];
+    const requests = [];
+    const chat = { appendChild: card => cards.push(card), scrollHeight: 1 };
+    const history = [
+        { sender: 'user', text: 'make a short vid' },
+        { sender: 'Nova', text: 'What theme would you like?' },
+        { sender: 'user', text: 'something funny' },
+        { sender: 'Nova', text: 'One moment.' }
+    ];
+    const sandbox = load(artifactsSrc, {
+        chatHistory: history,
+        document: {
+            getElementById: () => chat,
+            createElement: () => ({ setAttribute() {}, querySelector: () => ({}) })
+        },
+        sessionStorage: { getItem: () => 'test-key' },
+        fetch: (_url, options) => {
+            requests.push(JSON.parse(options.body));
+            return new Promise(() => {});
+        }
+    });
+    sandbox.window.maybeCreateRequestedArtifact('something funny', 'One moment.');
+    sandbox.window.maybeCreateRequestedArtifact('something funny', 'One moment.');
+    assert.strictEqual(cards.length, 1);
+    assert.ok(cards[0].innerHTML.includes('Generating video'));
+    assert.ok(cards[0].innerHTML.includes('several minutes'));
+    assert.strictEqual(requests.length, 1);
+    assert.ok(requests[0].prompt.startsWith('make a short vid\n\nVideo idea: something funny'));
+    assert.ok(requests[0].prompt.includes('visual gag'));
+});
+
+test('video-only requests can start when the chat proxy is out of credits', async () => {
+    const source = read('nova_runtime_ai.js');
+    const messages = [];
+    const requests = [];
+    const history = [{ sender: 'user', text: 'nova, generate a short funny video' }];
+    const sandbox = load(slice(source, 'function isAreYouUpCheck', 'async function _retryWithJinaFallback'), {
+        chatHistory: history,
+        conversationHistory: [],
+        detectRequestedArtifactFormats: artifacts.detectRequestedArtifactFormats,
+        resolveVideoArtifactRequest: artifacts.resolveVideoArtifactRequest,
+        getSlyTriggeredReply: () => null,
+        isAvonIdentityRequest: () => false,
+        isCurrentTimeRequest: () => false,
+        isPromptLimitErrorMessage: () => false,
+        OPENROUTER_API_KEY: '', OPENAI_API_KEY: '',
+        generateViaServerProxy: async () => { throw new Error('429 insufficient_quota'); },
+        removeThinkingIndicator() {},
+        addMessage: (text, sender) => { messages.push(text); history.push({ text, sender }); }
+    });
+    sandbox.window.maybeCreateRequestedArtifact = (text, reply) => requests.push({ text, reply });
+    await sandbox.generateAIResponse(history[0].text, 'Nova', { assistant: 'nova' });
+    assert.strictEqual(requests.length, 1);
+    assert.strictEqual(requests[0].text, history[0].text);
+    assert.ok(messages[0].includes('chat service is unavailable'));
+    assert.strictEqual(sandbox.conversationHistory.length, 1);
+});
+
+test('chat failure video fallback excludes searches, mixed formats, and proactive requests', () => {
+    const source = read('nova_runtime_ai.js');
+    const requests = [];
+    const sandbox = load(slice(source, 'function tryVideoAfterChatFailure', '// Enhanced AI integration'), {
+        chatHistory: [], conversationHistory: [],
+        detectRequestedArtifactFormats: artifacts.detectRequestedArtifactFormats,
+        resolveVideoArtifactRequest: artifacts.resolveVideoArtifactRequest,
+        removeThinkingIndicator() {},
+        addMessage() {}
+    });
+    sandbox.window.maybeCreateRequestedArtifact = (...args) => requests.push(args);
+    for (const text of ['find videos about cats', 'make a video and a pdf']) {
+        assert.strictEqual(sandbox.tryVideoAfterChatFailure(text, 'Nova', 'Nova', {}), false);
+    }
+    assert.strictEqual(sandbox.tryVideoAfterChatFailure('make a video', 'Nova', 'Nova', { proactiveEvaluation: true }), false);
+    assert.strictEqual(requests.length, 0);
+    sandbox.chatHistory.push(
+        { sender: 'user', text: 'make a video' },
+        { sender: 'Avon', text: 'What theme would you like?' },
+        { sender: 'user', text: 'something funny' }
+    );
+    assert.strictEqual(sandbox.tryVideoAfterChatFailure('something funny', 'Nova', 'Avon', {}), true);
+    assert.strictEqual(requests.length, 1);
+});
+
+test('video generation submits, polls, and returns a playable provider URL', async () => {
+    const calls = [];
+    const id = '764cabcf-b745-4b3e-ae38-1200304cf45b';
+    const sandbox = load(videoGeneratorSrc, {
+        URL, sessionStorage: { getItem: () => 'test-key' },
+        setTimeout: fn => fn(),
+        fetch: async (_url, options) => {
+            const body = JSON.parse(options.body);
+            calls.push(body);
+            const payload = body.action === 'create' ? { request_id: id }
+                : body.action === 'status' ? { status: calls.length === 2 ? 'IN_QUEUE' : 'COMPLETED' }
+                : { video: { url: 'https://storage.example/video.mp4' } };
+            return { ok: true, json: async () => payload };
+        }
+    });
+    const label = {};
+    const result = await sandbox.generateVideo('create a short video of a moon', { querySelector: () => label });
+    assert.strictEqual(result.url, 'https://storage.example/video.mp4');
+    assert.deepStrictEqual(calls.map(call => call.action), ['create', 'status', 'status', 'result']);
+    assert.strictEqual(calls[0].prompt, 'create a short video of a moon');
+});
+
+test('video generation reports missing keys and provider failures', async () => {
+    const missing = load(videoGeneratorSrc, {
+        sessionStorage: { getItem: () => null }
+    });
+    await assert.rejects(missing.generateVideo('create a video', {}), /fal.ai video API key/);
+    const failing = load(videoGeneratorSrc, {
+        sessionStorage: { getItem: () => 'test-key' },
+        fetch: async () => ({ ok: false, status: 402, json: async () => ({ error: 'No credits' }) })
+    });
+    await assert.rejects(failing.generateVideo('create a video', {}), /No credits/);
+});
+
+test('ambiguous video submissions warn before retrying', async () => {
+    for (const fetch of [
+        async () => { throw new TypeError('network failure'); },
+        async () => ({ ok: true, status: 200, json: async () => ({}) })
+    ]) {
+        const sandbox = load(videoGeneratorSrc, {
+            sessionStorage: { getItem: () => 'test-key' }, fetch
+        });
+        await assert.rejects(sandbox.generateVideo('create a video', {}), /check fal\.ai before retrying/i);
+    }
+});
+
+test('video errors retain the job ID after submission', async () => {
+    const id = '764cabcf-b745-4b3e-ae38-1200304cf45b';
+    const label = {};
+    const sandbox = load(videoGeneratorSrc, {
+        URL, sessionStorage: { getItem: () => 'test-key' }, setTimeout: fn => fn(),
+        fetch: async (_url, options) => {
+            const action = JSON.parse(options.body).action;
+            return { ok: true, json: async () => action === 'create' ? { request_id: id }
+                : action === 'status' ? { status: 'COMPLETED' } : {} };
+        }
+    });
+    await assert.rejects(sandbox.generateVideo('create a video', { querySelector: () => label }),
+        error => error.message.includes(id) && /check fal\.ai/i.test(error.message));
+    assert.ok(label.textContent.includes(id));
+});
+
+test('video generation reports empty and non-JSON endpoint failures with their HTTP status', async () => {
+    for (const status of [404, 405, 500, 200]) {
+        const sandbox = load(videoGeneratorSrc, {
+            sessionStorage: { getItem: () => 'test-key' },
+            fetch: async () => ({
+                ok: status === 200,
+                status,
+                json: async () => { throw new SyntaxError('Unexpected end of JSON input'); }
+            }),
+            SyntaxError
+        });
+        await assert.rejects(sandbox.generateVideo('create a video', {}), error => {
+            assert.ok(error.message.includes(`HTTP ${status}`));
+            if (status === 404 || status === 405) assert.ok(error.message.includes('restart the AI5 dev server'));
+            else assert.ok(error.message.includes('check fal.ai before retrying'));
+            return true;
+        });
+    }
+});
+
+test('video generation settings and creation intent are available across AI5 pages', () => {
+    ['AI_v5_nova.html', 'AI_v5_JARVIS.html', 'AI_v5_JARVIS_CLEAN.html'].forEach(page => {
+        const html = fs.readFileSync(path.join(__dirname, '..', 'public', page), 'utf8');
+        assert.ok(html.includes('id="falVideoApiKey"'), page);
+        const artifactScript = html.indexOf('<script src="../scripts/nova_runtime_artifacts.js"></script>');
+        assert.ok(artifactScript >= 0 && artifactScript < html.indexOf('<script src="../scripts/nova_runtime_ai.js"></script>'),
+            `${page}: artifact generation must load before the AI runtime`);
+        const apiStyle = id => html.match(new RegExp(`<input[^>]*id="${id}"[^>]*style="([^"]+)"`))?.[1];
+        assert.ok(apiStyle('falVideoApiKey'), `${page}: video key input has styling`);
+        assert.strictEqual(apiStyle('falVideoApiKey'), apiStyle('openaiApiKey'), `${page}: video key matches other API inputs`);
+    });
+    const sources = `${slice(read('nova_runtime_ai.js'), 'const _WEB_URL_RE', 'function prepareOpenAIMessages')}`;
+    const tools = load(sources, { detectRequestedArtifactFormats: artifacts.detectRequestedArtifactFormats, persistentMaterial: [] });
+    assert.strictEqual(tools._resolveWebIntent('make a downloadable video tutorial'), null);
+    assert.strictEqual(tools._resolveWebIntent('find videos about sunsets').type, 'search');
 });
 
 test('detectRequestedArtifactFormats handles documents and ignores normal chat', () => {
@@ -136,6 +814,11 @@ test('normalizeImageReply replaces refusals only for image requests', () => {
 // ---------- "You up?" check and task offers ----------
 const aiSrc = read('nova_runtime_ai.js');
 const ai = load(slice(aiSrc, 'function isAreYouUpCheck', '// Enhanced AI integration'));
+const webTools = load(`${slice(aiSrc, 'const _WEB_URL_RE', 'function prepareOpenAIMessages')}\n${slice(aiSrc, 'function buildWebTaskMessage', 'function extractResponseText')}`, {
+    persistentMaterial: [],
+    shortResponseModeEnabled: false
+});
+const mainSrc = read('nova_main.js');
 
 test('isAreYouUpCheck matches the greeting forms only', () => {
     ['Nova you up?', 'Avon, you up', 'hey nova are you up?', 'you up?', 'A.V.O.N., are you up'].forEach(text =>
@@ -149,6 +832,31 @@ test('prompt carries task-offer and you-up guidance and the reply is not hardcod
     assert.ok(aiSrc.includes('Never claim something was stored or sent unless it actually was'));
     assert.ok(aiSrc.includes('options.youUpCheck'));
     assert.ok(!aiSrc.includes("'For you sir, always.'"), 'reply must come from the model, not a fixed string');
+});
+
+test('audio video requests search for links grounded in the uploaded transcript', () => {
+    const packet = 'AUDIO ANALYSIS PACKET\nWhen the user asks for video resources, explain this clearly.\nTRANSCRIPT\nSpeaker A: Inverted pendulum control keeps a rod upright.\nEND AUDIO ANALYSIS PACKET';
+    assert.strictEqual(webTools._resolveWebIntent(`${packet}\n\nGo over recording`), null);
+    assert.ok(!webTools.buildWebTaskMessage(`${packet}\n\nGo over recording`).includes('actual watchable videos'));
+    const intent = webTools._detectWebIntent(
+        `${packet}\n\nFind relevant videos for this recording`
+    );
+    assert.strictEqual(intent.type, 'search');
+    assert.ok(intent.query.includes('educational video tutorial'));
+    assert.ok(intent.query.includes('Inverted pendulum control'));
+    const videoPrompt = webTools.buildWebTaskMessage(`${packet}\n\nFind relevant videos for this recording`, 'YouTube result URL: https://www.youtube.com/watch?v=example');
+    assert.ok(videoPrompt.includes('actual watchable videos'));
+    assert.ok(videoPrompt.includes('direct verified video-page link'));
+    assert.ok(aiSrc.includes('the app can submit a video-generation job'));
+});
+
+test('Sly personality guides occasional, understated, mischievous wit for Nova and Avon', () => {
+    const slyInstructions = mainSrc.match(/sly:\s*\{\s*name:\s*'Sly',\s*instructions:\s*'([^']+)'/);
+    assert.ok(slyInstructions, 'Sly personality instructions should exist');
+    assert.ok(slyInstructions[1].includes('Let intelligent, understated wit surface naturally'));
+    assert.ok(slyInstructions[1].includes('a gentle tease, or a sly implication'));
+    assert.ok(slyInstructions[1].includes('do not add sass to every reply'));
+    assert.ok(slyInstructions[1].includes('never cruel'));
 });
 
 // ---------- AI Vision ----------
@@ -299,7 +1007,7 @@ test('Auto Mode coordinates screen and camera through one proactive gate', () =>
 
 test('Auto Mode prompt treats stillness as ambiguous and retains recent visual context', () => {
     assert.ok(flowSrc.includes('A static screen alone does not mean the user is inactive'));
-    assert.ok(flowSrc.includes('autoModeVisualMemory.slice(-2)'));
+    assert.ok(flowSrc.includes('autoModeVisualMemory.filter(item => Date.now() - item.at >= 3000).slice(-2)'));
     assert.ok(flowSrc.includes('window.getAutoModeVisualContext ='));
     assert.ok(flowSrc.includes('activeMotionReviewDue'));
     assert.ok(read('nova_runtime_ai.js').includes('options.autoModeEvaluation'));
@@ -320,20 +1028,164 @@ test('90-second idle check-in always produces a spoken prompt, including NO_ACTI
     assert.ok(read('nova_runtime_ai.js').includes('Do not return NO_ACTION just because the screen is static'));
 });
 
+test('ongoing visual activity keeps idle check-ins from interrupting indefinitely', async () => {
+    class Clock extends Date { static now() { return 300000; } }
+    let evaluations = 0;
+    const sandbox = load(slice(flowSrc, '// Auto Mode coordinates screen', 'async function runAutoModeLoop'), {
+        Date: Clock,
+        document: { hidden: false, addEventListener() {}, getElementById: () => ({ value: '' }) },
+        window: { getScreenShareTarget: () => 'both' },
+        isResponseInFlight: false,
+        generateAIResponse: async () => { evaluations++; return { reply: 'Hello' }; },
+        setTimeout, clearTimeout
+    });
+    const state = { startedAt: 1000, nextEvaluationAt: 0, lastVisualChangeAt: 299000, lastSpokeAt: 0, unanswered: 0 };
+    assert.strictEqual(await sandbox.runAutoModeCheckIn(1, state), false);
+    assert.strictEqual(evaluations, 0);
+    assert.strictEqual(state.nextEvaluationAt, 330000);
+});
+
 test('Auto Mode keeps only a short in-memory window of recent visual frames', () => {
-    flow.window.getScreenShareTarget = () => 'both';
-    flow.window.isAiVisionActive = () => true;
-    flow.window.getScreenShareFrame = (_assistant, width) => `screen-${width}`;
-    flow.window.getVisionFrame = width => `camera-${width}`;
-    flow.rememberAutoModeVisualContext('nova');
-    flow.rememberAutoModeVisualContext('nova');
-    flow.rememberAutoModeVisualContext('nova');
-    const recent = flow.window.getAutoModeVisualContext('nova');
+    let now = 100000;
+    class Clock extends Date { static now() { return now; } }
+    let target = 'nova';
+    const memory = load(slice(flowSrc, '// Auto Mode coordinates screen', 'async function runAutoModeLoop'), {
+        Date: Clock, document: { addEventListener() {} }, setTimeout, clearTimeout
+    });
+    memory.window.getScreenShareTarget = () => target;
+    memory.window.isAiVisionActive = () => true;
+    memory.window.getScreenShareFrame = (_assistant, width) => `screen-${width}`;
+    memory.window.getVisionFrame = width => `camera-${width}`;
+    memory.rememberAutoModeVisualContext('nova');
+    now += 1000;
+    memory.rememberAutoModeVisualContext('nova');
+    now += 4000;
+    memory.rememberAutoModeVisualContext('nova');
+    now += 5000;
+    memory.rememberAutoModeVisualContext('nova');
+    const recent = memory.window.getAutoModeVisualContext('nova');
     assert.strictEqual(recent.length, 2);
     assert.strictEqual(recent[0].screen, 'screen-320');
     assert.strictEqual(recent[0].camera, 'camera-320');
-    flow.window.clearAutoModeVisualMemory();
-    assert.strictEqual(flow.window.getAutoModeVisualContext('nova').length, 0);
+    target = 'both';
+    assert.strictEqual(memory.window.getAutoModeVisualContext('other')[0].screen, null, 'do not expose a frame captured for another assistant');
+    memory.window.clearAutoModeVisualMemory('screen');
+    assert.strictEqual(memory.window.getAutoModeVisualContext('nova')[0].screen, null);
+    memory.window.clearAutoModeVisualMemory();
+    assert.strictEqual(memory.window.getAutoModeVisualContext('nova').length, 0);
+});
+
+test('Auto Mode samples changing shared video in the background without narrating every frame', async () => {
+    let now = 100000, polls = 0, evaluations = 0, samples = 0;
+    const replies = [];
+    class Clock extends Date { static now() { return now; } }
+    const windowStub = {
+        getScreenShareTarget: () => 'both',
+        getScreenShareSignature: () => new Uint8Array(32 * 18 * 3).fill(polls % 2 ? 0 : 15),
+        getScreenShareFrame: () => `frame-${++samples}`,
+        isAiVisionActive: () => false,
+        isSpeaking: false
+    };
+    const sandbox = load(slice(flowSrc, '// Auto Mode coordinates screen', 'function toggleAutoMode()'), {
+        Date: Clock, window: windowStub,
+        document: { hidden: true, addEventListener() {}, getElementById: () => ({ value: '' }) },
+        setTimeout, clearTimeout, console: { log() {}, error() {} },
+        screenShareStream: {}, screenShareVideo: null,
+        groupChatEnabled: false, mutedGroupAssistant: 'both',
+        currentPersonality: 'Nova', isResponseInFlight: false,
+        conversationHistory: [], getLastAssistantMessage: () => null,
+        generateAIResponse: async () => {
+            evaluations++;
+            return { reply: evaluations === 1 ? 'NO_ACTION' : 'That was an unexpected turn.' };
+        },
+        addMessage: text => replies.push(text), speakAssistantResponse() {}
+    });
+    vm.runInContext(`
+        autoModeActive = true; autoModeRunId = 1;
+        runAutoModeCheckIn = async () => false;
+        waitForAutoModeSample = async () => { tick(); };
+    `, sandbox);
+    sandbox.tick = () => {
+        now += 1000;
+        if (++polls > 75) vm.runInContext('autoModeActive = false', sandbox);
+    };
+    await sandbox.runAutoModeLoop(1);
+    assert.ok(evaluations >= 2, 'continuous motion is periodically evaluated');
+    assert.ok(samples > evaluations, 'frames are sampled independently of model evaluations');
+    assert.ok(replies.length >= 1 && replies.length <= 2, 'remarks remain selective and spaced');
+});
+
+test('Auto Mode discards an in-flight reaction when sharing stops or the user requests quiet', async () => {
+    for (const event of ['share-stopped', 'snooze', 'interaction']) {
+        let now = 100000, polls = 0, replies = 0, evaluations = 0;
+        class Clock extends Date { static now() { return now; } }
+        const windowStub = {
+            getScreenShareTarget: () => 'both',
+            getScreenShareSignature: () => new Uint8Array(32 * 18 * 3),
+            getScreenShareFrame: () => 'frame',
+            isAiVisionActive: () => false
+        };
+        let sandbox;
+        sandbox = load(slice(flowSrc, '// Auto Mode coordinates screen', 'function toggleAutoMode()'), {
+            Date: Clock, window: windowStub,
+            document: { hidden: false, addEventListener() {}, getElementById: () => ({ value: '' }) },
+            setTimeout, clearTimeout, console: { log() {}, error() {} },
+            screenShareStream: {}, screenShareVideo: null,
+            groupChatEnabled: false, mutedGroupAssistant: 'both',
+            currentPersonality: 'Nova', isResponseInFlight: false,
+            conversationHistory: [], getLastAssistantMessage: () => null,
+            generateAIResponse: async () => {
+                evaluations++;
+                if (event === 'share-stopped') sandbox.screenShareStream = null;
+                if (event === 'snooze') windowStub.proactiveGate.snooze(60000);
+                if (event === 'interaction') sandbox.noteAutoModeUserActivity();
+                return { reply: 'A notable moment.' };
+            },
+            addMessage: () => { replies++; }, speakAssistantResponse() {}
+        });
+        sandbox.tick = () => {
+            now += 1000;
+            if (++polls > 3) vm.runInContext('autoModeActive = false', sandbox);
+        };
+        vm.runInContext(`
+            autoModeActive = true; autoModeRunId = 1;
+            runAutoModeCheckIn = async () => false;
+            waitForAutoModeSample = async () => { tick(); };
+        `, sandbox);
+        await sandbox.runAutoModeLoop(1);
+        assert.strictEqual(evaluations, 1, `${event}: a model evaluation was started`);
+        assert.strictEqual(replies, 0, `${event}: no stale reaction is emitted`);
+    }
+});
+
+test('Auto Mode attaches each visual frame with the correct adjacent label', () => {
+    const ai = read('nova_runtime_ai.js');
+    const block = slice(ai, '    const screenFrame = window.getScreenShareFrame?', '    // Save user message to history');
+    const sandbox = load(`
+        let isAvon = false, options = { autoModeEvaluation: true }, messages = [];
+        let userMessage = 'evaluate', addresseeNote = '', styleReminder = 'NO_ACTION';
+        ${block}
+        window.result = messages[0].content;
+    `, { window: {
+        getScreenShareFrame: () => 'current',
+        getScreenShareTarget: () => 'both',
+        getVisionFrame: () => null,
+        getAutoModeVisualContext: () => [{ secondsAgo: 5, screen: 'older', camera: null }]
+    } });
+    const parts = sandbox.window.result;
+    assert.ok(parts[1].text.includes('current screen'));
+    assert.strictEqual(parts[2].image_url.url, 'current');
+    assert.ok(parts[3].text.includes('5 seconds ago'));
+    assert.strictEqual(parts[4].image_url.url, 'older');
+});
+
+test('video awareness prompt preserves selected personality and does not invent audio', () => {
+    const ai = read('nova_runtime_ai.js');
+    assert.ok(flowSrc.includes('An occasional brief, context-specific reaction'));
+    assert.ok(flowSrc.includes('never imply you heard video audio'));
+    assert.ok(flowSrc.includes('including subtle, intelligent mischief if Sly is selected'));
+    assert.ok(ai.includes('ACTIVE PERSONALITY (${presetConfig.name})'));
+    assert.ok(ai.includes('If speaking, make one brief natural remark in your selected personality'));
 });
 
 test('video frame callbacks can wake Auto Mode without waiting for its fallback poll', async () => {

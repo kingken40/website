@@ -25,6 +25,8 @@ When your browser and device support it, AI5 can take spoken input and read repl
 
 Voice recognition and synthesis depend on browser, operating-system, and voice availability. Microphone access must be allowed for voice input.
 
+During browser text-to-speech playback, the current word is underlined when the selected browser voice reports word boundaries. Pause keeps your place, Stop cancels the current playback, and Play resumes a pause or restarts the last response after a stop. The local voice bridge and audio packs do not provide word-boundary timing, so word highlighting is unavailable with those outputs.
+
 ## Share files for help
 
 Attach materials to ask questions about their contents. AI5 has handlers for:
@@ -36,7 +38,19 @@ Attach materials to ask questions about their contents. AI5 has handlers for:
 - Code files
 - Audio recordings
 
-Audio uploads are transcribed before they are used in chat. Where supported, AI5 distinguishes speakers and includes timestamps; long recordings may be split into parts for processing. Lecture-like recordings can receive a study-oriented treatment, such as topic summaries, key concepts, examples, and unclear sections.
+Audio uploads are transcribed before they are used in chat. Where supported, AI5 distinguishes speakers and includes timestamps; long recordings may be split into parts for processing. Lecture-like recordings can receive a structured study guide with speaker-role inferences, topic summaries, key concepts, examples, and unclear sections, even when shorter-response settings are enabled. Ask for a visual example to get a generated image/diagram, or ask for relevant videos to trigger a transcript-informed search for watchable links.
+
+Nova and Avon can also submit a short text-to-video request to fal.ai and show the resulting video in chat. If an assistant asks for a video idea, your next answer can supply it. A status card appears when generation starts and reports whether the video is queued or generating. Add your own fal.ai API key in Settings; it is retained for the current browser tab only and sent through the app's server to fal.ai. Generation uses your fal.ai credits and may incur charges. It can take several minutes; keep the tab open to see the result. Provider availability, access, safety rules, and output quality apply. This generates video from the request text, not an uploaded video or synchronized narration.
+
+For local use, start `python dev_server.py` from the repository root and open AI5 through that server, rather than a static-only server. A deployed site must include the `/api/video` serverless endpoint as well as the updated AI5 files. After submission, the status card displays the fal.ai job ID; keep it if polling fails. If a submission response is lost or invalid, check fal.ai for an existing request before trying again, since another submission may incur another charge.
+
+If the chat provider is unavailable, a video-only creation request can still be attempted through fal.ai; the status card reports the outcome. Other chat requests still require a working chat provider.
+
+For broad descriptive video requests, AI5 adds visual direction for the requested tone and supplies a concrete scene, without requiring the chat provider. For comedy it emphasizes a visual gag or unexpected event rather than laughter or smiling alone. Specific subjects, actions, and exclusions remain part of the prompt. The model's actual interpretation and output may vary.
+
+Request a video of 5–10 whole seconds, or 12, 14, 16, 18, or 20 seconds. Longer requests use fal.ai LTX 2.3 Fast at 1080p and 25 fps instead of WAN; AI5 asks for confirmation with an estimated price before submitting. Other lengths are rejected rather than silently shortened. A follow-up such as "make one that's 20 seconds" can reuse a recent successful video prompt. This creates a new generation, not an extension, and uses additional credits. AI5 shows the measured duration when the browser can read it; the provider's actual result may differ.
+
+An HTTP 403 comes from fal.ai and can have different causes; the status card shows the provider's error detail when available. Check the indicated account, billing, key permissions, or model-access issue with fal.ai before retrying.
 
 Supported formats and file-size limits depend on the upload handler and configured services.
 
@@ -44,9 +58,9 @@ Supported formats and file-size limits depend on the upload handler and configur
 
 Turn on **AI Vision** to share a live camera view with the assistant. Camera frames can provide context for your questions, such as asking about something visible in the frame. Use a vision-capable AI model for image understanding.
 
-With **Auto Mode** on, AI5 considers screen changes, camera context, recent visual frames, and recent conversation together. It can recognize activities such as reading, coding, watching, or working when the images support that interpretation; a still screen alone is not treated as proof that you are inactive. It waits for meaningful moments, avoids repeating itself, and can ask a relevant question or offer a concise suggestion—or stay quiet when you appear focused.
+With **Auto Mode** and **Screen Share** on, AI5 can use occasional screen snapshots to follow visible changes in a video and sometimes react briefly to a notable moment in the selected assistant's personality. It also considers camera context and recent conversation when available. It avoids constant narration and can stay quiet while you are focused. Snapshots are intermittent, so it may miss moments; Screen Share does not capture video audio. Visible captions and conversation or transcripts you provide can supply additional context.
 
-Auto Mode keeps a small, temporary visual history in memory while it is active so it can compare recent screen or camera frames and understand what changed. This short-term visual history is cleared when Auto Mode or the corresponding screen/camera share is stopped; it is not saved with chat history.
+Auto Mode keeps a small, temporary visual history in memory while it is active so it can compare recent screen or camera frames and understand what changed. While Screen Share remains on, visual checks can continue when the AI5 page is in the background. This short-term visual history is cleared when Auto Mode or the corresponding screen/camera share is stopped; it is not saved with chat history.
 
 Camera and screen sharing require your permission. Turn them off when you no longer want to provide visual context.
 
