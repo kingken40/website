@@ -1181,7 +1181,7 @@ function setupSpeechRecognition() {
                 pendingTranscript = '';
                 lastInterimTranscript = '';
                 updateVoiceStatus('Voice recognition unavailable. Tap the microphone to retry.');
-                showVoiceNotification(`Voice recognition error: ${recognitionError}. Check browser permissions or try recorded voice.`, 5000);
+                showVoiceNotification(`Voice recognition error: ${recognitionError}. Check your connection and microphone permissions, then tap the microphone to retry.`, 5000);
                 return;
             }
             if (IS_TOUCH_PHONE && recognitionError === 'no-speech') {

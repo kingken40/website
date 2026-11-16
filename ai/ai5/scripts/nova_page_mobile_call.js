@@ -110,8 +110,6 @@
                 else if (state === 'processing') statusText.textContent = 'Processing...';
                 else if (state === 'muted')  statusText.textContent = 'Microphone muted';
                 else if (state === 'disabled') statusText.textContent = 'Always listening off';
-                else if (state === 'recording') statusText.textContent = 'Recording - tap Send when finished';
-                else if (state === 'transcribing') statusText.textContent = 'Transcribing voice...';
                 else if (state === 'listening') statusText.textContent = 'Always listening...';
                 else if (state === 'starting') statusText.textContent = 'Starting microphone...';
                 else statusText.textContent = mobileStartError || 'Tap microphone to start listening';
@@ -121,8 +119,6 @@
         // Poll voice/speaking flags exposed by nova_voice.js
         setInterval(function() {
             updateMuteButtonUI();
-            if (window.mobileRecordedVoiceState === 'recording') { setCallState('recording'); return; }
-            if (window.mobileRecordedVoiceState === 'processing') { setCallState('transcribing'); return; }
             if (!mobileAlwaysListeningEnabled)                  { setCallState('disabled');   return; }
             if (muted)                                        { setCallState('muted');      return; }
             if (typeof window.reconcileSpeechOutputState === 'function') {
@@ -133,7 +129,7 @@
             if (window.isListening && window.alwaysListeningHotkeyMode) { setCallState('listening'); return; }
             if (mobileStartPromise || window.alwaysListeningHotkeyMode) { setCallState('starting'); return; }
             if (window.voiceRecognitionError) mobileStartError = window.voiceRecognitionError === 'network'
-                ? 'Speech service unavailable - try Record'
+                ? 'Speech service unavailable - tap to retry'
                 : 'Microphone unavailable - tap to retry';
             setCallState('ready');
         }, 350);
@@ -151,14 +147,6 @@
                     label.textContent = muted ? 'Unmute' : isOff ? 'Start mic' : 'Mute';
                 }
 
-                window.pauseMobileListeningForRecording = async function() {
-                    muted = true;
-                    mobileStartGeneration++;
-                    if (window.alwaysListeningHotkeyMode && typeof toggleAlwaysListeningMode === 'function') {
-                        await toggleAlwaysListeningMode();
-                    }
-                    updateMuteButtonUI();
-                };
             }
             muteBtn.setAttribute('aria-pressed', String(isOff));
         }
@@ -291,9 +279,7 @@
               try {
                 if (typeof toggleAlwaysListeningMode !== 'function' ||
                     (!window.SpeechRecognition && !window.webkitSpeechRecognition)) {
-                    mobileStartError = document.getElementById('mobileRecordVoiceBtn')
-                        ? 'Voice recognition unavailable - try Record'
-                        : 'Voice recognition unavailable - try another browser';
+                    mobileStartError = 'Voice recognition unavailable - try another browser';
                     return;
                 }
                 if (typeof window.requestVoicePermission === 'function' && !window.hasVoicePermission) {

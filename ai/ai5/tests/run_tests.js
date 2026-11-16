@@ -161,92 +161,19 @@ test('mobile unsupported speech recognition is not reported as listening', async
     assert.strictEqual(h.toggles, 0);
 });
 
-function makeMobileRecordingHarness({ key = 'configured', deferredPermission = false } = {}) {
-    const listeners = {}, notices = [], submissions = [], timers = [];
-    const label = {}, mute = {};
-    const button = {
-        disabled: false, classList: { toggle() {} },
-        setAttribute(name, value) { this[name] = value; },
-        querySelector: () => label,
-        addEventListener(type, fn) { listeners[type] = fn; }
-    };
-    let stopped = 0, permissionResolve, recorder;
-    const stream = { getTracks: () => [{ stop() { stopped++; } }] };
-    class Recorder {
-        static isTypeSupported(type) { return type === 'audio/mp4'; }
-        constructor(input, options) { this.mimeType = options.mimeType; this.state = 'inactive'; recorder = this; }
-        start() { this.state = 'recording'; }
-        stop() {
-            this.state = 'inactive';
-            this.ondataavailable({ data: { size: 5, type: this.mimeType } });
-            this.onstop();
-        }
-    }
-    class AudioFile { constructor(parts, name, options) { this.parts = parts; this.name = name; this.type = options.type; } }
-    const sandbox = load(read('nova_mobile_recording.js'), {
-        OPENAI_API_KEY: key, MediaRecorder: Recorder, File: AudioFile,
-        navigator: { mediaDevices: { getUserMedia: () => deferredPermission
-            ? new Promise(resolve => { permissionResolve = resolve; })
-            : Promise.resolve(stream) } },
-        document: { getElementById: id => id === 'mobileRecordVoiceBtn' ? button : id === 'mobileMuteBtn' ? mute : null },
-        window: {
-            pauseMobileListeningForRecording: async () => {},
-            processUserMessage: text => submissions.push(text),
-            addEventListener(type, fn) { listeners[type] = fn; }
-        },
-        showNotification: text => notices.push(text),
-        transcribeAudio: async file => { sandbox.file = file; return 'First sentence. Second sentence.'; },
-        setTimeout: fn => { timers.push(fn); return fn; }, clearTimeout() {},
-        console: { error() {}, warn() {} }
-    });
-    return { listeners, notices, submissions, button, label, mute, sandbox,
-        get stopped() { return stopped; }, get recorder() { return recorder; },
-        grant() { permissionResolve(stream); } };
-}
-
-test('recorded mobile voice sends the complete audio with the correct format and releases the mic', async () => {
-    const h = makeMobileRecordingHarness();
-    h.listeners.click();
-    await new Promise(resolve => setImmediate(resolve));
-    assert.strictEqual(h.recorder.state, 'recording');
-    assert.strictEqual(h.label.textContent, 'Send');
-    assert.strictEqual(h.mute.disabled, true);
-    h.listeners.click();
-    await new Promise(resolve => setImmediate(resolve));
-    assert.strictEqual(h.sandbox.file.name, 'voice.m4a');
-    assert.strictEqual(h.sandbox.file.type, 'audio/mp4');
-    assert.deepStrictEqual(h.submissions, ['First sentence. Second sentence.']);
-    assert.strictEqual(h.stopped, 1);
-    assert.strictEqual(h.mute.disabled, false);
+test('JARVIS mobile uses the existing mute control without a separate recording button', () => {
+    const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'AI_v5_JARVIS.html'), 'utf8');
+    assert.ok(html.includes('id="mobileMuteBtn"'));
+    assert.ok(!html.includes('mobileRecordVoiceBtn'));
+    assert.ok(!html.includes('nova_mobile_recording.js'));
 });
 
-test('recorded voice reports missing key and cancels permission on page exit', async () => {
-    const missing = makeMobileRecordingHarness({ key: '' });
-    missing.listeners.click();
-    assert.ok(missing.notices[0].includes('OpenAI API key'));
-    assert.strictEqual(missing.recorder, undefined);
-    const pending = makeMobileRecordingHarness({ deferredPermission: true });
-    pending.listeners.click();
-    await new Promise(resolve => setImmediate(resolve));
-    pending.listeners.pagehide();
-    pending.grant();
-    await new Promise(resolve => setImmediate(resolve));
-    assert.strictEqual(pending.stopped, 1);
-    assert.strictEqual(pending.recorder, undefined);
-    assert.deepStrictEqual(pending.submissions, []);
-});
-
-test('recorded voice reports transcription failures and still releases the mic', async () => {
-    const h = makeMobileRecordingHarness();
-    h.sandbox.transcribeAudio = async () => { throw new Error('Service unavailable'); };
-    h.listeners.click();
-    await new Promise(resolve => setImmediate(resolve));
-    h.listeners.click();
-    await new Promise(resolve => setImmediate(resolve));
-    assert.ok(h.notices.some(text => text.includes('Service unavailable')));
-    assert.strictEqual(h.stopped, 1);
-    assert.strictEqual(h.button.disabled, false);
-    assert.deepStrictEqual(h.submissions, []);
+test('mobile speech-service failure tells the user to retry using the mic', () => {
+    const h = makeMobileCallHarness();
+    h.window.voiceRecognitionError = 'network';
+    h.listeners.poll();
+    assert.strictEqual(h.status.textContent, 'Speech service unavailable - tap to retry');
+    assert.strictEqual(h.label.textContent, 'Start mic');
 });
 
 test('always listening stops on microphone permission errors and preserves partial speech on timeout', () => {
