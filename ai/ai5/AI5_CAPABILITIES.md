@@ -62,6 +62,8 @@ With **Auto Mode** and **Screen Share** on, AI5 can use occasional screen snapsh
 
 On the mobile call screen, allow microphone access and tap **Start mic** if automatic startup is blocked. The status shows when recognition is actually listening; tap the microphone to retry after an error. Mobile listening combines phrases across recognition restarts and sends a turn after about three seconds of silence. Mobile voice input requires a secure connection and a browser with speech recognition support; recognition availability and accuracy depend on the browser and its speech service.
 
+In `public/AI_v5_JARVIS.html`, the desktop and mobile update dates beside the avatar are maintained manually in `scripts/nova_update_dates.js` when the corresponding experience changes. They display in the viewer's local time; they are not automatic deployment timestamps.
+
 For a useful educational moment supported by that context, AI5 may ask you to go back to a specific topic and then briefly explain the point, whether or not you rewind. It cannot control playback or reliably detect a seek, and will not assume you went back. The follow-up waits for the normal proactive speech gap and a quiet moment; it is dropped if you reply in chat, request quiet, stop sharing, or turn off Auto Mode. You can also ask about the suggestion directly.
 
 Auto Mode keeps a small, temporary visual history in memory while it is active so it can compare recent screen or camera frames and understand what changed. While Screen Share remains on, visual checks can continue when the AI5 page is in the background. This short-term visual history is cleared when Auto Mode or the corresponding screen/camera share is stopped; it is not saved with chat history.

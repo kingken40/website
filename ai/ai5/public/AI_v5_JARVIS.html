@@ -38,13 +38,17 @@
         </div>
 
         <!-- Avatar -->
-        <div class="mobile-avatar-section">
+        <div class="mobile-avatar-section nova-update-layout">
             <div class="mobile-avatar-container" id="mobileAvatarContainer">
                 <div class="mobile-call-ring mobile-call-ring-1"></div>
                 <div class="mobile-call-ring mobile-call-ring-2"></div>
                 <div class="mobile-call-ring mobile-call-ring-3"></div>
                 <div class="mobile-avatar" id="mobileAvatar">
                     <div class="mobile-avatar-core" aria-hidden="true"></div>
+                </div>
+                <div class="nova-update-dates" aria-label="Last updated">
+                    <div><i class="fas fa-desktop" aria-hidden="true"></i><span>Desktop Updated: <time data-nova-update="desktop"></time></span></div>
+                    <div><i class="fas fa-mobile-alt" aria-hidden="true"></i><span>Mobile Updated: <time data-nova-update="mobile"></time></span></div>
                 </div>
             </div>
             <h2 class="mobile-ai-name">N.O.V.A</h2>
@@ -174,12 +178,16 @@
     <!-- ===== END MOBILE CALL UI ===== -->
 
     <!-- Header Section -->
-    <header class="nova-header">
+    <header class="nova-header nova-update-layout">
         <div class="arc-reactor">
             <div class="arc-core"></div>
             <div class="arc-ring arc-ring-1"></div>
             <div class="arc-ring arc-ring-2"></div>
             <div class="arc-ring arc-ring-3"></div>
+            <div class="nova-update-dates" aria-label="Last updated">
+                <div><i class="fas fa-desktop" aria-hidden="true"></i><span>Desktop Updated: <time data-nova-update="desktop"></time></span></div>
+                <div><i class="fas fa-mobile-alt" aria-hidden="true"></i><span>Mobile Updated: <time data-nova-update="mobile"></time></span></div>
+            </div>
         </div>
         <h1 class="nova-title">N.O.V.A</h1>
         <p class="nova-subtitle">Networking Orthogonal Virtual Assistant</p>
@@ -917,6 +925,7 @@
     </div>
 
     <!-- Scripts -->
+    <script src="../scripts/nova_update_dates.js"></script>
     <script src="../scripts/nova_kb_store.js"></script>
     <script src="../scripts/nova_conversation_flow.js"></script>
     <script src="../scripts/nova_runtime_artifacts.js"></script>

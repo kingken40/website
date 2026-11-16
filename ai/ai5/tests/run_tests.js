@@ -25,6 +25,24 @@ function load(code, extra = {}) {
 const tests = [];
 const test = (name, fn) => tests.push({ name, fn });
 
+test('update dates are shown for both experiences only on the JARVIS page', () => {
+    const nodes = ['desktop', 'mobile', 'desktop', 'mobile'].map(key => ({ dataset: { novaUpdate: key } }));
+    const dates = load(read('nova_update_dates.js'), { document: { querySelectorAll: () => nodes } });
+    assert.ok(Number.isFinite(Date.parse(nodes[0].dateTime)));
+    assert.ok(Number.isFinite(Date.parse(nodes[1].dateTime)));
+    nodes.forEach(node => assert.match(node.textContent, /^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2} [AP]M$/));
+    assert.strictEqual(nodes[0].textContent, nodes[2].textContent);
+    assert.strictEqual(nodes[1].textContent, nodes[3].textContent);
+    assert.throws(() => dates.formatNovaUpdateDate('invalid'), /Invalid AI5 update date/);
+    ['AI_v5_nova.html', 'AI_v5_JARVIS.html', 'AI_v5_JARVIS_CLEAN.html'].forEach(page => {
+        const html = fs.readFileSync(path.join(__dirname, '..', 'public', page), 'utf8');
+        const expected = page === 'AI_v5_JARVIS.html' ? 2 : 0;
+        assert.strictEqual((html.match(/data-nova-update="desktop"/g) || []).length, expected, page);
+        assert.strictEqual((html.match(/data-nova-update="mobile"/g) || []).length, expected, page);
+        assert.strictEqual(html.includes('nova_update_dates.js'), expected > 0, page);
+    });
+});
+
 // ---------- Audio transcription and lecture mode ----------
 const filesSrc = read('nova_runtime_files.js');
 const audio = load(slice(filesSrc, 'function formatAudioTimestamp', 'function encodeMonoWav'));
