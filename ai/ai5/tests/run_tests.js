@@ -150,7 +150,8 @@ test('always listening stops on microphone permission errors and preserves parti
         let recognition = {}, isListening = false, alwaysListeningHotkeyMode = true;
         let alwaysListeningTurnActive = true, hasVoicePermission = true, pendingTranscript = 'hello', lastInterimTranscript = 'there';
         let pttReleaseMode = false, speechInterruptListeningMode = false, isSpeechOutputActive = false;
-        let isWakeWordSession = false;
+        let isWakeWordSession = false, IS_TOUCH_PHONE = false;
+        function clearMobileVoiceTurn() {}
         function consumeVoiceTurnTranscript() {
             const text = [pendingTranscript, lastInterimTranscript].filter(Boolean).join(' ');
             pendingTranscript = ''; lastInterimTranscript = ''; return text;
@@ -184,7 +185,7 @@ test('mobile-style single-shot recognition submits the spoken transcript on end'
         let recognition = {}, isListening = false, hotkeyListening = false, hotkeyReleasePendingStart = false;
         let alwaysListeningHotkeyMode = true, alwaysListeningTurnActive = true, isWakeListening = false;
         let wakeWordEnabled = false, pttReleaseMode = false, speechInterruptListeningMode = false;
-        let interruptListeningEnabled = false, isWakeWordSession = false, pendingTranscript = '', lastInterimTranscript = '';
+        let interruptListeningEnabled = false, isWakeWordSession = false, pendingTranscript = '', lastInterimTranscript = '', IS_TOUCH_PHONE = false;
         function consumeVoiceTurnTranscript() {
             const text = [pendingTranscript, lastInterimTranscript].filter(Boolean).join(' ');
             pendingTranscript = ''; lastInterimTranscript = ''; return text;
@@ -207,6 +208,81 @@ test('mobile-style single-shot recognition submits the spoken transcript on end'
     sandbox.window.testRecognition.onresult({ resultIndex: 0, results: [result] });
     sandbox.window.testRecognition.onend();
     assert.deepStrictEqual(submissions, ['Can you hear me clearly?']);
+});
+
+test('mobile always listening joins phrases across recognizer restarts and waits for silence', () => {
+    let now = 100000;
+    const timers = [];
+    const submissions = [];
+    class Clock extends Date { static now() { return now; } }
+    let sandbox;
+    const recognition = {
+        start() { this.onstart(); },
+        stop() { this.onend(); },
+        abort() {}
+    };
+    sandbox = load(`
+        let recognition = window.recognition, isListening = false, hotkeyListening = false, hotkeyReleasePendingStart = false;
+        let alwaysListeningHotkeyMode = true, alwaysListeningTurnActive = false, alwaysListeningTurnStartedAt = 0;
+        let mobileVoicePauseTimer = null, mobileVoiceFinishing = false, mobileVoiceSpeechActive = false, mobileVoiceTurnGeneration = 0;
+        let isWakeListening = false, wakeWordEnabled = false, pttReleaseMode = false, speechInterruptListeningMode = false;
+        let interruptListeningEnabled = false, isWakeWordSession = false, pendingTranscript = '', lastInterimTranscript = '';
+        let IS_TOUCH_PHONE = true, hasVoicePermission = true, isSpeaking = false, isSpeechOutputActive = false;
+        ${slice(voiceSrc, 'function joinTranscriptParts', 'function recreateRecognition')}
+        ${slice(voiceSrc, 'function startAlwaysListeningTurn()', 'function setupPushToTalkHotkey()')}
+    `, {
+        Date: Clock, window: { recognition }, navigator: { language: 'en-US' },
+        console: { log() {}, warn() {}, error() {} },
+        setTimeout(fn, delay) { const timer = { fn, at: now + delay, cancelled: false }; timers.push(timer); return timer; },
+        clearTimeout(timer) { if (timer) timer.cancelled = true; },
+        updateVoiceUI() {}, updateVoiceStatus() {}, getAlwaysListeningStatus: () => 'Listening',
+        pickBestTranscript: result => result[0].transcript, handleInterruptCaptureResult: () => false,
+        isMicMutedForSpeech: () => false, isAssistantEchoTranscript: () => false,
+        hasUsableVoiceRecognition: () => true, isWithinEchoTail: () => false,
+        submitVoiceTranscript: text => submissions.push(text)
+    });
+    const advance = ms => {
+        const until = now + ms;
+        while (true) {
+            const next = timers.filter(t => !t.cancelled && t.at <= until).sort((a, b) => a.at - b.at)[0];
+            if (!next) break;
+            next.cancelled = true; now = next.at; next.fn();
+        }
+        now = until;
+    };
+    const say = text => {
+        const result = [{ transcript: text }];
+        result.isFinal = true;
+        recognition.onresult({ resultIndex: 0, results: [result] });
+    };
+    sandbox.startAlwaysListeningTurn();
+    recognition.onspeechstart();
+    say('The first sentence.');
+    recognition.onspeechend();
+    recognition.onend();
+    advance(300);
+    advance(1000);
+    recognition.onspeechstart();
+    advance(4000);
+    assert.deepStrictEqual(submissions, [], 'speech in progress must not be cut off');
+    say('Here is the second sentence.');
+    recognition.onspeechend();
+    recognition.onend();
+    advance(300);
+    recognition.onerror({ error: 'no-speech' });
+    recognition.onend();
+    advance(2699);
+    assert.deepStrictEqual(submissions, [], 'wait for a full pause');
+    advance(1);
+    assert.deepStrictEqual(submissions, ['The first sentence. Here is the second sentence.']);
+    advance(5000);
+    assert.strictEqual(submissions.length, 1, 'submit the complete turn only once');
+    sandbox.startAlwaysListeningTurn();
+    say('Do not send this.');
+    vm.runInContext("alwaysListeningHotkeyMode = false; clearMobileVoiceTurn(); pendingTranscript = ''; lastInterimTranscript = '';", sandbox);
+    recognition.onend();
+    advance(5000);
+    assert.strictEqual(submissions.length, 1, 'muting cancels the pending turn');
 });
 
 function makePlaybackHarness() {

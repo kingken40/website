@@ -23,6 +23,10 @@ let isWakeWordSession = false; // Track if current interaction is from wake word
 let alwaysListeningHotkeyMode = false; // R+T toggled continuous listening
 let alwaysListeningTurnActive = false;
 let alwaysListeningTurnStartedAt = 0;
+let mobileVoicePauseTimer = null;
+let mobileVoiceFinishing = false;
+let mobileVoiceSpeechActive = false;
+let mobileVoiceTurnGeneration = 0;
 let currentVoiceSettings = {
     rate: 0.9,   // Measured, articulate pace - sophisticated yet natural
     pitch: 0.9,  // Mid-range British tone - authoritative without being too deep (like Paul Bettany)
@@ -559,6 +563,7 @@ function processSpeechInterruptCandidate(finalTranscript, interimTranscript) {
     // Clear this first so stopSpeech() doesn't abort the mic we want to keep open
     speechInterruptListeningMode = false;
     stopSpeech();
+    clearMobileVoiceTurn();
     pendingTranscript = '';
     lastInterimTranscript = '';
     alwaysListeningTurnActive = false;
@@ -898,6 +903,47 @@ function consumeVoiceTurnTranscript() {
     return transcript;
 }
 
+const MOBILE_VOICE_PAUSE_MS = 3000;
+
+function clearMobileVoiceTurn() {
+    clearTimeout(mobileVoicePauseTimer);
+    mobileVoicePauseTimer = null;
+    mobileVoiceFinishing = false;
+    mobileVoiceSpeechActive = false;
+    mobileVoiceTurnGeneration += 1;
+}
+
+function submitMobileVoiceTurn() {
+    clearMobileVoiceTurn();
+    const transcript = consumeVoiceTurnTranscript();
+    if (!transcript || !alwaysListeningHotkeyMode) return;
+    isWakeWordSession = true;
+    window.isWakeWordSession = true;
+    updateVoiceStatus('Processing command...');
+    submitVoiceTranscript(transcript);
+}
+
+function scheduleMobileVoiceTurn() {
+    clearTimeout(mobileVoicePauseTimer);
+    mobileVoicePauseTimer = setTimeout(() => {
+        mobileVoicePauseTimer = null;
+        if (!alwaysListeningHotkeyMode) return;
+        mobileVoiceFinishing = true;
+        if (!alwaysListeningTurnActive) {
+            submitMobileVoiceTurn();
+        } else if (isListening) {
+            try {
+                recognition.stop();
+            } catch (error) {
+                console.warn('Could not finish mobile voice turn:', error);
+                alwaysListeningTurnActive = false;
+                isListening = false;
+                submitMobileVoiceTurn();
+            }
+        }
+    }, MOBILE_VOICE_PAUSE_MS);
+}
+
 // Mobile browsers sometimes re-send a final result already captured; ignore exact repeats.
 function isRepeatedTranscript(existing, incoming) {
     const a = String(existing || '').trim().toLowerCase();
@@ -912,6 +958,19 @@ function setupSpeechRecognition() {
     recognition.interimResults = true;
     recognition.lang = navigator.language || 'en-US';
     recognition.maxAlternatives = 5;
+
+    recognition.onspeechstart = function() {
+        if (IS_TOUCH_PHONE && alwaysListeningHotkeyMode && !mobileVoiceFinishing) {
+            mobileVoiceSpeechActive = true;
+            clearTimeout(mobileVoicePauseTimer);
+            mobileVoicePauseTimer = null;
+        }
+    };
+    recognition.onspeechend = function() {
+        mobileVoiceSpeechActive = false;
+        if (IS_TOUCH_PHONE && alwaysListeningHotkeyMode && !mobileVoiceFinishing &&
+            (pendingTranscript || lastInterimTranscript)) scheduleMobileVoiceTurn();
+    };
     
     recognition.onstart = function() {
         console.log('🎤 Voice recognition started');
@@ -920,9 +979,17 @@ function setupSpeechRecognition() {
         isListening = true;
         window.isListening = true;
         // Don't clear transcripts on restart during hotkey hold - startVoiceRecognition clears them on initial press
-        if (!hotkeyListening) {
+        if (!hotkeyListening && !(IS_TOUCH_PHONE && alwaysListeningHotkeyMode)) {
             pendingTranscript = '';
             lastInterimTranscript = '';
+        }
+        if (IS_TOUCH_PHONE && alwaysListeningHotkeyMode && mobileVoiceFinishing) {
+            try { recognition.stop(); } catch (error) {
+                console.warn('Could not finish mobile voice turn after starting:', error);
+                alwaysListeningTurnActive = false;
+                isListening = false;
+                submitMobileVoiceTurn();
+            }
         }
         if (hotkeyReleasePendingStart) {
             hotkeyReleasePendingStart = false;
@@ -980,6 +1047,24 @@ function setupSpeechRecognition() {
             alwaysListeningTurnActive = false;
             isListening = false;
             window.isListening = false;
+            if (IS_TOUCH_PHONE) {
+                mobileVoiceSpeechActive = false;
+                if (mobileVoiceFinishing) {
+                    submitMobileVoiceTurn();
+                    return;
+                }
+                if (lastInterimTranscript && !isRepeatedTranscript(pendingTranscript, lastInterimTranscript)) {
+                    pendingTranscript = joinTranscriptParts(pendingTranscript, lastInterimTranscript);
+                }
+                lastInterimTranscript = '';
+                if (pendingTranscript && !mobileVoicePauseTimer) scheduleMobileVoiceTurn();
+                const turnGeneration = mobileVoiceTurnGeneration;
+                setTimeout(() => {
+                    if (alwaysListeningHotkeyMode && turnGeneration === mobileVoiceTurnGeneration &&
+                        !mobileVoiceFinishing && !isListening) startAlwaysListeningTurn();
+                }, 300);
+                return;
+            }
             const transcript = consumeVoiceTurnTranscript();
             if (transcript) {
                 console.log('🎙️ Always-listening turned-on captured:', transcript);
@@ -1085,9 +1170,10 @@ function setupSpeechRecognition() {
         }
 
         if (alwaysListeningHotkeyMode) {
-            alwaysListeningTurnActive = false;
             if (recognitionError === 'not-allowed' || recognitionError === 'service-not-allowed' ||
                 recognitionError === 'audio-capture') {
+                clearMobileVoiceTurn();
+                alwaysListeningTurnActive = false;
                 if (recognitionError === 'not-allowed' || recognitionError === 'service-not-allowed') hasVoicePermission = false;
                 window.voiceRecognitionError = recognitionError;
                 alwaysListeningHotkeyMode = false;
@@ -1098,6 +1184,11 @@ function setupSpeechRecognition() {
                 showVoiceNotification(`Voice recognition error: ${recognitionError}. Check microphone permissions and try again.`, 5000);
                 return;
             }
+            if (IS_TOUCH_PHONE && recognitionError === 'no-speech') {
+                return;
+            }
+            clearMobileVoiceTurn();
+            alwaysListeningTurnActive = false;
             if (recognitionError !== 'aborted' && recognitionError !== 'no-speech') {
                 showVoiceNotification(`Voice recognition error: ${recognitionError}`, 2500);
             }
@@ -1280,10 +1371,14 @@ function setupSpeechRecognition() {
                 lastInterimTranscript = '';
                 console.log('🗣️ Captured final:', finalTranscript, '| Total:', pendingTranscript);
                 updateVoiceStatus(`Captured: "${pendingTranscript}"`);
-            } else if (interimTranscript) {
+            }
+            if (interimTranscript) {
                 lastInterimTranscript = interimTranscript;
                 console.log('🗣️ Interim:', interimTranscript);
                 updateVoiceStatus(`Listening: "${interimTranscript}"`);
+            }
+            if (IS_TOUCH_PHONE && alwaysListeningHotkeyMode && alwaysListeningTurnActive && !mobileVoiceFinishing && !mobileVoiceSpeechActive) {
+                scheduleMobileVoiceTurn();
             }
         }
     };
@@ -3628,6 +3723,9 @@ async function toggleAlwaysListeningMode(options = {}) {
     if (alwaysListeningHotkeyMode) {
         alwaysListeningHotkeyMode = false;
         alwaysListeningTurnActive = false;
+        clearMobileVoiceTurn();
+        pendingTranscript = '';
+        lastInterimTranscript = '';
         window.alwaysListeningHotkeyMode = false;
         hotkeyActive = false;
         hotkeyListening = false;
@@ -3728,8 +3826,10 @@ function startAlwaysListeningTurn() {
 
     // Other voice flows can replace these callbacks; R+T needs the standard turn handlers.
     setupSpeechRecognition();
-    pendingTranscript = '';
-    lastInterimTranscript = '';
+    if (!IS_TOUCH_PHONE) {
+        pendingTranscript = '';
+        lastInterimTranscript = '';
+    }
     alwaysListeningTurnActive = true;
     alwaysListeningTurnStartedAt = Date.now();
     speechInterruptListeningMode = false;
