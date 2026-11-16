@@ -1625,12 +1625,20 @@ If live web blocks are included, treat them as current evidence and use them dir
     const directModeNote = !options.rawTask && localStorage.getItem('nova_direct_mode') === 'true'
         ? ' DIRECT MODE is on: get straight to the point. No greetings, pleasantries, filler, flattery, restating the question, apologies, or closing offers/questions. Lead with the answer or result and include only what is needed. Keep your persona to a minimum.'
         : '';
+    const lastVideoSuggestion = !options.proactiveEvaluation
+        ? [...conversationHistory].reverse().find(message => message.role === 'assistant')
+        : null;
+    const videoShareTarget = window.getScreenShareTarget?.();
+    const videoMomentNote = lastVideoSuggestion?.videoMomentPoint && videoShareTarget &&
+        (videoShareTarget === 'both' || videoShareTarget === (isAvon ? 'other' : 'nova'))
+        ? `[Context for the recent rewind suggestion: ${lastVideoSuggestion.videoMomentPoint}. This point has not necessarily been said yet. Explain it if relevant to the user's reply, but do not assume they rewound.]`
+        : '';
     const styleReminder = (options.rawTask
         ? '[Follow the task above exactly and return only the requested output, with no persona, greeting, or extra remarks.]'
         : options.proactiveEvaluation && options.idleCheckIn
         ? `[Auto Mode idle check-in as ${personaLabel}: this request is only made after at least 90 seconds without user interaction or meaningful visual change. Give one gentle, friendly, relevant check-in of at most two sentences. Do not return NO_ACTION just because the screen is static or the user's state is uncertain. Avoid claiming they are inactive or describing unseen activity. Do not take actions.]`
         : options.proactiveEvaluation
-        ? `[Unified Auto Mode as ${personaLabel}: consider the current screen and camera images, labeled recent visual images, and available conversation or speech transcripts together. Infer activity only when supported by evidence; stillness or silence does not imply inactivity. If visible evidence suggests video viewing, an occasional distinctive, timely reaction can be appropriate, but do not narrate or invent audio, dialogue, or unseen events. Otherwise avoid interrupting focused activity unless a specific observation or question would help. Return exactly NO_ACTION when nothing merits an interruption. If speaking, make one brief natural remark in your selected personality, at most two sentences. Never claim to take actions.]`
+        ? `[Unified Auto Mode as ${personaLabel}: consider the current screen and camera images, labeled recent visual images, and available conversation or speech transcripts together. Infer activity only when supported by evidence; stillness or silence does not imply inactivity. If visible evidence suggests video viewing, an occasional distinctive, timely reaction can be appropriate, but do not narrate or invent audio, dialogue, or unseen events. Otherwise avoid interrupting focused activity unless a specific observation or question would help. Return exactly NO_ACTION when nothing merits an interruption. If speaking, make one brief natural remark in your selected personality, at most two sentences, except that a useful, grounded educational video moment may use the requested REWIND/POINT two-line format. Never claim to take actions.]`
         : presetConfig
             ? `[Voice requirement for this reply: answer as ${personaLabel} in a clearly "${presetConfig.name}" personality - ${presetConfig.instructions} ${PERSONALITY_INFLUENCE_LEVELS[getPersonalityInfluence(assistantKey)].text} Regardless of how earlier replies sounded.                 ${replyLengthText('Reply with one very short sentence (about 10 words or fewer), only the answer.', 'Answer in one or two short sentences maximum, only what was asked.',             'Give a full, detailed answer.')}${youUpNote}${solutionOfferNote}]`
                         : `[Voice requirement for this reply: answer as ${personaLabel} in your own distinct core persona, not a generic assistant voice. ${replyLengthText('Reply with one very short sentence (about 10 words or fewer), only the answer.', 'Answer in one or two short sentences maximum, only what was asked.',                         'Give a full, detailed answer.')}${youUpNote}${solutionOfferNote}]`).replace(/\]$/, `${directModeNote}]`);
@@ -1669,10 +1677,10 @@ If live web blocks are included, treat them as current evidence and use them dir
         role: "user",
         content: frameParts.length
             ? [
-                { type: 'text', text: `${userMessage}${frameNotes}\n\n${addresseeNote}\n\n${styleReminder}` },
+                { type: 'text', text: `${userMessage}${frameNotes}\n\n${addresseeNote}\n\n${videoMomentNote}\n\n${styleReminder}` },
                 ...frameParts
             ]
-            : `${userMessage}${frameNotes}\n\n${addresseeNote ? addresseeNote + '\n\n' : ''}${styleReminder}`
+            : `${userMessage}${frameNotes}\n\n${addresseeNote ? addresseeNote + '\n\n' : ''}${videoMomentNote ? videoMomentNote + '\n\n' : ''}${styleReminder}`
     });
     
     // Save user message to history

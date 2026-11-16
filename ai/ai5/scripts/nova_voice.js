@@ -915,6 +915,7 @@ function setupSpeechRecognition() {
     
     recognition.onstart = function() {
         console.log('🎤 Voice recognition started');
+        window.voiceRecognitionError = '';
         updateVoiceUI(true);
         isListening = true;
         window.isListening = true;
@@ -1085,8 +1086,28 @@ function setupSpeechRecognition() {
 
         if (alwaysListeningHotkeyMode) {
             alwaysListeningTurnActive = false;
+            if (recognitionError === 'not-allowed' || recognitionError === 'service-not-allowed' ||
+                recognitionError === 'audio-capture') {
+                if (recognitionError === 'not-allowed' || recognitionError === 'service-not-allowed') hasVoicePermission = false;
+                window.voiceRecognitionError = recognitionError;
+                alwaysListeningHotkeyMode = false;
+                window.alwaysListeningHotkeyMode = false;
+                pendingTranscript = '';
+                lastInterimTranscript = '';
+                updateVoiceStatus('Microphone unavailable. Tap the microphone to retry.');
+                showVoiceNotification(`Voice recognition error: ${recognitionError}. Check microphone permissions and try again.`, 5000);
+                return;
+            }
             if (recognitionError !== 'aborted' && recognitionError !== 'no-speech') {
                 showVoiceNotification(`Voice recognition error: ${recognitionError}`, 2500);
+            }
+            const transcript = consumeVoiceTurnTranscript();
+            if (transcript && recognitionError !== 'aborted') {
+                isWakeWordSession = true;
+                window.isWakeWordSession = true;
+                updateVoiceStatus('Processing command...');
+                submitVoiceTranscript(transcript);
+                return;
             }
             setTimeout(() => {
                 if (alwaysListeningHotkeyMode && !isListening && !isSpeechOutputActive) {
@@ -3603,7 +3624,7 @@ async function startHotkeyListeningDuringSpeech() {
     }, 80);
 }
 
-async function toggleAlwaysListeningMode() {
+async function toggleAlwaysListeningMode(options = {}) {
     if (alwaysListeningHotkeyMode) {
         alwaysListeningHotkeyMode = false;
         alwaysListeningTurnActive = false;
@@ -3652,7 +3673,8 @@ async function toggleAlwaysListeningMode() {
     window.alwaysListeningHotkeyMode = true;
     showVoiceNotification('Always-listening mode enabled (R+T to turn off)', 2500);
     updateVoiceStatus(getAlwaysListeningStatus());
-    setTimeout(startAlwaysListeningTurn, 250);
+    if (options.startImmediately) startAlwaysListeningTurn();
+    else setTimeout(startAlwaysListeningTurn, 250);
     startAlwaysListeningWatchdog();
 }
 

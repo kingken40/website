@@ -50,6 +50,165 @@ test('push-to-talk buttons handle pointer cancellation and permission-release ra
     assert.ok(!voiceSrc.includes("newVoiceBtn.addEventListener('touchstart', startListening)"));
 });
 
+function makeMobileCallHarness() {
+    const listeners = {};
+    const timers = [];
+    const icon = {}, label = {}, status = {};
+    const button = {
+        addEventListener(type, fn) { listeners[type] = fn; },
+        querySelector(selector) { return selector === 'i' ? icon : label; },
+        setAttribute() {}
+    };
+    const elements = { mobileMuteBtn: button, mobileStatusText: status };
+    const windowStub = {
+        innerWidth: 375, SpeechRecognition: function() {},
+        matchMedia: () => ({ matches: true }),
+        addEventListener(type, fn) { listeners[`window:${type}`] = fn; },
+        hasVoicePermission: false, alwaysListeningHotkeyMode: false, isListening: false
+    };
+    let permission;
+    let toggles = 0, toggleOptions;
+    windowStub.requestVoicePermission = () => new Promise(resolve => { permission = resolve; });
+    const sandbox = load(read('nova_page_mobile_call.js'), {
+        window: windowStub,
+        document: { getElementById: id => elements[id] || null, querySelector: () => null },
+        setInterval(fn) { listeners.poll = fn; },
+        setTimeout(fn) { timers.push(fn); return fn; },
+        clearTimeout() {},
+        toggleAlwaysListeningMode: async options => { toggles++; toggleOptions = options; windowStub.alwaysListeningHotkeyMode = !windowStub.alwaysListeningHotkeyMode; },
+        console: { log() {}, warn() {} }
+    });
+    return { listeners, timers, window: windowStub, status, label, sandbox,
+        grant(value) { windowStub.hasVoicePermission = value; permission(value); },
+        get toggles() { return toggles; }, get toggleOptions() { return toggleOptions; } };
+}
+
+test('mobile microphone startup failure is visible and a tap retries once', async () => {
+    const h = makeMobileCallHarness();
+    h.listeners['window:load']();
+    h.timers.shift()();
+    h.grant(false);
+    await new Promise(resolve => setImmediate(resolve));
+    h.listeners.poll();
+    assert.ok(h.status.textContent.includes('permission needed'));
+    assert.strictEqual(h.label.textContent, 'Start mic');
+    h.listeners.click();
+    h.grant(true);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.strictEqual(h.toggles, 1);
+    assert.strictEqual(h.toggleOptions.startImmediately, true);
+    h.listeners.poll();
+    assert.strictEqual(h.status.textContent, 'Starting microphone...');
+    h.window.isListening = true;
+    h.listeners.poll();
+    assert.strictEqual(h.status.textContent, 'Always listening...');
+});
+
+test('mobile mute during a pending permission request prevents listening', async () => {
+    const h = makeMobileCallHarness();
+    h.listeners['window:load']();
+    h.timers.shift()();
+    h.listeners.click();
+    h.grant(true);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.strictEqual(h.toggles, 0);
+    h.listeners.poll();
+    assert.strictEqual(h.status.textContent, 'Microphone muted');
+    h.listeners.click();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.strictEqual(h.toggles, 1);
+});
+
+test('mobile mic can be re-enabled while permission is still pending', async () => {
+    const h = makeMobileCallHarness();
+    h.listeners['window:load']();
+    h.timers.shift()();
+    h.listeners.click();
+    h.listeners.click();
+    h.grant(true);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.strictEqual(h.toggles, 0);
+    h.timers.shift()();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.strictEqual(h.toggles, 1);
+});
+
+test('mobile unsupported speech recognition is not reported as listening', async () => {
+    const h = makeMobileCallHarness();
+    delete h.window.SpeechRecognition;
+    h.listeners.click();
+    await new Promise(resolve => setImmediate(resolve));
+    h.listeners.poll();
+    assert.ok(h.status.textContent.includes('unavailable'));
+    assert.strictEqual(h.toggles, 0);
+});
+
+test('always listening stops on microphone permission errors and preserves partial speech on timeout', () => {
+    const code = slice(voiceSrc, 'function setupSpeechRecognition()', 'function recreateRecognition');
+    const submissions = [], notifications = [], timers = [];
+    const sandbox = load(`
+        let recognition = {}, isListening = false, alwaysListeningHotkeyMode = true;
+        let alwaysListeningTurnActive = true, hasVoicePermission = true, pendingTranscript = 'hello', lastInterimTranscript = 'there';
+        let pttReleaseMode = false, speechInterruptListeningMode = false, isSpeechOutputActive = false;
+        let isWakeWordSession = false;
+        function consumeVoiceTurnTranscript() {
+            const text = [pendingTranscript, lastInterimTranscript].filter(Boolean).join(' ');
+            pendingTranscript = ''; lastInterimTranscript = ''; return text;
+        }
+        ${code}
+        setupSpeechRecognition();
+        window.testRecognition = recognition;
+        window.state = () => ({ alwaysListeningHotkeyMode, hasVoicePermission });
+    `, {
+        navigator: { language: 'en-US' },
+        updateVoiceUI() {}, updateVoiceStatus() {},
+        showVoiceNotification: text => notifications.push(text),
+        submitVoiceTranscript: text => submissions.push(text),
+        setTimeout: fn => timers.push(fn),
+        console: { log() {}, error() {} }
+    });
+    sandbox.window.testRecognition.onerror({ error: 'no-speech' });
+    assert.deepStrictEqual(submissions, ['hello there']);
+    assert.strictEqual(timers.length, 0);
+    sandbox.window.testRecognition.onerror({ error: 'not-allowed' });
+    assert.strictEqual(sandbox.window.state().alwaysListeningHotkeyMode, false);
+    assert.strictEqual(sandbox.window.state().hasVoicePermission, false);
+    assert.strictEqual(sandbox.window.voiceRecognitionError, 'not-allowed');
+    assert.ok(notifications[0].includes('not-allowed'));
+});
+
+test('mobile-style single-shot recognition submits the spoken transcript on end', () => {
+    const submissions = [];
+    const code = slice(voiceSrc, 'function setupSpeechRecognition()', 'function recreateRecognition');
+    const sandbox = load(`
+        let recognition = {}, isListening = false, hotkeyListening = false, hotkeyReleasePendingStart = false;
+        let alwaysListeningHotkeyMode = true, alwaysListeningTurnActive = true, isWakeListening = false;
+        let wakeWordEnabled = false, pttReleaseMode = false, speechInterruptListeningMode = false;
+        let interruptListeningEnabled = false, isWakeWordSession = false, pendingTranscript = '', lastInterimTranscript = '';
+        function consumeVoiceTurnTranscript() {
+            const text = [pendingTranscript, lastInterimTranscript].filter(Boolean).join(' ');
+            pendingTranscript = ''; lastInterimTranscript = ''; return text;
+        }
+        ${slice(voiceSrc, 'function joinTranscriptParts', 'function setupSpeechRecognition()')}
+        ${code}
+        setupSpeechRecognition();
+        window.testRecognition = recognition;
+    `, {
+        navigator: { language: 'en-US' }, console: { log() {} },
+        updateVoiceUI() {}, updateVoiceStatus() {},
+        pickBestTranscript: result => result[0].transcript,
+        handleInterruptCaptureResult: () => false,
+        isMicMutedForSpeech: () => false, isAssistantEchoTranscript: () => false,
+        submitVoiceTranscript: text => submissions.push(text)
+    });
+    sandbox.window.testRecognition.onstart();
+    const result = [{ transcript: 'Can you hear me clearly?' }];
+    result.isFinal = true;
+    sandbox.window.testRecognition.onresult({ resultIndex: 0, results: [result] });
+    sandbox.window.testRecognition.onend();
+    assert.deepStrictEqual(submissions, ['Can you hear me clearly?']);
+});
+
 function makePlaybackHarness() {
     const timers = [];
     const utterances = [];
@@ -1013,6 +1172,101 @@ test('Auto Mode prompt treats stillness as ambiguous and retains recent visual c
     assert.ok(read('nova_runtime_ai.js').includes('options.autoModeEvaluation'));
 });
 
+test('video moment parsing keeps protocol labels out of chat and rejects malformed moments', () => {
+    const moment = flow.parseAutoModeVideoMoment('REWIND: Wait, go back to the diagram.\nPOINT: The arrows show the direction of energy flow.');
+    assert.strictEqual(moment.remark, 'Wait, go back to the diagram.');
+    assert.strictEqual(moment.point, 'The arrows show the direction of energy flow.');
+    assert.strictEqual(flow.parseAutoModeVideoMoment('A normal reaction.').remark, 'A normal reaction.');
+    assert.strictEqual(flow.parseAutoModeVideoMoment('REWIND: Go back.\nPOINT:').remark, '');
+    assert.ok(flowSrc.includes('frame ages are wall-clock ages, not video positions'));
+    assert.ok(read('nova_runtime_ai.js').includes('REWIND/POINT two-line format'));
+});
+
+test('a reply to a rewind suggestion receives the unsaid point as context', () => {
+    const ai = read('nova_runtime_ai.js');
+    const block = slice(ai, '    const lastVideoSuggestion =', '    const styleReminder =');
+    const sandbox = load(`
+        let options = {}, isAvon = false, conversationHistory = [
+            { role: 'assistant', content: 'Go back to the diagram.', videoMomentPoint: 'The arrows show energy flow' },
+            { role: 'user', content: 'I went back, why?' }
+        ];
+        ${block}
+        window.note = videoMomentNote;
+    `, { window: { getScreenShareTarget: () => 'nova' } });
+    assert.ok(sandbox.window.note.includes('The arrows show energy flow'));
+    assert.ok(sandbox.window.note.includes('not necessarily been said yet'));
+    assert.ok(sandbox.window.note.includes('do not assume they rewound'));
+    const restricted = load(`
+        let options = {}, isAvon = true, conversationHistory = [
+            { role: 'assistant', videoMomentPoint: 'Private shared screen content' }
+        ];
+        ${block}
+        window.note = videoMomentNote;
+    `, { window: { getScreenShareTarget: () => 'nova' } });
+    assert.strictEqual(restricted.window.note, '');
+});
+
+test('video points follow rewind suggestions without assuming a seek and respect cancellation', async () => {
+    for (const scenario of ['ignored', 'rewound', 'busy', 'user-replied', 'chat-reset', 'snoozed', 'share-stopped', 'auto-stopped']) {
+        let now = 100000, polls = 0, evaluations = 0;
+        const messages = [];
+        const history = [];
+        class Clock extends Date { static now() { return now; } }
+        const windowStub = {
+            getScreenShareTarget: () => 'both',
+            getScreenShareSignature: () => new Uint8Array(32 * 18 * 3),
+            getScreenShareFrame: () => 'frame',
+            isAiVisionActive: () => false,
+            isSpeechOutputBusy: () => scenario === 'busy' && polls >= 5 && polls < 30
+        };
+        let sandbox;
+        sandbox = load(slice(flowSrc, '// Auto Mode coordinates screen', 'function toggleAutoMode()'), {
+            Date: Clock, window: windowStub,
+            document: { hidden: true, addEventListener() {}, getElementById: () => ({ value: '' }) },
+            setTimeout, clearTimeout, console: { log() {}, warn() {}, error() {} },
+            screenShareStream: {}, screenShareVideo: null,
+            groupChatEnabled: false, mutedGroupAssistant: 'both',
+            currentPersonality: 'Nova', isResponseInFlight: false,
+            conversationHistory: history, getLastAssistantMessage: () => null,
+            generateAIResponse: async () => {
+                evaluations++;
+                return { reply: evaluations === 1
+                    ? 'REWIND: Wait, go back to the diagram.\nPOINT: The arrows show the direction of energy flow.'
+                    : 'NO_ACTION', model: 'test-model' };
+            },
+            addMessage: (text, sender) => messages.push({ text, sender }),
+            speakAssistantResponse() {}
+        });
+        sandbox.tick = () => {
+            now += 1000;
+            polls++;
+            if (polls === 5) {
+                if (scenario === 'rewound') sandbox.noteAutoModeUserActivity();
+                if (scenario === 'user-replied') history.push({ role: 'user', content: 'Why?' });
+                if (scenario === 'chat-reset') sandbox.conversationHistory = [];
+                if (scenario === 'snoozed') windowStub.proactiveGate.snooze(60000);
+                if (scenario === 'share-stopped') sandbox.screenShareStream = null;
+                if (scenario === 'auto-stopped') vm.runInContext('autoModeActive = false', sandbox);
+            }
+            if (polls > 35) vm.runInContext('autoModeActive = false', sandbox);
+        };
+        vm.runInContext(`
+            autoModeActive = true; autoModeRunId = 1;
+            runAutoModeCheckIn = async () => false;
+            waitForAutoModeSample = async () => { tick(); };
+        `, sandbox);
+        await sandbox.runAutoModeLoop(1);
+        assert.strictEqual(messages[0].text, 'Wait, go back to the diagram.', scenario);
+        assert.strictEqual(messages.length, ['ignored', 'rewound', 'busy'].includes(scenario) ? 2 : 1, scenario);
+        if (messages.length === 2) {
+            assert.strictEqual(messages[1].text, 'The arrows show the direction of energy flow.', scenario);
+            assert.strictEqual(history[1].content, messages[1].text, scenario);
+            assert.strictEqual(history[0].videoMomentPoint, undefined, scenario);
+        }
+        if (scenario === 'user-replied') assert.ok(history[0].videoMomentPoint, 'retain context for the user response');
+    }
+});
+
 test('90-second idle check-in always produces a spoken prompt, including NO_ACTION or failed model responses', () => {
     assert.ok(flowSrc.includes('const AUTO_MODE_CHECKIN_IDLE_MS = 90000'));
     assert.strictEqual(
@@ -1163,7 +1417,7 @@ test('Auto Mode attaches each visual frame with the correct adjacent label', () 
     const block = slice(ai, '    const screenFrame = window.getScreenShareFrame?', '    // Save user message to history');
     const sandbox = load(`
         let isAvon = false, options = { autoModeEvaluation: true }, messages = [];
-        let userMessage = 'evaluate', addresseeNote = '', styleReminder = 'NO_ACTION';
+        let userMessage = 'evaluate', addresseeNote = '', videoMomentNote = '', styleReminder = 'NO_ACTION';
         ${block}
         window.result = messages[0].content;
     `, { window: {

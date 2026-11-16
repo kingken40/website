@@ -60,6 +60,10 @@ Turn on **AI Vision** to share a live camera view with the assistant. Camera fra
 
 With **Auto Mode** and **Screen Share** on, AI5 can use occasional screen snapshots to follow visible changes in a video and sometimes react briefly to a notable moment in the selected assistant's personality. It also considers camera context and recent conversation when available. It avoids constant narration and can stay quiet while you are focused. Snapshots are intermittent, so it may miss moments; Screen Share does not capture video audio. Visible captions and conversation or transcripts you provide can supply additional context.
 
+On the mobile call screen, allow microphone access and tap **Start mic** if automatic startup is blocked. The status shows when recognition is actually listening; tap the microphone to retry after an error. Mobile voice input requires a secure connection and a browser with speech recognition support; recognition availability and accuracy depend on the browser and its speech service.
+
+For a useful educational moment supported by that context, AI5 may ask you to go back to a specific topic and then briefly explain the point, whether or not you rewind. It cannot control playback or reliably detect a seek, and will not assume you went back. The follow-up waits for the normal proactive speech gap and a quiet moment; it is dropped if you reply in chat, request quiet, stop sharing, or turn off Auto Mode. You can also ask about the suggestion directly.
+
 Auto Mode keeps a small, temporary visual history in memory while it is active so it can compare recent screen or camera frames and understand what changed. While Screen Share remains on, visual checks can continue when the AI5 page is in the background. This short-term visual history is cleared when Auto Mode or the corresponding screen/camera share is stopped; it is not saved with chat history.
 
 Camera and screen sharing require your permission. Turn them off when you no longer want to provide visual context.
