@@ -120,6 +120,9 @@ test('mobile microphone startup failure is visible and a tap retries once', asyn
     h.window.isListening = true;
     h.listeners.poll();
     assert.strictEqual(h.status.textContent, 'Always listening...');
+    h.window.mobileVoiceTranscript = 'Can you hear me?';
+    h.listeners.poll();
+    assert.strictEqual(h.status.textContent, 'Hearing: Can you hear me?');
 });
 
 test('mobile mute during a pending permission request prevents listening', async () => {
@@ -172,7 +175,7 @@ test('mobile speech-service failure tells the user to retry using the mic', () =
     const h = makeMobileCallHarness();
     h.window.voiceRecognitionError = 'network';
     h.listeners.poll();
-    assert.strictEqual(h.status.textContent, 'Speech service unavailable - tap to retry');
+    assert.strictEqual(h.status.textContent, 'Speech service unavailable - try another browser');
     assert.strictEqual(h.label.textContent, 'Start mic');
 });
 
@@ -268,7 +271,7 @@ test('mobile always listening joins phrases across recognizer restarts and waits
         console: { log() {}, warn() {}, error() {} },
         setTimeout(fn, delay) { const timer = { fn, at: now + delay, cancelled: false }; timers.push(timer); return timer; },
         clearTimeout(timer) { if (timer) timer.cancelled = true; },
-        updateVoiceUI() {}, updateVoiceStatus() {}, getAlwaysListeningStatus: () => 'Listening',
+        updateVoiceUI() {}, updateVoiceStatus() {}, showVoiceNotification() {}, getAlwaysListeningStatus: () => 'Listening',
         pickBestTranscript: result => result[0].transcript, handleInterruptCaptureResult: () => false,
         isMicMutedForSpeech: () => false, isAssistantEchoTranscript: () => false,
         hasUsableVoiceRecognition: () => true, isWithinEchoTail: () => false,
@@ -291,6 +294,7 @@ test('mobile always listening joins phrases across recognizer restarts and waits
     sandbox.startAlwaysListeningTurn();
     recognition.onspeechstart();
     say('The first sentence.');
+    assert.strictEqual(sandbox.window.mobileVoiceTranscript, 'The first sentence.');
     recognition.onspeechend();
     recognition.onend();
     advance(300);
@@ -308,6 +312,7 @@ test('mobile always listening joins phrases across recognizer restarts and waits
     assert.deepStrictEqual(submissions, [], 'wait for a full pause');
     advance(1);
     assert.deepStrictEqual(submissions, ['The first sentence. Here is the second sentence.']);
+    assert.strictEqual(sandbox.window.mobileVoiceTranscript, '');
     advance(5000);
     assert.strictEqual(submissions.length, 1, 'submit the complete turn only once');
     sandbox.startAlwaysListeningTurn();
@@ -316,6 +321,20 @@ test('mobile always listening joins phrases across recognizer restarts and waits
     recognition.onend();
     advance(5000);
     assert.strictEqual(submissions.length, 1, 'muting cancels the pending turn');
+    vm.runInContext('alwaysListeningHotkeyMode = true;', sandbox);
+    sandbox.startAlwaysListeningTurn();
+    say('Words before failure.');
+    const interim = [{ transcript: 'And the ending' }];
+    interim.isFinal = false;
+    recognition.onresult({ resultIndex: 0, results: [interim] });
+    assert.strictEqual(sandbox.window.mobileVoiceTranscript, 'Words before failure. And the ending');
+    recognition.onerror({ error: 'network' });
+    recognition.onend();
+    advance(5000);
+    assert.deepStrictEqual(submissions, ['The first sentence. Here is the second sentence.', 'Words before failure. And the ending']);
+    assert.strictEqual(sandbox.window.mobileVoiceTranscript, '');
+    assert.strictEqual(sandbox.window.alwaysListeningHotkeyMode, false);
+    assert.strictEqual(sandbox.window.voiceRecognitionError, 'network');
 });
 
 function makePlaybackHarness() {

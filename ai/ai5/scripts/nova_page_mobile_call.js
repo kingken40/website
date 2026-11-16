@@ -110,7 +110,9 @@
                 else if (state === 'processing') statusText.textContent = 'Processing...';
                 else if (state === 'muted')  statusText.textContent = 'Microphone muted';
                 else if (state === 'disabled') statusText.textContent = 'Always listening off';
-                else if (state === 'listening') statusText.textContent = 'Always listening...';
+                else if (state === 'listening') statusText.textContent = window.mobileVoiceTranscript
+                    ? 'Hearing: ' + window.mobileVoiceTranscript
+                    : 'Always listening...';
                 else if (state === 'starting') statusText.textContent = 'Starting microphone...';
                 else statusText.textContent = mobileStartError || 'Tap microphone to start listening';
             }
@@ -128,9 +130,10 @@
             if (document.querySelector('.thinking-indicator'))    { setCallState('processing'); return; }
             if (window.isListening && window.alwaysListeningHotkeyMode) { setCallState('listening'); return; }
             if (mobileStartPromise || window.alwaysListeningHotkeyMode) { setCallState('starting'); return; }
-            if (window.voiceRecognitionError) mobileStartError = window.voiceRecognitionError === 'network'
-                ? 'Speech service unavailable - tap to retry'
-                : 'Microphone unavailable - tap to retry';
+            if (window.voiceRecognitionError) mobileStartError = window.voiceRecognitionError === 'network' ||
+                window.voiceRecognitionError === 'service-not-allowed'
+                ? 'Speech service unavailable - try another browser'
+                : 'Microphone unavailable - check permissions and tap to retry';
             setCallState('ready');
         }, 350);
 

@@ -911,6 +911,7 @@ function clearMobileVoiceTurn() {
     mobileVoiceFinishing = false;
     mobileVoiceSpeechActive = false;
     mobileVoiceTurnGeneration += 1;
+    window.mobileVoiceTranscript = '';
 }
 
 function submitMobileVoiceTurn() {
@@ -1172,6 +1173,7 @@ function setupSpeechRecognition() {
         if (alwaysListeningHotkeyMode) {
             if (recognitionError === 'not-allowed' || recognitionError === 'service-not-allowed' ||
                 recognitionError === 'audio-capture' || (IS_TOUCH_PHONE && recognitionError === 'network')) {
+                const transcript = IS_TOUCH_PHONE ? consumeVoiceTurnTranscript() : '';
                 clearMobileVoiceTurn();
                 alwaysListeningTurnActive = false;
                 if (recognitionError === 'not-allowed' || recognitionError === 'service-not-allowed') hasVoicePermission = false;
@@ -1182,6 +1184,11 @@ function setupSpeechRecognition() {
                 lastInterimTranscript = '';
                 updateVoiceStatus('Voice recognition unavailable. Tap the microphone to retry.');
                 showVoiceNotification(`Voice recognition error: ${recognitionError}. Check your connection and microphone permissions, then tap the microphone to retry.`, 5000);
+                if (transcript) {
+                    isWakeWordSession = true;
+                    window.isWakeWordSession = true;
+                    submitVoiceTranscript(transcript);
+                }
                 return;
             }
             if (IS_TOUCH_PHONE && recognitionError === 'no-speech') {
@@ -1376,6 +1383,9 @@ function setupSpeechRecognition() {
                 lastInterimTranscript = interimTranscript;
                 console.log('🗣️ Interim:', interimTranscript);
                 updateVoiceStatus(`Listening: "${interimTranscript}"`);
+            }
+            if (IS_TOUCH_PHONE && alwaysListeningHotkeyMode) {
+                window.mobileVoiceTranscript = joinTranscriptParts(pendingTranscript, lastInterimTranscript);
             }
             if (IS_TOUCH_PHONE && alwaysListeningHotkeyMode && alwaysListeningTurnActive && !mobileVoiceFinishing && !mobileVoiceSpeechActive) {
                 scheduleMobileVoiceTurn();

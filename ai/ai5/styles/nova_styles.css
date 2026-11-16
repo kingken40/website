@@ -2725,6 +2725,7 @@ body.no-animations * {
 .mobile-call-status {
     display: inline-flex;
     align-items: center;
+    max-width: 100%;
     gap: 0.5rem;
     padding: 0.4rem 1.1rem;
     background: rgba(0, 20, 50, 0.6);
@@ -2753,6 +2754,8 @@ body.no-animations * {
     color: rgba(255, 255, 255, 0.78);
     letter-spacing: 0.3px;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* Transcript strip */
