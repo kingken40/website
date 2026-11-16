@@ -1171,7 +1171,7 @@ function setupSpeechRecognition() {
 
         if (alwaysListeningHotkeyMode) {
             if (recognitionError === 'not-allowed' || recognitionError === 'service-not-allowed' ||
-                recognitionError === 'audio-capture') {
+                recognitionError === 'audio-capture' || (IS_TOUCH_PHONE && recognitionError === 'network')) {
                 clearMobileVoiceTurn();
                 alwaysListeningTurnActive = false;
                 if (recognitionError === 'not-allowed' || recognitionError === 'service-not-allowed') hasVoicePermission = false;
@@ -1180,8 +1180,8 @@ function setupSpeechRecognition() {
                 window.alwaysListeningHotkeyMode = false;
                 pendingTranscript = '';
                 lastInterimTranscript = '';
-                updateVoiceStatus('Microphone unavailable. Tap the microphone to retry.');
-                showVoiceNotification(`Voice recognition error: ${recognitionError}. Check microphone permissions and try again.`, 5000);
+                updateVoiceStatus('Voice recognition unavailable. Tap the microphone to retry.');
+                showVoiceNotification(`Voice recognition error: ${recognitionError}. Check browser permissions or try recorded voice.`, 5000);
                 return;
             }
             if (IS_TOUCH_PHONE && recognitionError === 'no-speech') {
