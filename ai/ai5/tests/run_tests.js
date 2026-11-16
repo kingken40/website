@@ -260,14 +260,14 @@ test('mobile always listening joins phrases across recognizer restarts and waits
     sandbox = load(`
         let recognition = window.recognition, isListening = false, hotkeyListening = false, hotkeyReleasePendingStart = false;
         let alwaysListeningHotkeyMode = true, alwaysListeningTurnActive = false, alwaysListeningTurnStartedAt = 0;
-        let mobileVoicePauseTimer = null, mobileVoiceFinishing = false, mobileVoiceSpeechActive = false, mobileVoiceTurnGeneration = 0;
+        let mobileVoicePauseTimer = null, mobileVoiceFinishTimer = null, mobileVoiceFinishing = false, mobileVoiceSpeechActive = false, mobileVoiceTurnGeneration = 0;
         let isWakeListening = false, wakeWordEnabled = false, pttReleaseMode = false, speechInterruptListeningMode = false;
         let interruptListeningEnabled = false, isWakeWordSession = false, pendingTranscript = '', lastInterimTranscript = '';
         let IS_TOUCH_PHONE = true, hasVoicePermission = true, isSpeaking = false, isSpeechOutputActive = false;
-        ${slice(voiceSrc, 'function joinTranscriptParts', 'function recreateRecognition')}
+        ${slice(voiceSrc, 'function joinTranscriptParts', 'function startWakeListening')}
         ${slice(voiceSrc, 'function startAlwaysListeningTurn()', 'function setupPushToTalkHotkey()')}
     `, {
-        Date: Clock, window: { recognition }, navigator: { language: 'en-US' },
+        Date: Clock, window: { recognition, SpeechRecognition: function() {} }, navigator: { language: 'en-US' },
         console: { log() {}, warn() {}, error() {} },
         setTimeout(fn, delay) { const timer = { fn, at: now + delay, cancelled: false }; timers.push(timer); return timer; },
         clearTimeout(timer) { if (timer) timer.cancelled = true; },
@@ -335,6 +335,69 @@ test('mobile always listening joins phrases across recognizer restarts and waits
     assert.strictEqual(sandbox.window.mobileVoiceTranscript, '');
     assert.strictEqual(sandbox.window.alwaysListeningHotkeyMode, false);
     assert.strictEqual(sandbox.window.voiceRecognitionError, 'network');
+});
+
+test('mobile submits a turn when speechend or recognition end is missing', () => {
+    let now = 0;
+    const timers = [], submissions = [];
+    const recognition = {
+        start() { this.onstart(); },
+        stop() { this.stopped = true; },
+        abort() { this.aborted = true; }
+    };
+    const sandbox = load(`
+        let recognition = window.recognition, isListening = false, hotkeyListening = false, hotkeyReleasePendingStart = false;
+        let alwaysListeningHotkeyMode = true, alwaysListeningTurnActive = false, alwaysListeningTurnStartedAt = 0;
+        let mobileVoicePauseTimer = null, mobileVoiceFinishTimer = null, mobileVoiceFinishing = false, mobileVoiceSpeechActive = false, mobileVoiceTurnGeneration = 0;
+        let isWakeListening = false, wakeWordEnabled = false, pttReleaseMode = false, speechInterruptListeningMode = false;
+        let interruptListeningEnabled = false, isWakeWordSession = false, pendingTranscript = '', lastInterimTranscript = '';
+        let IS_TOUCH_PHONE = true, hasVoicePermission = true, isSpeaking = false, isSpeechOutputActive = false;
+        ${slice(voiceSrc, 'function joinTranscriptParts', 'function startWakeListening')}
+        ${slice(voiceSrc, 'function startAlwaysListeningTurn()', 'function setupPushToTalkHotkey()')}
+    `, {
+        window: { recognition, SpeechRecognition: function() {} }, navigator: { language: 'en-US' },
+        console: { log() {}, warn() {}, error() {} },
+        setTimeout(fn, delay) { const timer = { fn, at: now + delay, cancelled: false }; timers.push(timer); return timer; },
+        clearTimeout(timer) { if (timer) timer.cancelled = true; },
+        updateVoiceUI() {}, updateVoiceStatus() {}, getAlwaysListeningStatus: () => 'Listening',
+        pickBestTranscript: result => result[0].transcript, handleInterruptCaptureResult: () => false,
+        isMicMutedForSpeech: () => false, isAssistantEchoTranscript: () => false,
+        hasUsableVoiceRecognition: () => true, isWithinEchoTail: () => false,
+        submitVoiceTranscript: text => submissions.push(text)
+    });
+    const advance = ms => {
+        const until = now + ms;
+        while (true) {
+            const next = timers.filter(t => !t.cancelled && t.at <= until).sort((a, b) => a.at - b.at)[0];
+            if (!next) break;
+            next.cancelled = true; now = next.at; next.fn();
+        }
+        now = until;
+    };
+    const say = text => {
+        const result = [{ transcript: text }];
+        result.isFinal = false;
+        recognition.onresult({ resultIndex: 0, results: [result] });
+    };
+    sandbox.startAlwaysListeningTurn();
+    recognition.onspeechstart();
+    say('Can you');
+    advance(2000);
+    say('Can you hear me');
+    advance(2999);
+    assert.strictEqual(recognition.stopped, undefined);
+    advance(1);
+    assert.strictEqual(recognition.stopped, true);
+    say('Can you hear me clearly');
+    advance(1999);
+    assert.deepStrictEqual(submissions, []);
+    advance(1);
+    assert.deepStrictEqual(submissions, ['Can you hear me clearly']);
+    assert.strictEqual(recognition.aborted, true);
+    assert.strictEqual(recognition.onend, null);
+    assert.notStrictEqual(sandbox.window.recognition, recognition);
+    advance(5000);
+    assert.strictEqual(submissions.length, 1);
 });
 
 function makePlaybackHarness() {

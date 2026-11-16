@@ -24,6 +24,7 @@ let alwaysListeningHotkeyMode = false; // R+T toggled continuous listening
 let alwaysListeningTurnActive = false;
 let alwaysListeningTurnStartedAt = 0;
 let mobileVoicePauseTimer = null;
+let mobileVoiceFinishTimer = null;
 let mobileVoiceFinishing = false;
 let mobileVoiceSpeechActive = false;
 let mobileVoiceTurnGeneration = 0;
@@ -904,10 +905,13 @@ function consumeVoiceTurnTranscript() {
 }
 
 const MOBILE_VOICE_PAUSE_MS = 3000;
+const MOBILE_VOICE_FINISH_TIMEOUT_MS = 2000;
 
 function clearMobileVoiceTurn() {
     clearTimeout(mobileVoicePauseTimer);
+    clearTimeout(mobileVoiceFinishTimer);
     mobileVoicePauseTimer = null;
+    mobileVoiceFinishTimer = null;
     mobileVoiceFinishing = false;
     mobileVoiceSpeechActive = false;
     mobileVoiceTurnGeneration += 1;
@@ -932,7 +936,25 @@ function scheduleMobileVoiceTurn() {
         mobileVoiceFinishing = true;
         if (!alwaysListeningTurnActive) {
             submitMobileVoiceTurn();
-        } else if (isListening) {
+        } else {
+            const finishingRecognition = recognition;
+            mobileVoiceFinishTimer = setTimeout(() => {
+                if (!alwaysListeningHotkeyMode || !mobileVoiceFinishing || recognition !== finishingRecognition) return;
+                console.warn('Mobile recognition did not finish; submitting the captured turn.');
+                finishingRecognition.onstart = null;
+                finishingRecognition.onend = null;
+                finishingRecognition.onerror = null;
+                finishingRecognition.onresult = null;
+                finishingRecognition.onspeechstart = null;
+                finishingRecognition.onspeechend = null;
+                try { finishingRecognition.abort(); } catch (error) {
+                    console.warn('Could not abort stalled mobile recognition:', error);
+                }
+                alwaysListeningTurnActive = false;
+                recreateRecognition(true);
+                submitMobileVoiceTurn();
+            }, MOBILE_VOICE_FINISH_TIMEOUT_MS);
+            if (!isListening) return;
             try {
                 recognition.stop();
             } catch (error) {
@@ -1385,10 +1407,10 @@ function setupSpeechRecognition() {
                 updateVoiceStatus(`Listening: "${interimTranscript}"`);
             }
             if (IS_TOUCH_PHONE && alwaysListeningHotkeyMode) {
-                window.mobileVoiceTranscript = joinTranscriptParts(pendingTranscript, lastInterimTranscript);
-            }
-            if (IS_TOUCH_PHONE && alwaysListeningHotkeyMode && alwaysListeningTurnActive && !mobileVoiceFinishing && !mobileVoiceSpeechActive) {
-                scheduleMobileVoiceTurn();
+                const transcript = joinTranscriptParts(pendingTranscript, lastInterimTranscript);
+                const changed = transcript !== window.mobileVoiceTranscript;
+                window.mobileVoiceTranscript = transcript;
+                if (changed && alwaysListeningTurnActive && !mobileVoiceFinishing) scheduleMobileVoiceTurn();
             }
         }
     };
