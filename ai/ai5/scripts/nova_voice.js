@@ -905,6 +905,7 @@ function consumeVoiceTurnTranscript() {
 }
 
 const MOBILE_VOICE_PAUSE_MS = 3000;
+const MOBILE_VOICE_SPEECH_TIMEOUT_MS = 8000;
 const MOBILE_VOICE_FINISH_TIMEOUT_MS = 2000;
 
 function clearMobileVoiceTurn() {
@@ -928,7 +929,7 @@ function submitMobileVoiceTurn() {
     submitVoiceTranscript(transcript);
 }
 
-function scheduleMobileVoiceTurn() {
+function scheduleMobileVoiceTurn(delay = MOBILE_VOICE_PAUSE_MS) {
     clearTimeout(mobileVoicePauseTimer);
     mobileVoicePauseTimer = setTimeout(() => {
         mobileVoicePauseTimer = null;
@@ -964,7 +965,7 @@ function scheduleMobileVoiceTurn() {
                 submitMobileVoiceTurn();
             }
         }
-    }, MOBILE_VOICE_PAUSE_MS);
+    }, delay);
 }
 
 // Mobile browsers sometimes re-send a final result already captured; ignore exact repeats.
@@ -985,8 +986,9 @@ function setupSpeechRecognition() {
     recognition.onspeechstart = function() {
         if (IS_TOUCH_PHONE && alwaysListeningHotkeyMode && !mobileVoiceFinishing) {
             mobileVoiceSpeechActive = true;
-            clearTimeout(mobileVoicePauseTimer);
-            mobileVoicePauseTimer = null;
+            if (pendingTranscript || lastInterimTranscript) {
+                scheduleMobileVoiceTurn(MOBILE_VOICE_SPEECH_TIMEOUT_MS);
+            }
         }
     };
     recognition.onspeechend = function() {
@@ -1193,6 +1195,11 @@ function setupSpeechRecognition() {
         }
 
         if (alwaysListeningHotkeyMode) {
+            if (IS_TOUCH_PHONE && mobileVoiceFinishing && recognitionError === 'aborted') {
+                alwaysListeningTurnActive = false;
+                submitMobileVoiceTurn();
+                return;
+            }
             if (recognitionError === 'not-allowed' || recognitionError === 'service-not-allowed' ||
                 recognitionError === 'audio-capture' || (IS_TOUCH_PHONE && recognitionError === 'network')) {
                 const transcript = IS_TOUCH_PHONE ? consumeVoiceTurnTranscript() : '';

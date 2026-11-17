@@ -2,7 +2,7 @@
 // The offsets record the time zone in effect when the changes were published.
 const novaUpdateDates = {
     desktop: '2026-11-16T13:20:18-07:00',
-    mobile: '2026-11-16T15:19:48-07:00'
+    mobile: '2026-11-17T13:32:54-07:00'
 };
 
 function formatNovaUpdateDate(value) {
