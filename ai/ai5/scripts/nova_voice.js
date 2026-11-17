@@ -915,6 +915,7 @@ function setupSpeechRecognition() {
     
     recognition.onstart = function() {
         console.log('🎤 Voice recognition started');
+        if (IS_TOUCH_PHONE) window.voiceRecognitionError = '';
         updateVoiceUI(true);
         isListening = true;
         window.isListening = true;
@@ -1085,6 +1086,25 @@ function setupSpeechRecognition() {
 
         if (alwaysListeningHotkeyMode) {
             alwaysListeningTurnActive = false;
+            if (IS_TOUCH_PHONE) {
+                const transcript = consumeVoiceTurnTranscript();
+                if (recognitionError !== 'no-speech' && recognitionError !== 'aborted') {
+                    window.voiceRecognitionError = recognitionError;
+                    alwaysListeningHotkeyMode = false;
+                    window.alwaysListeningHotkeyMode = false;
+                    if (recognitionError === 'not-allowed' || recognitionError === 'service-not-allowed') {
+                        hasVoicePermission = false;
+                    }
+                    showVoiceNotification(`Voice recognition error: ${recognitionError}. Tap the microphone to retry.`, 5000);
+                }
+                if (transcript) {
+                    isWakeWordSession = true;
+                    window.isWakeWordSession = true;
+                    submitVoiceTranscript(transcript);
+                    return;
+                }
+                if (!alwaysListeningHotkeyMode) return;
+            }
             if (recognitionError !== 'aborted' && recognitionError !== 'no-speech') {
                 showVoiceNotification(`Voice recognition error: ${recognitionError}`, 2500);
             }

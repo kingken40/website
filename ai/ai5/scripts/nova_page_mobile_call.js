@@ -22,6 +22,8 @@
 
         var muted              = false;
         var mobileAlwaysListeningEnabled = true;
+        var mobileStartPending = false;
+        var mobileStartError = '';
         var transcriptCollapsed = false;
         var holdToggleTimer = null;
         var holdToggleTriggered = false;
@@ -107,7 +109,9 @@
                 else if (state === 'processing') statusText.textContent = 'Processing...';
                 else if (state === 'muted')  statusText.textContent = 'Microphone muted';
                 else if (state === 'disabled') statusText.textContent = 'Always listening off';
-                else                         statusText.textContent = 'Always listening...';
+                else if (state === 'listening') statusText.textContent = 'Always listening...';
+                else if (state === 'starting') statusText.textContent = 'Starting microphone...';
+                else statusText.textContent = mobileStartError || 'Tap microphone to start listening';
             }
         }
 
@@ -120,22 +124,37 @@
             }
             if (window.isSpeaking || window.isSpeechOutputActive) { setCallState('speaking');   return; }
             if (document.querySelector('.thinking-indicator'))    { setCallState('processing'); return; }
-            setCallState('listening');
+            if (window.voiceRecognitionError) {
+                mobileStartError = window.voiceRecognitionError === 'not-allowed' || window.voiceRecognitionError === 'service-not-allowed'
+                    ? 'Speech permission denied - check settings and tap mic'
+                    : window.voiceRecognitionError === 'network'
+                        ? 'Speech service unavailable - tap mic to retry'
+                        : 'Microphone unavailable - tap mic to retry';
+                setCallState('ready');
+            } else if (window.alwaysListeningHotkeyMode && window.isListening) {
+                setCallState('listening');
+            } else if (mobileStartPending || window.alwaysListeningHotkeyMode) {
+                setCallState('starting');
+            } else {
+                setCallState('ready');
+            }
+            updateMuteButtonUI();
         }, 350);
 
         function updateMuteButtonUI() {
             if (!muteBtn) return;
             var icon = muteBtn.querySelector('i');
             var label = muteBtn.querySelector('span');
-            var isOff = !mobileAlwaysListeningEnabled || muted;
+            var isOff = !mobileAlwaysListeningEnabled || muted || !window.alwaysListeningHotkeyMode;
             if (icon) icon.className = isOff ? 'fas fa-microphone-slash' : 'fas fa-microphone';
             if (label) {
                 if (!mobileAlwaysListeningEnabled) {
                     label.textContent = 'Mic Off';
                 } else {
-                    label.textContent = muted ? 'Unmute' : 'Mute';
+                    label.textContent = muted ? 'Unmute' : isOff ? 'Start mic' : 'Mute';
                 }
             }
+            muteBtn.setAttribute('aria-label', isOff ? 'Start microphone' : 'Mute microphone');
             muteBtn.setAttribute('aria-pressed', String(isOff));
         }
 
@@ -153,8 +172,7 @@
                 if (statusText) statusText.textContent = 'Always listening off';
             } else {
                 muted = false;
-                await ensureMobileListeningEnabled();
-                if (statusText) statusText.textContent = 'Always listening...';
+                await ensureMobileListeningEnabled(true);
             }
 
             updateMuteButtonUI();
@@ -195,6 +213,10 @@
                     if (statusText) statusText.textContent = 'Hold mic 3s to enable always listening';
                     return;
                 }
+                if (!muted && !window.alwaysListeningHotkeyMode) {
+                    ensureMobileListeningEnabled(true);
+                    return;
+                }
                 muted = !muted;
                 updateMuteButtonUI();
 
@@ -208,7 +230,7 @@
                     }
                 } else {
                     // Resume always-listening
-                    ensureMobileListeningEnabled();
+                    ensureMobileListeningEnabled(true);
                 }
             });
 
@@ -254,32 +276,38 @@
         }
 
         // â”€â”€ Auto-start always-listening after voice system is ready â”€â”€â”€â”€â”€â”€â”€â”€
-        async function ensureMobileListeningEnabled() {
+        async function ensureMobileListeningEnabled(forceRetry) {
             if (!window.matchMedia('(max-width: 768px)').matches) return;
-            if (muted || !mobileAlwaysListeningEnabled) return;
+            if (muted || !mobileAlwaysListeningEnabled || mobileStartPending) return;
+            if (!forceRetry && (mobileStartError || window.voiceRecognitionError)) return;
+            mobileStartPending = true;
+            mobileStartError = '';
+            if (forceRetry) window.voiceRecognitionError = '';
             try {
+                if (typeof toggleAlwaysListeningMode !== 'function' ||
+                    (!window.SpeechRecognition && !window.webkitSpeechRecognition)) {
+                    mobileStartError = 'Voice recognition not supported in this browser';
+                    return;
+                }
                 if (typeof window.requestVoicePermission === 'function' && !window.hasVoicePermission) {
                     const granted = await window.requestVoicePermission();
                     if (!granted) {
-                        if (statusText) statusText.textContent = 'Microphone permission needed';
+                        mobileStartError = 'Microphone permission needed - tap mic to retry';
                         return;
                     }
                 }
 
-                if (typeof toggleAlwaysListeningMode === 'function') {
-                    if (!window.alwaysListeningHotkeyMode) {
-                        await toggleAlwaysListeningMode();
-                    }
-                    if (statusText) statusText.textContent = 'Always listening...';
-                    return;
-                }
-
-                if (typeof window.startListeningDirect === 'function' && !window.isListening) {
-                    window.startListeningDirect();
-                    if (statusText) statusText.textContent = 'Listening...';
+                if (!muted && mobileAlwaysListeningEnabled && !window.alwaysListeningHotkeyMode) {
+                    await toggleAlwaysListeningMode();
                 }
             } catch (error) {
                 console.warn('ðŸ“± Mobile listening enable failed:', error);
+            } finally {
+                mobileStartPending = false;
+                if (!muted && mobileAlwaysListeningEnabled && !window.alwaysListeningHotkeyMode && !mobileStartError) {
+                    mobileStartError = 'Microphone unavailable - tap mic to retry';
+                }
+                updateMuteButtonUI();
             }
         }
 
@@ -287,9 +315,9 @@
 
         window.addEventListener('load', function() {
             // First attempt at 2 s, retry at 5 s if voice hasn't initialised yet
-            setTimeout(ensureMobileListeningEnabled, 2000);
-            setTimeout(ensureMobileListeningEnabled, 5000);
-            setTimeout(ensureMobileListeningEnabled, 9000);
+            setTimeout(function() { return ensureMobileListeningEnabled(false); }, 2000);
+            setTimeout(function() { return ensureMobileListeningEnabled(false); }, 5000);
+            setTimeout(function() { return ensureMobileListeningEnabled(false); }, 9000);
         });
 
         console.log('ðŸ“± Mobile call mode initialised');

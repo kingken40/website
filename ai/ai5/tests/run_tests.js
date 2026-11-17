@@ -42,6 +42,119 @@ test('consumeVoiceTurnTranscript preserves final and interim speech exactly once
     assert.strictEqual(voiceTranscript.consumeVoiceTurnTranscript(), '');
 });
 
+test('mobile recognition submits captured words on end or error without sending them twice', () => {
+    const submissions = [];
+    const timers = [];
+    const sandbox = load(`
+        let recognition = {}, isListening = false, hotkeyListening = false, hotkeyReleasePendingStart = false;
+        let alwaysListeningHotkeyMode = true, alwaysListeningTurnActive = true, isWakeListening = false;
+        let wakeWordEnabled = false, pttReleaseMode = false, speechInterruptListeningMode = false;
+        let interruptListeningEnabled = false, isWakeWordSession = false, pendingTranscript = '', lastInterimTranscript = '';
+        let hasVoicePermission = true, IS_TOUCH_PHONE = true, isSpeechOutputActive = false;
+        ${slice(voiceSrc, 'function joinTranscriptParts', 'function recreateRecognition')}
+        setupSpeechRecognition();
+        window.testRecognition = recognition;
+        window.nextTurn = () => { alwaysListeningHotkeyMode = true; alwaysListeningTurnActive = true; };
+    `, {
+        navigator: { language: 'en-US' }, console: { log() {}, warn() {}, error() {} },
+        updateVoiceUI() {}, updateVoiceStatus() {}, showVoiceNotification() {},
+        pickBestTranscript: result => result[0].transcript,
+        handleInterruptCaptureResult: () => false,
+        isMicMutedForSpeech: () => false, isAssistantEchoTranscript: () => false,
+        getAlwaysListeningStatus: () => 'Listening',
+        submitVoiceTranscript: text => submissions.push(text),
+        setTimeout: fn => timers.push(fn)
+    });
+    const recognition = sandbox.window.testRecognition;
+    const say = (text, isFinal) => {
+        const result = [{ transcript: text }];
+        result.isFinal = isFinal;
+        recognition.onresult({ resultIndex: 0, results: [result] });
+    };
+    recognition.onstart();
+    say('Can you hear me clearly?', true);
+    recognition.onend();
+    assert.deepStrictEqual(submissions, ['Can you hear me clearly?']);
+
+    sandbox.window.nextTurn();
+    recognition.onstart();
+    say('Please explain this', false);
+    recognition.onerror({ error: 'no-speech' });
+    recognition.onend();
+    assert.deepStrictEqual(submissions, ['Can you hear me clearly?', 'Please explain this']);
+    assert.strictEqual(timers.length, 0);
+
+    sandbox.window.nextTurn();
+    recognition.onstart();
+    say('Words before the error', true);
+    recognition.onerror({ error: 'network' });
+    recognition.onend();
+    assert.deepStrictEqual(submissions, ['Can you hear me clearly?', 'Please explain this', 'Words before the error']);
+    assert.strictEqual(sandbox.window.voiceRecognitionError, 'network');
+    assert.strictEqual(sandbox.window.alwaysListeningHotkeyMode, false);
+});
+
+test('mobile microphone shows permission failure and starts on a retry tap', async () => {
+    const listeners = {};
+    const timers = [];
+    let updateStatus;
+    let permissionGranted = false;
+    let permissionCalls = 0;
+    const status = { textContent: '' };
+    const icon = {};
+    const label = {};
+    const button = {
+        querySelector: selector => selector === 'i' ? icon : label,
+        setAttribute() {},
+        addEventListener: (name, fn) => { listeners[name] = fn; }
+    };
+    const windowStub = {
+        innerWidth: 390, SpeechRecognition: function() {},
+        alwaysListeningHotkeyMode: false, isListening: false,
+        matchMedia: () => ({ matches: true }),
+        addEventListener: (name, fn) => { listeners['window-' + name] = fn; },
+        requestVoicePermission: async () => { permissionCalls++; return permissionGranted; }
+    };
+    const mobileSrc = read('nova_page_mobile_call.js');
+    load(mobileSrc, {
+        window: windowStub,
+        document: {
+            getElementById: id => ({ mobileStatusText: status, mobileMuteBtn: button })[id] || null,
+            querySelector: () => null
+        },
+        toggleAlwaysListeningMode: async () => { windowStub.alwaysListeningHotkeyMode = true; },
+        setInterval: fn => { updateStatus = fn; },
+        setTimeout: (fn, delay) => { timers.push({ fn, delay }); },
+        console: { log() {}, warn() {} }
+    });
+    listeners['window-load']();
+    await timers.find(timer => timer.delay === 2000).fn();
+    updateStatus();
+    assert.strictEqual(status.textContent, 'Microphone permission needed - tap mic to retry');
+    assert.strictEqual(label.textContent, 'Start mic');
+    await timers.find(timer => timer.delay === 5000).fn();
+    assert.strictEqual(permissionCalls, 1, 'automatic retries must not repeatedly request denied permission');
+    permissionGranted = true;
+    listeners.click();
+    await new Promise(resolve => setImmediate(resolve));
+    windowStub.isListening = true;
+    updateStatus();
+    assert.strictEqual(status.textContent, 'Always listening...');
+    assert.strictEqual(label.textContent, 'Mute');
+    assert.strictEqual(permissionCalls, 2);
+    windowStub.alwaysListeningHotkeyMode = false;
+    windowStub.isListening = false;
+    windowStub.voiceRecognitionError = 'network';
+    updateStatus();
+    assert.strictEqual(status.textContent, 'Speech service unavailable - tap mic to retry');
+    assert.strictEqual(label.textContent, 'Start mic');
+    listeners.click();
+    await new Promise(resolve => setImmediate(resolve));
+    windowStub.isListening = true;
+    updateStatus();
+    assert.strictEqual(status.textContent, 'Always listening...');
+});
+
 test('push-to-talk buttons handle pointer cancellation and permission-release races', () => {
     assert.ok(voiceSrc.includes("button.addEventListener('pointercancel', stopListening)"));
     assert.ok(voiceSrc.includes("button.addEventListener('lostpointercapture', stopListening)"));
