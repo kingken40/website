@@ -796,7 +796,6 @@ function stopScreenShare(message) {
     }
     screenShareVideo = null;
     window.clearAutoModeVisualMemory?.('screen');
-    window.clearAutoModeVideoPoint?.();
     setScreenShareUi(false);
     if (message) showNotification(message, 2200);
 }
@@ -905,12 +904,6 @@ let autoModeWakeResolver = null;
 let autoModeLastVideoWakeAt = 0;
 let autoModeVisualMemory = [];
 let autoModeLastVisualSampleAt = 0;
-let autoModePendingVideoPoint = null;
-
-window.clearAutoModeVideoPoint = function () {
-    if (autoModePendingVideoPoint) delete autoModePendingVideoPoint.anchor.videoMomentPoint;
-    autoModePendingVideoPoint = null;
-};
 
 function watchAutoModeVideoFrames(video) {
     if (!video?.requestVideoFrameCallback) return;
@@ -1005,7 +998,6 @@ function stopAutoMode(message) {
     autoModeActive = false;
     autoModeRunId += 1;
     window.clearAutoModeVisualMemory?.();
-    window.clearAutoModeVideoPoint();
     setAutoModeUi(false);
     if (message) showNotification(message, 2200);
 }
@@ -1076,24 +1068,9 @@ const AUTO_MODE_PROMPT = `UNIFIED AUTO MODE CHECK
 Use all context currently available: the shared screen (digital activity), webcam (physical context), recent visual frames (what changed recently), and recent conversation or speech transcripts (what the user said and asked). Do not assume a source is available unless its image or context is attached.
 First infer the user's activity only as far as the evidence supports: reading, coding, watching, working, studying, troubleshooting, stuck, or inactive. A static screen alone does not mean the user is inactive; reading, watching, and focused work often look still. Treat visible motion as possible video or ordinary work, not automatically a request for help.
 If the visible evidence suggests the user is watching a video, compare the time-labeled frames to follow visible changes. An occasional brief, context-specific reaction to a genuinely funny, surprising, confusing, or interesting moment is welcome, even when no help is needed. Do not constantly narrate, describe every frame, interrupt dialogue, or force a joke. Use the selected assistant's personality naturally, including subtle, intelligent mischief if Sly is selected, without mocking the user.
-For a genuinely useful educational point grounded in a visible recent frame, caption, or supplied transcript, you may suggest revisiting the moment. Only when you have both a specific identifiable moment and a useful explanation, return exactly two lines:
-REWIND: Wait, go back a few seconds to [specific visible topic or moment].
-POINT: [A concise, self-contained explanation of the point and why it matters.]
-The app will say the first line now and the second shortly afterward whether or not the user rewinds. Do not assume the user rewound. Give a numerical rewind interval or video timestamp only when supported by evidence; frame ages are wall-clock ages, not video positions. Never invent what was said or seen. If the moment or explanation is uncertain, do not use this format.
 Otherwise speak only when a specific observation is timely and useful: a relevant error or warning, a likely blocked step, a meaningful result, a decision point, or a concise suggestion tied to the user's goal. Ask a short, relevant question when it helps. Otherwise stay quiet, especially while the user appears focused.
 Use recent frames to understand transitions and avoid repeating or contradicting earlier observations. Frames are sparse snapshots, not continuous video. Use only visible content, captions, and conversation or transcripts actually supplied; never imply you heard video audio or know dialogue or events between frames. Treat uncertain interpretations as uncertain. Never click, search, submit, take actions, or claim to have done so.
-Return exactly NO_ACTION when an interruption is not justified. Otherwise return either the two-line REWIND/POINT format above or one brief, natural spoken remark of at most two sentences.`;
-
-function parseAutoModeVideoMoment(reply) {
-    const text = String(reply || '').trim();
-    if (!/^REWIND\s*:/i.test(text)) return { remark: text, point: null };
-    const match = text.match(/^REWIND\s*:\s*([^\r\n]+)\r?\nPOINT\s*:\s*([^\r\n]+)\s*$/i);
-    if (!match || !match[1].trim() || !match[2].trim()) {
-        console.warn('Auto Mode returned an invalid video moment.');
-        return { remark: '', point: null };
-    }
-    return { remark: match[1].trim(), point: match[2].trim() };
-}
+Return exactly NO_ACTION when an interruption is not justified. Otherwise return one brief, natural spoken remark of at most two sentences.`;
 
 // One shared gate for every proactive feature (Auto Mode, AI Vision) so only one evaluation runs at a time
 // and remarks never cluster: after any of them speaks, all of them wait MIN_GAP_MS.
@@ -1363,48 +1340,6 @@ async function runAutoModeLoop(runId) {
         await waitForAutoModeSample(AUTO_MODE_POLL_MS);
         if (!autoModeActive || runId !== autoModeRunId) return;
 
-        if (autoModePendingVideoPoint) {
-            const pending = autoModePendingVideoPoint;
-            const now = Date.now();
-            const shareTarget = window.getScreenShareTarget?.();
-            const userReplied = conversationHistory.slice(pending.historyIndex).some(message => message.role === 'user');
-            if (screenShareStream !== pending.stream || !shareTarget ||
-                (shareTarget !== 'both' && shareTarget !== pending.assistant) ||
-                (groupChatEnabled && mutedGroupAssistant !== 'both' && mutedGroupAssistant !== pending.assistant) ||
-                conversationHistory !== pending.history ||
-                conversationHistory[pending.historyIndex - 1] !== pending.anchor ||
-                userReplied ||
-                now >= pending.expiresAt || now < window.proactiveGate.snoozeUntil) {
-                if (!userReplied) delete pending.anchor.videoMomentPoint;
-                autoModePendingVideoPoint = null;
-            } else if (now >= pending.dueAt && window.proactiveGate.canStart(now) &&
-                !isResponseInFlight && !window.isListening && !window.isUserMidSpeech?.() &&
-                !window.isSpeechOutputBusy?.() && !window.isSpeaking &&
-                !window.voiceInterruptInProgress && !window.speechSynthesis?.speaking &&
-                !document.getElementById('messageInput')?.value.trim() &&
-                now - autoModeLastInteractionAt >= 2500 && window.proactiveGate.begin()) {
-                autoModePendingVideoPoint = null;
-                let spoke = false;
-                try {
-                    delete pending.anchor.videoMomentPoint;
-                    addMessage(pending.point, pending.sender, null, pending.model);
-                    conversationHistory.push({
-                        role: 'assistant', speaker: pending.sender, content: pending.point,
-                        personality: pending.personality, timestamp: new Date().toISOString(), model: pending.model
-                    });
-                    recentRemarks.push(pending.point);
-                    if (recentRemarks.length > AUTO_MODE_RECENT_REMARKS) recentRemarks.shift();
-                    autoModeLastSpokeAt = now;
-                    spoke = true;
-                    speakAssistantResponse(pending.point, pending.sender);
-                } finally {
-                    window.proactiveGate.end(spoke);
-                }
-                continue;
-            }
-            if (autoModePendingVideoPoint) continue;
-        }
-
         if (await runAutoModeCheckIn(runId, checkInState)) continue;
         if (!autoModeActive || runId !== autoModeRunId) return;
         const assistant = getAutoModeAssistant();
@@ -1527,9 +1462,7 @@ async function runAutoModeLoop(runId) {
                 (cameraSignature && !window.isAiVisionActive?.()) ||
                 (activeMotionReviewDue && Date.now() - evaluationStartedAt > 30000)) continue;
 
-            const moment = parseAutoModeVideoMoment(replyResult?.reply);
-            const reply = moment.remark;
-            if (moment.point && (!evaluatedScreenStream || !window.getScreenShareTarget?.())) continue;
+            const reply = String(replyResult?.reply || '').trim();
             if (!reply || /^NO_ACTION(?:\s|[.!:—-]|$)/i.test(reply)) {
                 noActionStreak += 1;
                 continue;
@@ -1563,17 +1496,6 @@ async function runAutoModeLoop(runId) {
             autoModeLastSpokeAt = Date.now();
             spoke = true;
             speakAssistantResponse(reply, sender);
-            if (moment.point && evaluatedScreenStream && window.getScreenShareTarget?.()) {
-                conversationHistory[conversationHistory.length - 1].videoMomentPoint = moment.point;
-                autoModePendingVideoPoint = {
-                    point: moment.point, sender, assistant, model: replyResult.model,
-                    personality: currentPersonality, stream: evaluatedScreenStream,
-                    history: conversationHistory, anchor: conversationHistory[conversationHistory.length - 1],
-                    historyIndex: conversationHistory.length,
-                    dueAt: Date.now() + window.proactiveGate.MIN_GAP_MS,
-                    expiresAt: Date.now() + 90000
-                };
-            }
         } catch (error) {
             console.error('Auto Mode visual check failed:', error);
             stopAutoMode(`Auto Mode paused: ${error.message}`);

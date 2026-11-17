@@ -71,7 +71,7 @@ body {
     z-index: 10;
 }
 
-.nova-update-layout .arc-reactor {
+.arc-reactor {
     width: 120px;
     height: 120px;
     margin: 0 auto 1rem;
@@ -82,58 +82,6 @@ body {
         0 0 50px rgba(0, 170, 255, 0.5),
         inset 0 0 50px rgba(0, 170, 255, 0.2);
     animation: arcReactorGlow 3s ease-in-out infinite;
-}
-
-.nova-update-dates {
-    position: absolute;
-    left: calc(100% + 1rem);
-    top: 50%;
-    transform: translateY(-50%);
-    color: #fff;
-    font-size: 0.7rem;
-    line-height: 1.6;
-    text-align: left;
-    white-space: nowrap;
-}
-
-.nova-update-dates > div {
-    display: flex;
-    align-items: baseline;
-    gap: 0.4rem;
-}
-
-.nova-update-dates i {
-    width: 1em;
-    text-align: center;
-}
-
-@media (max-width: 800px) {
-    .nova-update-dates {
-        position: static;
-        transform: none;
-        text-align: center;
-        font-size: 0.65rem;
-    }
-
-    .nova-update-dates > div {
-        justify-content: center;
-    }
-
-    .arc-reactor {
-        margin-bottom: 4.5rem;
-    }
-
-    .arc-reactor .nova-update-dates,
-    .mobile-avatar-container .nova-update-dates {
-        position: absolute;
-        top: calc(100% + 0.35rem);
-        left: 50%;
-        transform: translateX(-50%);
-    }
-
-    .nova-update-layout .mobile-avatar-container {
-        margin-bottom: 4rem;
-    }
 }
 
 .arc-core {
@@ -2725,7 +2673,6 @@ body.no-animations * {
 .mobile-call-status {
     display: inline-flex;
     align-items: center;
-    max-width: 100%;
     gap: 0.5rem;
     padding: 0.4rem 1.1rem;
     background: rgba(0, 20, 50, 0.6);
@@ -2754,8 +2701,6 @@ body.no-animations * {
     color: rgba(255, 255, 255, 0.78);
     letter-spacing: 0.3px;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 /* Transcript strip */
