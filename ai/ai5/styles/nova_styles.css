@@ -84,6 +84,25 @@ body {
     animation: arcReactorGlow 3s ease-in-out infinite;
 }
 
+.nova-update-dates {
+    margin-bottom: 1rem;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.75rem;
+    line-height: 1.6;
+}
+
+.nova-update-dates > div {
+    display: flex;
+    justify-content: center;
+    align-items: baseline;
+    gap: 0.4rem;
+}
+
+.nova-update-dates i {
+    width: 1em;
+    text-align: center;
+}
+
 .arc-core {
     position: absolute;
     width: 40px;
