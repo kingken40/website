@@ -79,9 +79,17 @@
             setTimeout(function () { overlay.scrollTop = overlay.scrollHeight; }, 380);
         }
 
+        var lastSyncedMarkup = null;
         function syncMessages() {
             if (!srcMsgs || !transcriptMsgs) return;
-            transcriptMsgs.innerHTML = srcMsgs.innerHTML;
+            var snapshot = srcMsgs.cloneNode(true);
+            snapshot.querySelectorAll('.speech-current-word').forEach(function(mark) {
+                mark.replaceWith(document.createTextNode(mark.textContent));
+            });
+            var markup = snapshot.innerHTML;
+            if (markup === lastSyncedMarkup) return;
+            lastSyncedMarkup = markup;
+            transcriptMsgs.innerHTML = markup;
             transcriptMsgs.scrollTop = transcriptMsgs.scrollHeight;
             scrollOverlayToBottom();
         }

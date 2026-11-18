@@ -243,6 +243,49 @@ test('mobile microphone shows permission failure and starts on a retry tap', asy
     assert.strictEqual(status.textContent, 'Always listening...');
 });
 
+test('mobile transcript retains its nodes during reading highlights but updates for real changes', () => {
+    const source = read('nova_page_mobile_call.js');
+    let markup = '<div>hello world</div>';
+    let replacements = 0;
+    let scrolled = 0;
+    const srcMsgs = {
+        cloneNode: () => {
+            let snapshot = markup;
+            return {
+                querySelectorAll: () => snapshot.includes('<span class="speech-current-word">')
+                    ? [{ textContent: 'world', replaceWith: () => {
+                        snapshot = snapshot.replace('<span class="speech-current-word">world</span>', 'world');
+                    } }]
+                    : [],
+                get innerHTML() { return snapshot; }
+            };
+        }
+    };
+    const transcriptMsgs = {
+        set innerHTML(value) { this.markup = value; replacements++; },
+        scrollHeight: 5
+    };
+    const sandbox = load(`
+        ${slice(source, '        var lastSyncedMarkup = null;', '\n        if (srcMsgs) {')}
+        window.syncMessages = syncMessages;
+    `, {
+        srcMsgs, transcriptMsgs,
+        document: { createTextNode: value => value },
+        scrollOverlayToBottom: () => { scrolled++; }
+    });
+    sandbox.window.syncMessages();
+    markup = '<div>hello <span class="speech-current-word">world</span></div>';
+    sandbox.window.syncMessages();
+    markup = '<div>hello world</div>';
+    sandbox.window.syncMessages();
+    assert.strictEqual(replacements, 1);
+    assert.strictEqual(scrolled, 1);
+    markup += '<div>another reply</div>';
+    sandbox.window.syncMessages();
+    assert.strictEqual(replacements, 2);
+    assert.ok(transcriptMsgs.markup.includes('another reply'));
+});
+
 test('iPhone defaults to browser speech without overriding an explicit bridge setting', () => {
     const code = slice(voiceSrc, 'const IS_IOS_SPEECH =', 'let localVoiceBridgeUrl');
     const bridgeEnabled = (ua, setting) => vm.runInContext(
@@ -1028,6 +1071,41 @@ test('video-only requests can start when the chat proxy is out of credits', asyn
     assert.strictEqual(sandbox.conversationHistory.length, 1);
 });
 
+test('proxy errors report their real cause and restore mobile listening after speech', async () => {
+    const messages = [];
+    const spoken = [];
+    let restores = 0;
+    let failure = new Error('Server proxy error (503): {"error":"No AI API key configured on server."}');
+    const sandbox = load(slice(read('nova_runtime_ai.js'), 'function isAreYouUpCheck', 'async function _retryWithJinaFallback'), {
+        OPENROUTER_API_KEY: '', OPENAI_API_KEY: '',
+        getSlyTriggeredReply: () => null,
+        isAvonIdentityRequest: () => false,
+        isCurrentTimeRequest: () => false,
+        isPromptLimitErrorMessage: () => false,
+        generateViaServerProxy: async () => { throw failure; },
+        removeThinkingIndicator() {},
+        addMessage: (text, sender) => messages.push({ text, sender }),
+        speakAssistantResponse: (text, sender, callback) => spoken.push({ text, sender, callback })
+    });
+    sandbox.window.speakText = () => {};
+    sandbox.window.isWakeWordSession = true;
+    sandbox.window.restoreWakeListeningAfterResponse = () => { restores++; };
+    await sandbox.generateAIResponse('hello', 'Nova', { assistant: 'other' });
+    assert.ok(messages[0].text.includes('No AI API key is configured'));
+    assert.strictEqual(messages[0].sender, 'Avon');
+    spoken[0].callback();
+    assert.strictEqual(restores, 1);
+
+    failure = new Error('Could not retrieve source pages to verify this answer. Please try again.');
+    await sandbox.generateAIResponse('hello', 'Nova');
+    assert.ok(messages[1].text.includes('Source search is unavailable'));
+
+    failure = new Error('Server proxy error (503): service overloaded');
+    await sandbox.generateAIResponse('hello', 'Nova');
+    assert.ok(messages[2].text.includes('service overloaded'));
+    assert.ok(!messages[2].text.includes('API key is configured'));
+});
+
 test('chat failure video fallback excludes searches, mixed formats, and proactive requests', () => {
     const source = read('nova_runtime_ai.js');
     const requests = [];
@@ -1230,6 +1308,30 @@ test('web research uses fetched pages, not search snippets or unrelated outbound
     assert.strictEqual(sandbox._resolveWebIntent('How do vaccines work?').type, 'auto');
     assert.strictEqual(sandbox._resolveWebIntent('Describe photosynthesis').type, 'auto');
     assert.strictEqual(sandbox._resolveWebIntent('Summarize this file'), null);
+});
+
+test('ordinary factual search can use fetched encyclopedia pages when search is unavailable', async () => {
+    let searchRequests = 0;
+    const sandbox = load(slice(aiSrc, 'const _WEB_URL_RE', 'function prepareOpenAIMessages'), {
+        persistentMaterial: [], URL, URLSearchParams, AbortController, setTimeout, clearTimeout,
+        console: { log() {}, warn() {} },
+        fetch: async url => {
+            assert.ok(url.startsWith('https://en.wikipedia.org/w/api.php?'));
+            searchRequests++;
+            return { ok: true, json: async () => ({ query: { search: [{ title: 'Photosynthesis' }] } }) };
+        }
+    });
+    sandbox._jinaSearch = async () => null;
+    sandbox._jinaFetch = async () =>
+        'Title: Photosynthesis\nURL Source: https://en.wikipedia.org/wiki/Photosynthesis\nMarkdown Content:\nVerified page text.';
+    const result = await sandbox.getWebSearchContext('What is photosynthesis?');
+    assert.strictEqual(result.sources[0].url, 'https://en.wikipedia.org/wiki/Photosynthesis');
+    assert.ok(result.context.includes('Verified page text.'));
+    assert.strictEqual(await sandbox.getWebSearchContext('Search the web for current news'), null);
+    assert.strictEqual(await sandbox.getWebSearchContext('What is the forecast for 2027?'), null);
+    assert.strictEqual(searchRequests, 1, 'explicit and current searches must not use the limited fallback');
+    sandbox._jinaFetch = async () => null;
+    assert.strictEqual(await sandbox.getWebSearchContext('What is photosynthesis?'), null);
 });
 
 test('server proxy returns only answers citing retrieved pages and stops when retrieval fails', async () => {

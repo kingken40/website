@@ -490,15 +490,25 @@ async function generateAIResponse(userMessage, personality, options = {}) {
             }
             console.warn('?? Server proxy unavailable:', proxyErr.message);
             if (tryVideoAfterChatFailure(userMessage, personality, responseSender, options)) return;
-            // Server proxy failed � fall through to show the most useful message we can
             removeThinkingIndicator();
-            if (/503|No AI API key configured on server/i.test(proxyErr.message)) {
-                addMessage(
-                    '?? N.O.V.A requires an AI API key to respond. Please click the ?? Settings button and enter your OpenRouter API key (get one free at <a href="https://openrouter.ai/keys" target="_blank" style="color:#FFD700">openrouter.ai/keys</a>).',
-                    'Nova'
-                );
+            let proxyErrorMessage;
+            if (/No AI API key configured on server/i.test(proxyErr.message)) {
+                proxyErrorMessage = 'No AI API key is configured. Open Settings and save an OpenRouter or OpenAI API key, or configure a key on the server.';
+            } else if (/Could not retrieve source pages/i.test(proxyErr.message)) {
+                proxyErrorMessage = 'Source search is unavailable, so I cannot verify sources for that question. Please try again later.';
+            } else if (proxyErr.name === 'AbortError') {
+                proxyErrorMessage = 'The AI request timed out. Please try again.';
             } else {
-                addMessage(`? AI Error: ${proxyErr.message}`, 'Nova');
+                proxyErrorMessage = `AI Error: ${proxyErr.message}`;
+            }
+            addMessage(proxyErrorMessage, responseSender);
+            const restoreListening = window.isWakeWordSession && typeof window.restoreWakeListeningAfterResponse === 'function'
+                ? () => { window.restoreWakeListeningAfterResponse(); }
+                : null;
+            if (typeof window.speakText === 'function') {
+                speakAssistantResponse(proxyErrorMessage, responseSender, restoreListening);
+            } else if (restoreListening) {
+                restoreListening();
             }
             return;
         }
@@ -814,6 +824,8 @@ async function generateAIResponse(userMessage, personality, options = {}) {
         
         if (error.name === 'AbortError') {
             errorMsg = '?? Request timed out - The AI response is taking too long. Please try again.';
+        } else if (/Could not retrieve source pages/i.test(error.message)) {
+            errorMsg = 'Source search is unavailable, so I cannot verify sources for that question. Please try again later.';
         } else if (error.message.includes('insufficient_quota') || error.message.includes('billing')) {
             errorMsg = '?? API quota exhausted. Please check your OpenRouter or OpenAI account billing.';
         } else if (error.message.includes('401') || error.message.includes('Unauthorized')) {
@@ -1262,6 +1274,32 @@ async function _retrieveSourcePages(candidates) {
     return pages.filter(Boolean);
 }
 
+async function _searchEncyclopedia(query) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    try {
+        const params = new URLSearchParams({
+            action: 'query', list: 'search', srsearch: query, srlimit: '5',
+            format: 'json', origin: '*'
+        });
+        const response = await fetch(`https://en.wikipedia.org/w/api.php?${params}`, { signal: controller.signal });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        if (!Array.isArray(data.query?.search)) throw new Error('Invalid encyclopedia search response');
+        return data.query.search
+            .filter(item => typeof item.title === 'string' && item.title.trim())
+            .map(item => ({
+                title: item.title,
+                url: `https://en.wikipedia.org/wiki/${encodeURIComponent(item.title.replace(/ /g, '_'))}`
+            }));
+    } catch (error) {
+        console.warn('Encyclopedia search failed:', error.message);
+        return [];
+    } finally {
+        clearTimeout(timeoutId);
+    }
+}
+
 async function getWebSearchContext(userMessage) {
     const intent = _resolveWebIntent(userMessage);
     if (!intent) return null;
@@ -1274,10 +1312,16 @@ async function getWebSearchContext(userMessage) {
     } else {
         const query = _buildWebSearchQuery(intent.query || userMessage);
         const result = await _jinaSearch(query);
-        if (!result) return null;
-        const resultUrls = [...result.matchAll(/^URL:\s*(https?:\/\/\S+)/gim)]
-            .map(match => ({ url: match[1], title: _sourceTitleFromUrl(match[1]) }));
-        candidates = resultUrls.length ? resultUrls : _extractSourcesFromText(result);
+        if (result) {
+            const resultUrls = [...result.matchAll(/^URL:\s*(https?:\/\/\S+)/gim)]
+                .map(match => ({ url: match[1], title: _sourceTitleFromUrl(match[1]) }));
+            candidates = resultUrls.length ? resultUrls : _extractSourcesFromText(result);
+        } else if (intent.type === 'auto' &&
+            !/\b(?:latest|current|news|today|tonight|this week|this year|recent|price|trending|breaking|20\d{2})\b/i.test(query)) {
+            candidates = await _searchEncyclopedia(query);
+        } else {
+            return null;
+        }
     }
     const pages = await _retrieveSourcePages(candidates);
     if (!pages.length) return null;
