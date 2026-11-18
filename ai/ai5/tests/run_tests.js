@@ -76,21 +76,24 @@ test('consumeVoiceTurnTranscript preserves final and interim speech exactly once
 test('mobile recognition submits captured words on end or error without sending them twice', () => {
     const submissions = [];
     const timers = [];
+    let speechBusy = false;
     const sandbox = load(`
         let recognition = {}, isListening = false, hotkeyListening = false, hotkeyReleasePendingStart = false;
         let alwaysListeningHotkeyMode = true, alwaysListeningTurnActive = true, isWakeListening = false;
         let wakeWordEnabled = false, pttReleaseMode = false, speechInterruptListeningMode = false;
         let interruptListeningEnabled = false, isWakeWordSession = false, pendingTranscript = '', lastInterimTranscript = '';
-        let hasVoicePermission = true, IS_TOUCH_PHONE = true, isSpeechOutputActive = false;
+        let hasVoicePermission = true, IS_TOUCH_PHONE = true, IS_IOS_SPEECH = false, isSpeechOutputActive = false;
         ${slice(voiceSrc, 'function joinTranscriptParts', 'function recreateRecognition')}
         setupSpeechRecognition();
         window.testRecognition = recognition;
         window.nextTurn = () => { alwaysListeningHotkeyMode = true; alwaysListeningTurnActive = true; };
+        window.enableIOS = () => { IS_IOS_SPEECH = true; };
     `, {
         navigator: { language: 'en-US' }, console: { log() {}, warn() {}, error() {} },
         updateVoiceUI() {}, updateVoiceStatus() {}, showVoiceNotification() {},
         pickBestTranscript: result => result[0].transcript,
         handleInterruptCaptureResult: () => false,
+        isSpeechOutputBusy: () => speechBusy,
         isMicMutedForSpeech: () => false, isAssistantEchoTranscript: () => false,
         getAlwaysListeningStatus: () => 'Listening',
         submitVoiceTranscript: text => submissions.push(text),
@@ -155,6 +158,18 @@ test('mobile recognition submits captured words on end or error without sending 
     say('', false);
     recognition.onend();
     assert.strictEqual(submissions.length, 5, 'a withdrawn interim result must not be sent');
+
+    sandbox.window.enableIOS();
+    sandbox.window.nextTurn();
+    recognition.onstart();
+    say('words before playback', false);
+    let aborted = 0;
+    recognition.abort = () => { aborted++; };
+    speechBusy = true;
+    recognition.onstart();
+    recognition.onend();
+    assert.strictEqual(aborted, 1, 'a late recognizer start is stopped during playback');
+    assert.strictEqual(submissions[submissions.length - 1], 'words before playback');
 });
 
 test('mobile microphone shows permission failure and starts on a retry tap', async () => {
@@ -250,6 +265,7 @@ test('push-to-talk buttons handle pointer cancellation and permission-release ra
 function makePlaybackHarness(isIOS = false) {
     const timers = [];
     const utterances = [];
+    const audioSession = { type: 'auto' };
     const synth = {
         paused: false,
         speaking: false,
@@ -273,6 +289,7 @@ function makePlaybackHarness(isIOS = false) {
         ${slice(voiceSrc, 'let assistantSpeechQueue =', '// Voice Sampling and Selection Functions')}
     `, {
         console: { log() {}, warn() {}, error() {} },
+        navigator: { audioSession },
         window: { speechSynthesis: synth },
         document: {},
         localStorage: { getItem: () => null },
@@ -295,7 +312,7 @@ function makePlaybackHarness(isIOS = false) {
     sandbox.boundaries = [];
     sandbox.notifications = [];
     return {
-        sandbox, synth, utterances,
+        sandbox, synth, utterances, audioSession,
         runTimer(delay) {
             const timer = timers.find(item => !item.cancelled && item.delay === delay);
             assert.ok(timer, `missing ${delay}ms timer`);
@@ -304,6 +321,87 @@ function makePlaybackHarness(isIOS = false) {
         }
     };
 }
+
+test('iPhone speech releases the microphone and restores the audio session afterward', async () => {
+    const { sandbox, utterances, audioSession, runTimer } = makePlaybackHarness(true);
+    let aborts = 0;
+    let interrupts = 0;
+    sandbox.recognizer = { abort: () => { aborts++; } };
+    sandbox.startSpeechInterruptListening = () => { interrupts++; };
+    vm.runInContext(`
+        recognition = recognizer;
+        isListening = true;
+        alwaysListeningHotkeyMode = true;
+        interruptListeningEnabled = true;
+        hasVoicePermission = true;
+    `, sandbox);
+    sandbox.speakText('Hello there', null, 'other');
+    assert.strictEqual(aborts, 1);
+    assert.strictEqual(interrupts, 0);
+    assert.strictEqual(audioSession.type, 'playback');
+    assert.strictEqual(vm.runInContext('isListening', sandbox), false);
+    await runTimer(600);
+    utterances[0].onstart();
+    utterances[0].onend();
+    assert.strictEqual(audioSession.type, 'auto');
+
+    sandbox.speakText('Another reply', null, 'other');
+    assert.strictEqual(audioSession.type, 'playback');
+    sandbox.stopSpeech();
+    assert.strictEqual(audioSession.type, 'auto');
+});
+
+test('iPhone treats preparing and paused speech as busy, unlike desktop', () => {
+    const code = slice(voiceSrc, 'function isSpeechOutputBusy()', '// True while the mic');
+    const busy = (isIOS, state) => load(code, {
+        IS_IOS_SPEECH: isIOS, speechPlaybackState: state,
+        isSpeechOutputActive: false, isSpeaking: false, currentPackAudio: null
+    }).isSpeechOutputBusy();
+    assert.strictEqual(busy(true, 'preparing'), true);
+    assert.strictEqual(busy(true, 'paused'), true);
+    assert.strictEqual(busy(true, 'idle'), false);
+    assert.strictEqual(busy(false, 'preparing'), false);
+});
+
+test('iPhone watchdog and barge-in monitor do not reopen the mic during playback', async () => {
+    let tick;
+    let restarts = 0;
+    let captures = 0;
+    const watchdog = load(`
+        let alwaysListeningHotkeyMode = true, alwaysListeningTurnActive = true;
+        let isListening = false, alwaysListeningTurnStartedAt = 0;
+        ${slice(voiceSrc, 'let alwaysListeningWatchdog =', 'function startAlwaysListeningTurn()')}
+    `, {
+        IS_IOS_SPEECH: true,
+        isSpeechOutputBusy: () => true,
+        setInterval: fn => { tick = fn; return 1; },
+        startAlwaysListeningTurn: () => { restarts++; }
+    });
+    watchdog.startAlwaysListeningWatchdog();
+    tick();
+    assert.strictEqual(restarts, 0);
+
+    const monitor = load(slice(voiceSrc, 'async function startVoiceBargeInMonitor()', 'function stopVoiceBargeInMonitor('), {
+        IS_IOS_SPEECH: true,
+        navigator: { mediaDevices: { getUserMedia: () => { captures++; } } }
+    });
+    await monitor.startVoiceBargeInMonitor();
+    assert.strictEqual(captures, 0);
+});
+
+test('iPhone playback failures eventually release the audio session', async () => {
+    const { sandbox, utterances, audioSession, runTimer } = makePlaybackHarness(true);
+    sandbox.speakText('hello', null, 'other');
+    await runTimer(600);
+    for (let attempt = 0; attempt < 4; attempt++) {
+        utterances[attempt].onerror({ error: 'synthesis-failed' });
+        runTimer(attempt === 1 ? 500 : 250);
+    }
+    utterances[4].onerror({ error: 'synthesis-failed' });
+    assert.strictEqual(audioSession.type, 'auto');
+    assert.strictEqual(vm.runInContext('speechPlaybackState', sandbox), 'idle');
+    assert.ok(sandbox.notifications[0].includes('Speech could not play'));
+});
 
 test('iPhone speech unlock happens once and can be retried after rejection', () => {
     const { sandbox, utterances } = makePlaybackHarness(true);

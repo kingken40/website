@@ -6,6 +6,7 @@
 - Voice recognition requires a supported browser, microphone permission, and typically an internet connection. Open the page over **HTTPS** (or localhost); if recognition is unavailable, check browser permissions or try a browser with speech recognition support. Text chat remains available.
 - On mobile, the status shows when the microphone is starting, listening, or unavailable. If it reports a permission or speech-service error, check the device and browser settings or connection, then tap **Start mic** to retry.
 - On iPhone, tap a mobile control to enable spoken replies. Tap a word in a response to read from that point using the browser voice. The local voice bridge defaults off on iPhone, but can be enabled in settings.
+- On iPhone, listening pauses during spoken replies and resumes afterward; voice interruption during playback is unavailable.
 - **Auto Mode:** With screen sharing on, the assistant speaks up when it spots something useful.
 - **Auto-Pilot:** N.O.V.A and A.V.O.N. take turns continuing the chat.
 - **Play / Pause / Stop:** Control spoken replies. These are on mobile and desktop.

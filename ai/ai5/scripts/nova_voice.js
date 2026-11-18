@@ -379,7 +379,9 @@ window.isSpeechOutputBusy = isSpeechOutputBusy;
 
 function isSpeechOutputBusy() {
     // speechSynthesis.speaking is not checked: iOS can leave it stuck true, which would block the mic forever
-    return !!(isSpeechOutputActive || isSpeaking || (currentPackAudio && !currentPackAudio.paused && !currentPackAudio.ended));
+    return !!(isSpeechOutputActive || isSpeaking ||
+        (IS_IOS_SPEECH && (speechPlaybackState === 'preparing' || speechPlaybackState === 'paused')) ||
+        (currentPackAudio && !currentPackAudio.paused && !currentPackAudio.ended));
 }
 
 // True while the mic could still be hearing the assistant's own voice.
@@ -588,7 +590,7 @@ const BARGE_IN_MIN_LEVEL = 0.015;
 let bargeInMonitor = null;
 
 async function startVoiceBargeInMonitor() {
-    if (bargeInMonitor || !interruptListeningEnabled) return;
+    if (IS_IOS_SPEECH || bargeInMonitor || !interruptListeningEnabled) return;
     if (!navigator.mediaDevices?.getUserMedia) return;
     const monitor = { stopped: false, stream: null, context: null, timer: null };
     bargeInMonitor = monitor;
@@ -935,6 +937,14 @@ function setupSpeechRecognition() {
     
     recognition.onstart = function() {
         console.log('🎤 Voice recognition started');
+        if (IS_IOS_SPEECH && isSpeechOutputBusy()) {
+            try {
+                recognition.abort();
+            } catch (error) {
+                console.warn('🎤 Could not stop recognition during iPhone speech:', error);
+            }
+            return;
+        }
         if (IS_TOUCH_PHONE) window.voiceRecognitionError = '';
         updateVoiceUI(true);
         isListening = true;
@@ -2068,6 +2078,15 @@ let queuedAssistantSpeechActive = false;
 let activeQueuedSpeechFinish = null;
 let iosSpeechUnlocked = false;
 
+function setIOSAudioSession(type) {
+    if (!IS_IOS_SPEECH || !navigator.audioSession) return;
+    try {
+        navigator.audioSession.type = type;
+    } catch (error) {
+        console.warn('🔊 Could not set iPhone audio session:', error);
+    }
+}
+
 function unlockMobileSpeech() {
     if (!IS_IOS_SPEECH || iosSpeechUnlocked || isSpeaking || isSpeechOutputActive) return;
     const synth = window.speechSynthesis;
@@ -2171,6 +2190,7 @@ function speakText(text, onEndCallback = null, assistant = 'nova', queueToken = 
     const shouldResumeWakeListening = wakeWordEnabled && (isWakeListening || isWakeWordSession);
 
     const keepInterruptListeningActive =
+        !IS_IOS_SPEECH &&
         interruptListeningEnabled &&
         recognition &&
         isListening &&
@@ -2194,11 +2214,14 @@ function speakText(text, onEndCallback = null, assistant = 'nova', queueToken = 
         console.log('🎤 Keeping recognition active for speech interrupt support');
     }
 
-    if (interruptListeningEnabled && !keepInterruptListeningActive && hasVoicePermission && isVoiceSupported) {
+    if (!IS_IOS_SPEECH && interruptListeningEnabled && !keepInterruptListeningActive && hasVoicePermission && isVoiceSupported) {
         startSpeechInterruptListening();
     }
 
+    setIOSAudioSession('playback');
+
     const finalOnEndCallback = function() {
+        setIOSAudioSession('auto');
         if (typeof onEndCallback === 'function') {
             onEndCallback();
         } else if (shouldResumeWakeListening) {
@@ -2339,6 +2362,11 @@ function setupUtteranceAndSpeak(text, onEndCallback, assistant = 'nova') {
                 useDefaultVoice = true;
                 chunkAttempts = 0;
                 console.warn('🔊 Retrying speech chunk with the browser default voice');
+            } else if (IS_IOS_SPEECH && useDefaultVoice && chunkAttempts >= 2) {
+                console.error('🔊 iPhone speech could not start or finish:', reason);
+                showVoiceNotification('Speech could not play. Tap a response to try again, and check your iPhone volume.', 6000);
+                completeSpeech();
+                return;
             } else if (chunkAttempts > 3) {
                 console.error('🔊 Speech chunk is still incomplete; keeping it queued for retry:', reason);
                 chunkAttempts = 0;
@@ -2482,7 +2510,7 @@ function setupUtteranceAndSpeak(text, onEndCallback, assistant = 'nova') {
         60000,
         Math.max(18000, (chunk.trim().split(/\s+/).length * 600) + 12000)
     );
-    armChunkWatchdog(estimatedDurationMs, 'speech chunk did not start in time');
+    armChunkWatchdog(IS_IOS_SPEECH ? 8000 : estimatedDurationMs, 'speech chunk did not start in time');
 
     console.log('🔊 Starting speech synthesis...');
     try {
@@ -2525,6 +2553,7 @@ function stopSpeech() {
     }
     clearSpeechOutputState();
     stopSpeechInterruptListening(true);
+    setIOSAudioSession('auto');
 }
 
 function pauseSpeech() {
@@ -3750,6 +3779,7 @@ function startAlwaysListeningWatchdog() {
             alwaysListeningWatchdog = null;
             return;
         }
+        if (IS_IOS_SPEECH && isSpeechOutputBusy()) return;
         if (alwaysListeningTurnActive && !isListening && Date.now() - alwaysListeningTurnStartedAt > 4000) {
             startAlwaysListeningTurn();
             return;
