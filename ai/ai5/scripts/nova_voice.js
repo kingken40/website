@@ -875,13 +875,31 @@ function initializeVoice() {
 function pickBestTranscript(result) {
     let best = '';
     let bestScore = -1;
+    let bestAlternative = null;
     for (let a = 0; a < result.length; a++) {
         const text = (result[a].transcript || '').trim();
         if (!text) continue;
         const confidence = result[a].confidence > 0 ? result[a].confidence : (a === 0 ? 0.5 : 0.4);
         const nameBonus = /\b(nova|avon|n\.?o\.?v\.?a\.?|a\.?v\.?o\.?n\.?)\b/i.test(text) ? 0.05 : 0;
         const score = confidence + nameBonus;
-        if (score > bestScore) { best = text; bestScore = score; }
+        if (score > bestScore) { best = text; bestScore = score; bestAlternative = result[a]; }
+    }
+
+    // Prefer a recognizer-provided greeting over this specific common mishearing, not a guessed rewrite.
+    const misheard = IS_TOUCH_PHONE && best.match(/^heading\s+over\b(.*)$/i);
+    if (misheard && bestAlternative) {
+        const tail = value => value.toLowerCase().replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim();
+        for (let a = 0; a < result.length; a++) {
+            const alternative = result[a];
+            const greeting = (alternative.transcript || '').trim().match(/^hey[\s,]+nova\b(.*)$/i);
+            if (!greeting || tail(greeting[1]) !== tail(misheard[1])) continue;
+            const bestConfidence = bestAlternative.confidence;
+            const greetingConfidence = alternative.confidence;
+            const bothUnscored = !(bestConfidence > 0) && !(greetingConfidence > 0);
+            const closeConfidence = bestConfidence > 0 && greetingConfidence > 0 &&
+                greetingConfidence >= bestConfidence - 0.1;
+            if (bothUnscored || closeConfidence) return alternative.transcript.trim();
+        }
     }
     return best;
 }

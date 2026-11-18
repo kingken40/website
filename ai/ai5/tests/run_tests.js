@@ -32,10 +32,41 @@ const formatter = load(
     `function escapeHtml(text) { return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }\n${slice(filesSrc, 'function stripHtmlTags', '// Generate continuation prompt')}`
 );
 const voiceSrc = read('nova_voice.js');
+const voiceAlternatives = load(slice(voiceSrc, 'function pickBestTranscript', '// Joins result fragments'), { IS_TOUCH_PHONE: true });
 const voiceTranscript = load(
     slice(voiceSrc, 'function joinTranscriptParts', '// Mobile browsers sometimes re-send'),
     { pendingTranscript: 'final words', lastInterimTranscript: 'unfinished ending' }
 );
+
+test('voice recognition selects a close Hey Nova alternative without rewriting other speech', () => {
+    const pick = voiceAlternatives.pickBestTranscript;
+    assert.strictEqual(pick([
+        { transcript: 'Heading over, can you help?', confidence: 0.8 },
+        { transcript: 'Hey Nova, can you help?', confidence: 0.74 }
+    ]), 'Hey Nova, can you help?');
+    assert.strictEqual(pick([
+        { transcript: 'Heading over', confidence: 0 },
+        { transcript: 'Hey Nova', confidence: 0 }
+    ]), 'Hey Nova');
+    assert.strictEqual(pick([{ transcript: 'Heading over to the store', confidence: 0.9 }]), 'Heading over to the store');
+    assert.strictEqual(pick([
+        { transcript: 'Heading over to the store', confidence: 0.9 },
+        { transcript: 'Hey Nova to the store', confidence: 0.4 }
+    ]), 'Heading over to the store');
+    assert.strictEqual(pick([
+        { transcript: 'Heading over to the store', confidence: 0.8 },
+        { transcript: 'Hey Nova open the door', confidence: 0.74 }
+    ]), 'Heading over to the store');
+    assert.strictEqual(pick([
+        { transcript: 'Heading over', confidence: 0.8 },
+        { transcript: 'Hey Nova', confidence: 0 }
+    ]), 'Heading over');
+    const desktop = load(slice(voiceSrc, 'function pickBestTranscript', '// Joins result fragments'), { IS_TOUCH_PHONE: false });
+    assert.strictEqual(desktop.pickBestTranscript([
+        { transcript: 'Heading over', confidence: 0.8 },
+        { transcript: 'Hey Nova', confidence: 0.74 }
+    ]), 'Heading over');
+});
 
 test('consumeVoiceTurnTranscript preserves final and interim speech exactly once', () => {
     assert.strictEqual(voiceTranscript.consumeVoiceTurnTranscript(), 'final words unfinished ending');
