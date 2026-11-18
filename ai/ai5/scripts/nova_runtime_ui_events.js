@@ -303,7 +303,7 @@ function setupEventListeners() {
         const walker = document.createTreeWalker(messageContent, NodeFilter.SHOW_TEXT);
         let offset = 0;
         let node;
-        if (range && messageContent.contains(range.startContainer)) {
+        if (range && range.startContainer.nodeType === Node.TEXT_NODE && messageContent.contains(range.startContainer)) {
             while ((node = walker.nextNode())) {
                 if (node === range.startContainer) {
                     offset += range.startOffset;
@@ -333,7 +333,7 @@ function setupEventListeners() {
             }
         }
         if (directOffset !== null) offset = directOffset;
-        if (directOffset === null && (!range || !messageContent.contains(range.startContainer))) return;
+        if (directOffset === null && (!range || range.startContainer.nodeType !== Node.TEXT_NODE || !messageContent.contains(range.startContainer))) return;
 
         const fullText = messageContent.textContent || '';
         const wordStart = fullText.slice(0, offset).search(/\S+$/);

@@ -43,8 +43,10 @@ let selectedVoiceMode = 'tts'; // 'tts' | 'jarvis-pack'
 let selectedJarvisPackId = null;
 let currentPackAudio = null;
 let lastJarvisPackClipByPack = {};
+const IS_IOS_SPEECH = /iPhone|iPad|iPod/i.test(navigator.userAgent || '') ||
+    (/Macintosh/i.test(navigator.userAgent || '') && (navigator.maxTouchPoints || 0) > 1);
 const defaultBridgeEnabled = localStorage.getItem('Nova_local_voice_bridge_enabled');
-let localVoiceBridgeEnabled = defaultBridgeEnabled === null ? true : defaultBridgeEnabled === 'true';
+let localVoiceBridgeEnabled = defaultBridgeEnabled === null ? !IS_IOS_SPEECH : defaultBridgeEnabled === 'true';
 let localVoiceBridgeUrl = localStorage.getItem('Nova_local_voice_bridge_url') || 'http://127.0.0.1:8765';
 let currentBridgeAudio = null;
 let lastBridgeFailureNoticeMs = 0;
@@ -2064,6 +2066,25 @@ let assistantSpeechQueue = Promise.resolve();
 let assistantSpeechQueueToken = 0;
 let queuedAssistantSpeechActive = false;
 let activeQueuedSpeechFinish = null;
+let iosSpeechUnlocked = false;
+
+function unlockMobileSpeech() {
+    if (!IS_IOS_SPEECH || iosSpeechUnlocked || isSpeaking || isSpeechOutputActive) return;
+    const synth = window.speechSynthesis;
+    if (!synth || typeof SpeechSynthesisUtterance !== 'function') return;
+    try {
+        const utterance = new SpeechSynthesisUtterance('');
+        utterance.volume = 0;
+        utterance.onerror = error => {
+            iosSpeechUnlocked = false;
+            console.warn('🔊 Could not activate iPhone speech:', error.error);
+        };
+        synth.speak(utterance);
+        iosSpeechUnlocked = true;
+    } catch (error) {
+        console.warn('🔊 Could not activate iPhone speech:', error);
+    }
+}
 
 function enqueueAssistantSpeech(text, assistant = 'nova', onEndCallback = null) {
     const queueToken = assistantSpeechQueueToken;
@@ -2232,8 +2253,13 @@ function speakText(text, onEndCallback = null, assistant = 'nova', queueToken = 
         setupUtteranceAndSpeak(speechText, finalOnEndCallback, assistant);
     };
     
-    // Wait a bit before speaking to ensure any active recognition has stopped
-    setTimeout(startSpeaking, 600);
+    if (IS_IOS_SPEECH && tracking?.userGesture) {
+        // The actual utterance must be queued inside the tap on iOS.
+        setupUtteranceAndSpeak(speechText, finalOnEndCallback, assistant);
+    } else {
+        // Wait a bit before speaking to ensure any active recognition has stopped
+        setTimeout(startSpeaking, 600);
+    }
 }
 
 function splitSpeechIntoChunks(text, maxLength = 180) {
@@ -2443,6 +2469,12 @@ function setupUtteranceAndSpeak(text, onEndCallback, assistant = 'nova') {
             completeSpeech();
             return;
         }
+        if (IS_IOS_SPEECH && event.error === 'not-allowed') {
+            iosSpeechUnlocked = false;
+            showVoiceNotification('Speech was blocked. Tap the microphone or a response to enable audio.', 6000);
+            completeSpeech();
+            return;
+        }
         retryChunk(event.error || 'synthesis error');
     };
     
@@ -2560,13 +2592,14 @@ function speakTextFrom(text, characterOffset = 0, assistant = 'nova', content = 
     if (!normalizedText) return;
     const safeOffset = Math.max(0, Math.min(Number(characterOffset) || 0, normalizedText.length));
     const remainingText = normalizedText.slice(safeOffset);
-    speakText(remainingText || normalizedText, null, assistant, null, { content, offset: safeOffset });
+    speakText(remainingText || normalizedText, null, assistant, null, { content, offset: safeOffset, userGesture: true });
 }
 
 window.pauseSpeech = pauseSpeech;
 window.resumeSpeech = resumeSpeech;
 window.stopSpeech = stopSpeech;
 window.speakTextFrom = speakTextFrom;
+window.unlockMobileSpeech = unlockMobileSpeech;
 window.enqueueAssistantSpeech = enqueueAssistantSpeech;
 window.refreshSpeechPlaybackControls = () => setSpeechPlaybackState(speechPlaybackState);
 

@@ -163,6 +163,7 @@ test('mobile microphone shows permission failure and starts on a retry tap', asy
     let updateStatus;
     let permissionGranted = false;
     let permissionCalls = 0;
+    let speechUnlocks = 0;
     const status = { textContent: '' };
     const icon = {};
     const label = {};
@@ -176,13 +177,18 @@ test('mobile microphone shows permission failure and starts on a retry tap', asy
         alwaysListeningHotkeyMode: false, isListening: false,
         matchMedia: () => ({ matches: true }),
         addEventListener: (name, fn) => { listeners['window-' + name] = fn; },
-        requestVoicePermission: async () => { permissionCalls++; return permissionGranted; }
+        requestVoicePermission: async () => { permissionCalls++; return permissionGranted; },
+        unlockMobileSpeech: () => { speechUnlocks++; }
     };
     const mobileSrc = read('nova_page_mobile_call.js');
     load(mobileSrc, {
         window: windowStub,
         document: {
-            getElementById: id => ({ mobileStatusText: status, mobileMuteBtn: button })[id] || null,
+            getElementById: id => ({
+                mobileStatusText: status,
+                mobileMuteBtn: button,
+                mobileCallUI: { addEventListener: (name, fn) => { listeners['call-' + name] = fn; } }
+            })[id] || null,
             querySelector: () => null
         },
         toggleAlwaysListeningMode: async () => { windowStub.alwaysListeningHotkeyMode = true; },
@@ -190,6 +196,10 @@ test('mobile microphone shows permission failure and starts on a retry tap', asy
         setTimeout: (fn, delay) => { timers.push({ fn, delay }); },
         console: { log() {}, warn() {} }
     });
+    listeners['call-touchend']({ isTrusted: true, target: { closest: () => null } });
+    listeners['call-touchend']({ isTrusted: false, target: { closest: () => null } });
+    listeners['call-touchend']({ isTrusted: true, target: { closest: () => ({}) } });
+    assert.strictEqual(speechUnlocks, 1, 'only trusted non-message taps unlock speech');
     listeners['window-load']();
     await timers.find(timer => timer.delay === 2000).fn();
     updateStatus();
@@ -218,6 +228,17 @@ test('mobile microphone shows permission failure and starts on a retry tap', asy
     assert.strictEqual(status.textContent, 'Always listening...');
 });
 
+test('iPhone defaults to browser speech without overriding an explicit bridge setting', () => {
+    const code = slice(voiceSrc, 'const IS_IOS_SPEECH =', 'let localVoiceBridgeUrl');
+    const bridgeEnabled = (ua, setting) => vm.runInContext(
+        `${code}\nlocalVoiceBridgeEnabled`,
+        vm.createContext({ navigator: { userAgent: ua }, localStorage: { getItem: () => setting } })
+    );
+    assert.strictEqual(bridgeEnabled('iPhone', null), false);
+    assert.strictEqual(bridgeEnabled('iPhone', 'true'), true);
+    assert.strictEqual(bridgeEnabled('desktop', null), true);
+});
+
 test('push-to-talk buttons handle pointer cancellation and permission-release races', () => {
     assert.ok(voiceSrc.includes("button.addEventListener('pointercancel', stopListening)"));
     assert.ok(voiceSrc.includes("button.addEventListener('lostpointercapture', stopListening)"));
@@ -226,7 +247,7 @@ test('push-to-talk buttons handle pointer cancellation and permission-release ra
     assert.ok(!voiceSrc.includes("newVoiceBtn.addEventListener('touchstart', startListening)"));
 });
 
-function makePlaybackHarness() {
+function makePlaybackHarness(isIOS = false) {
     const timers = [];
     const utterances = [];
     const synth = {
@@ -248,6 +269,7 @@ function makePlaybackHarness() {
         let restartPending = false, selectedVoiceMode = 'tts', selectedJarvisPackId = null;
         let currentVoiceSettings = { rate: 1, pitch: 1, volume: 1 }, speechOutputWatchdog = null;
         let activeSpeechOutputText = '', speechInterruptTriggered = false;
+        const IS_IOS_SPEECH = ${isIOS};
         ${slice(voiceSrc, 'let assistantSpeechQueue =', '// Voice Sampling and Selection Functions')}
     `, {
         console: { log() {}, warn() {}, error() {} },
@@ -268,9 +290,10 @@ function makePlaybackHarness() {
         isUsableSpeechVoice: () => false,
         normalizeVoiceTranscript: text => text,
         rememberSpokenText() {},
-        showVoiceNotification() {}
+        showVoiceNotification(message) { sandbox.notifications.push(message); }
     });
     sandbox.boundaries = [];
+    sandbox.notifications = [];
     return {
         sandbox, synth, utterances,
         runTimer(delay) {
@@ -281,6 +304,65 @@ function makePlaybackHarness() {
         }
     };
 }
+
+test('iPhone speech unlock happens once and can be retried after rejection', () => {
+    const { sandbox, utterances } = makePlaybackHarness(true);
+    sandbox.unlockMobileSpeech();
+    sandbox.unlockMobileSpeech();
+    assert.strictEqual(utterances.length, 1);
+    assert.strictEqual(utterances[0].volume, 0);
+    utterances[0].onerror({ error: 'not-allowed' });
+    sandbox.unlockMobileSpeech();
+    assert.strictEqual(utterances.length, 2);
+    const desktop = makePlaybackHarness();
+    desktop.sandbox.unlockMobileSpeech();
+    assert.strictEqual(desktop.utterances.length, 0);
+});
+
+test('iPhone word tap queues the requested text synchronously and reports blocked speech', () => {
+    const { sandbox, utterances } = makePlaybackHarness(true);
+    sandbox.speakTextFrom('first second third', 6, 'nova');
+    assert.strictEqual(utterances.length, 1);
+    assert.strictEqual(utterances[0].text, 'second third');
+    utterances[0].onerror({ error: 'not-allowed' });
+    assert.ok(sandbox.notifications[0].includes('Tap the microphone'));
+    assert.strictEqual(vm.runInContext('speechPlaybackState', sandbox), 'idle');
+});
+
+test('word tap falls back to character geometry for an element caret', () => {
+    const source = read('nova_runtime_ui_events.js');
+    const code = slice(source, '    const speakFromPoint =', "\n    document.addEventListener('click'");
+    const textNode = { nodeValue: 'first second', nodeType: 3 };
+    const content = {
+        textContent: textNode.nodeValue,
+        contains: node => node === textNode || node === content,
+        closest: () => ({ dataset: { sender: 'Nova' } })
+    };
+    const calls = [];
+    const sandbox = load(`${code}\nwindow.tap = speakFromPoint;`, {
+        Node: { TEXT_NODE: 3 },
+        NodeFilter: { SHOW_TEXT: 4 },
+        window: { speakTextFrom: (...args) => calls.push(args) },
+        document: {
+            caretRangeFromPoint: () => ({ startContainer: content, startOffset: 0 }),
+            createTreeWalker: () => {
+                let used = false;
+                return { nextNode: () => used ? null : (used = true, textNode) };
+            },
+            createRange: () => {
+                let index = 0;
+                return {
+                    setStart: (node, value) => { index = value; },
+                    setEnd() {},
+                    getBoundingClientRect: () => ({ left: index * 10, right: index * 10 + 9, top: 0, bottom: 10 })
+                };
+            }
+        }
+    });
+    sandbox.window.tap(content, { clientX: 75, clientY: 5 });
+    assert.strictEqual(calls.length, 1);
+    assert.strictEqual(calls[0][1], 6);
+});
 
 test('playback pause and stop prevent delayed starts and chunk retries', async () => {
     const { sandbox, synth, utterances, runTimer } = makePlaybackHarness();

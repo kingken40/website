@@ -30,6 +30,11 @@
         var suppressNextMuteClick = false;
         var HOLD_TOGGLE_MS = 3000;
 
+        mobileCallUI?.addEventListener('touchend', function(event) {
+            if (!event.isTrusted || event.target.closest?.('.message-content[data-speech-content="true"]')) return;
+            window.unlockMobileSpeech?.();
+        }, { capture: true, passive: true });
+
         var lastMobileSettingsTapAt = 0;
 
         function openSettingsFromMobile(event) {
