@@ -141,21 +141,19 @@ function buildWebTaskMessage(userMessage, webContext = '') {
     const futureEventGuidance = relativeEventRequest
         ? `\n\nRelative-date check: The current local date is ${currentDateText}. Interpret "current", "next", and "upcoming" relative to this date. Use an official schedule or event source, verify the event date is strictly in the future when the user asks for a current or upcoming event, and discard results for past editions.`
         : '';
-    const responseLengthGuidance = shortResponseModeEnabled
-        ? 'Keep the answer concise by default. For a simple factual lookup, answer in one sentence and include a compact inline citation with the source title and clickable URL. Avoid unnecessary headings and omit a separate "Where to get more" section unless the user asks for detailed research.'
-        : 'Every internet-derived factual claim must have an inline clickable markdown citation when possible.\nAlways finish with "Sources & References" containing the source title and full clickable markdown URL for every source used.\nAlso include "Where to get more" with useful official pages, documentation, or further reading.';
+    const responseLengthGuidance = 'Support every factual claim, prior research, method, and comparison with an inline clickable citation to a retrieved page that actually supports it. Check the page content, not just its title or search snippet. Cite only URLs from the retrieved page headers. If the evidence is missing or insufficient, say what could not be verified and omit unsupported claims. Never invent references, DOIs, or URLs. Related reading must also come from retrieved pages.';
     const videoResourceGuidance = _VIDEO_RESOURCE_REQUEST_RE.test(_getUserRequestForWebIntent(userMessage))
         ? '\nFor this video request, prioritize actual watchable videos from reputable educational sources. Return a short bulleted list with the video title, a direct verified video-page link from the live results, and one sentence on its relevance. Do not substitute general articles, invent links, or imply a link was verified when it was not.'
         : '';
     return `${userMessage}${futureEventGuidance}${superBowlGuidance}${liveContext}
 
 WEB SEARCH TASK:
-Use the live web context to answer accurately and naturally.
+Use only the retrieved page content as external evidence; do not treat search snippets or unrelated links as verified sources.
 Prefer primary and official sources, and distinguish facts from interpretation.
 ${conciseLiveAnswerGuidance}
 ${responseLengthGuidance}
 ${videoResourceGuidance}
-Never invent a URL or citation, and never claim you cannot browse.`;
+If no usable evidence was retrieved, explain that the sources could not be verified.`;
 }
 
 function extractResponseText(choice) {
@@ -189,24 +187,6 @@ function needsResponseCompletion(reply, finishReason) {
 
 function buildResponseCompletionRequest(originalMessage, partialReply) {
     return `Continue and finish your previous answer to the user's message below. Start exactly where the partial answer stopped; do not repeat its wording, add a greeting, mention this instruction, or describe the continuation.\n\nUser message:\n${originalMessage}\n\nPartial answer:\n${partialReply}`;
-}
-
-function _correctSuperBowlDateReply(reply, userMessage) {
-    if (!_isSuperBowlDateRequest(userMessage)) return reply;
-
-    const now = new Date();
-    const eventYear = now.getMonth() >= 2 ? now.getFullYear() + 1 : now.getFullYear();
-    const verifiedDates = {
-        2027: ['February 14, 2027', 'Super Bowl LXI'],
-        2028: ['February 13, 2028', 'Super Bowl LXII'],
-        2029: ['February 11, 2029', 'Super Bowl LXIII'],
-        2030: ['February 10, 2030', 'Super Bowl LXIV']
-    };
-    const verified = verifiedDates[eventYear];
-    if (!verified) return reply;
-
-    const sourceUrl = _officialSuperBowlDatesUrl();
-    return `${verified[1]} is scheduled for ${verified[0]}. [NFL important dates](${sourceUrl})`;
 }
 
 function speakAssistantResponse(text, responseSender, onEndCallback = null) {
@@ -306,7 +286,7 @@ async function generateViaServerProxy(userMessage, personality, options = {}) {
             proxyMessage = buildWebTaskMessage(userMessage, webBundle.context);
             collectedWebSources = Array.isArray(webBundle.sources) ? webBundle.sources : [];
         } else {
-            proxyMessage = buildWebTaskMessage(userMessage);
+            throw new Error('Could not retrieve source pages to verify this answer. Please try again.');
         }
     }
 
@@ -403,17 +383,7 @@ async function generateViaServerProxy(userMessage, personality, options = {}) {
     }
 
     const rawReply = extractedText;
-    const jinaOverride = shouldUseWeb ? await _retryWithJinaFallback(rawReply, userMessage) : null;
-    if (jinaOverride) {
-        console.log('Jina fallback in server proxy');
-        return { reply: jinaOverride, webUsed: true, model: responseModel };
-    }
-    const payloadSources = _extractSourcesFromProviderPayload(responseData);
-    const mergedSources = _mergeSourceLists(payloadSources, collectedWebSources);
-    const reply = _correctSuperBowlDateReply(
-        _ensureWebSourcesInReply(rawReply, mergedSources, shouldUseWeb),
-        userMessage
-    );
+    const reply = _ensureWebSourcesInReply(rawReply, collectedWebSources, shouldUseWeb);
     return { reply, webUsed: shouldUseWeb, model: responseModel };
 }
 
@@ -556,8 +526,7 @@ async function generateAIResponse(userMessage, personality, options = {}) {
                 collectedWebSources = Array.isArray(webBundle.sources) ? webBundle.sources : [];
                 console.log('?? Web context injected, length:', webBundle.context.length, 'sources:', collectedWebSources.length);
             } else {
-                effectiveMessage = buildWebTaskMessage(userMessage);
-                console.warn('?? Web search returned no usable content; continuing with the selected model');
+                throw new Error('Could not retrieve source pages to verify this answer. Please try again.');
             }
         }
         
@@ -736,23 +705,7 @@ async function generateAIResponse(userMessage, personality, options = {}) {
         }
 
         const rawReply = extractedTextDirect;
-        const jinaOverrideDirect = shouldUseWeb ? await _retryWithJinaFallback(rawReply, userMessage) : null;
-        if (jinaOverrideDirect) {
-            console.log('Jina fallback in direct path');
-            removeThinkingIndicator();
-            addMessage(jinaOverrideDirect, responseSender, null, responseModel);
-            window.maybeCreateRequestedArtifact?.(userMessage, jinaOverrideDirect);
-            conversationHistory.push({ role: 'assistant', speaker: responseSender, content: jinaOverrideDirect, personality, timestamp: new Date().toISOString(), model: responseModel });
-            recordNoveltyResponse(userMessage, jinaOverrideDirect, responseModel);
-            speakAssistantResponse(jinaOverrideDirect, responseSender);
-            return;
-        }
-        const payloadSources = _extractSourcesFromProviderPayload(responseData);
-        const mergedSources = _mergeSourceLists(collectedWebSources, payloadSources);
-        let reply = _correctSuperBowlDateReply(
-            _ensureWebSourcesInReply(rawReply, mergedSources, shouldUseWeb),
-            userMessage
-        );
+        let reply = _ensureWebSourcesInReply(rawReply, collectedWebSources, shouldUseWeb);
         if (options.proactiveEvaluation) return { reply, model: responseModel };
         reply = window.normalizeImageReply?.(userMessage, reply) ?? reply;
         console.log('?', currentProvider.toUpperCase(), 'Response Success - Length:', reply.length, 'characters');
@@ -956,8 +909,8 @@ const _VIDEO_RESOURCE_ACTION_RE = /\b(?:find|search|look(?:\s+up)?|show|give|pro
 
 // Explicit web intent: URL present OR clear search/browse keywords
 const _WEB_INTENT_RE = /\b(search(?:\s+(?:for|the\s+web|online))?|look\s*(?:it\s+)?up|browse|visit|go\s+to|open\s+(?:the\s+)?(?:site|page|link|url|website)|fetch|check\s+(?:the\s+)?(?:website|page|site)|(?:their|its|the)\s+(?:website|webpage|web\s+page|site)|(?:find|get)\s+(?:online|on\s+the\s+web|current|real.?time|live)|latest\s+news|current\s+news|real.?time|what(?:'?s?|\s+is)\s+(?:on|at)\s+(?:the\s+)?(?:website|site|page)|download(?:able|s)?|installer|setup\s+file|github\s+release|official\s+download|apk|exe|dmg|zip\s+file|pdf\s+download|dataset|what(?:'?s?|\s+is)\s+(?:current|new|happening|going\s+on|trending|breaking)\s*(?:in|with|at|on|for)?|what(?:'?s?|\s+is)\s+(?:new\s+)?(?:in|with|at|on)\s+\w|update\s+on\s+|news\s+(?:about|on|for)|(?:latest|recent)\s+(?:on|in|about|from)|today\s+in|this\s+week\s+in|what'?s?\s+new|whats\s+new|whats\s+(?:current|happening|going)\s+|what\s+is\s+(?:current|happening|going))\b/i;
-const _FACT_LOOKUP_RE = /\b(what\s+is|who\s+is|where\s+is|when\s+is|why\s+is|how\s+to|latest|current|news|price|specs?|release\s+date|documentation|docs|official|best|top\s+\d+|compare|review|download(?:able|s)?|template|example|guide|tutorial|dataset|statistics?|evidence|research|according\s+to|source|happening|update|recent|today|tonight|this\s+week|this\s+year|trending|breaking|announce[dm]|launch[ed]?|reveal[ed]?|new\s+in|2025|2026)\b/i;
-const _EDUCATIONAL_LOOKUP_RE = /\b(explain|teach\s+me|help\s+me\s+learn|learn\s+about|how\s+does|why\s+does|why\s+do|meaning\s+of|definition\s+of|difference\s+between|pros\s+and\s+cons|advantages?\s+and\s+disadvantages?|is\s+.+\s+(?:good|safe|accurate|worth)|understand)\b/i;
+const _FACT_LOOKUP_RE = /\b(what\s+is|who\s+is|where\s+is|when\s+is|why\s+is|how\s+to|tell\s+me\s+about|latest|current|news|price|specs?|release\s+date|documentation|docs|official|best|top\s+\d+|compare|comparison|methods?|review|download(?:able|s)?|template|example|guide|tutorial|dataset|statistics?|evidence|research|according\s+to|sources?|citations?|references?|happening|update|recent|today|tonight|this\s+week|this\s+year|trending|breaking|announce[dm]|launch[ed]?|reveal[ed]?|new\s+in|2025|2026)\b/i;
+const _EDUCATIONAL_LOOKUP_RE = /\b(explain|describe|teach\s+me|help\s+me\s+learn|learn\s+about|how\s+(?:does|do|did|can)|why\s+(?:does|do|did)|what\s+(?:are|were|causes?)|who\s+(?:was|were|invented|discovered)|meaning\s+of|definition\s+of|difference\s+between|pros\s+and\s+cons|advantages?\s+and\s+disadvantages?|is\s+.+\s+(?:good|safe|accurate|worth)|understand)\b/i;
 const _LOCAL_TASK_RE = /\b(this\s+(?:chat|conversation|file|project|repo|code|snippet)|from\s+my\s+(?:notes|knowledge\s+base)|summari[sz]e\s+(?:this|above)|rewrite|rephrase|translate|fix\s+my\s+code|debug\s+this|remember\s+that)\b/i;
 const _CASUAL_CHAT_RE = /\b(hi|hello|hey|how are you|thanks|thank you|good morning|good night|tell me a joke|who are you)\b/i;
 const _RELATIVE_FUTURE_EVENT_RE = /\b(next|upcoming|coming up|this coming)\b/i;
@@ -973,31 +926,8 @@ const _CANT_BROWSE_RE = /\b(i\s+(?:can'?t|cannot|don'?t|do\s+not|am\s+unable\s+t
 // or when called directly as a fallback (rawReply can be empty string).
 async function _retryWithJinaFallback(rawReply, userMessage) {
     if (rawReply && !_CANT_BROWSE_RE.test(rawReply)) return null;
-    console.warn('?? Web refusal detected � overriding with direct Jina search...');
-    try {
-        const jinaResult = await _jinaSearch(_buildWebSearchQuery(userMessage));
-        if (!jinaResult) return null;
-        const sources = _extractSourcesFromText(jinaResult);
-        const lines = jinaResult.split('\n').filter(l => {
-            const t = l.trim();
-            return t.length > 15 && !/^(Jina AI|Results for|Search results|URL:|Title:|Published:|Source:)/i.test(t);
-        }).slice(0, 40);
-        let result = `Here's what I found with a live web search:\n\n${lines.join('\n')}`;
-        if (sources.length) {
-            result += '\n\n---\n**Sources & References**\n';
-            for (const src of sources.slice(0, 6)) {
-                result += `- ${src.title}\n  Link: [${src.url}](${src.url})\n`;
-            }
-            result += '\n**Where to get more**\n';
-            for (const src of sources.slice(0, 4)) {
-                result += `- ${src.title}: [${src.url}](${src.url})\n`;
-            }
-        }
-        return result;
-    } catch (e) {
-        console.warn('?? Jina fallback failed:', e.message);
-        return null;
-    }
+    console.warn('Web answer unavailable; search snippets are not verified evidence.');
+    return 'I could not produce a source-supported answer. Please try again.';
 }
 function _detectWebIntent(message) {
     const request = _getUserRequestForWebIntent(message);
@@ -1074,14 +1004,11 @@ function _resolveWebIntent(message) {
     const explicit = _detectWebIntent(message);
     if (explicit) return explicit;
 
-    if (_LOCAL_TASK_RE.test(request) || _CASUAL_CHAT_RE.test(request)) return null;
+    if (_LOCAL_TASK_RE.test(request)) return null;
 
     const factualRequest = _FACT_LOOKUP_RE.test(request) || _EDUCATIONAL_LOOKUP_RE.test(request);
     if (!factualRequest) return null;
-
-    if (_hasLikelyLocalKnowledge(request)) {
-        return null;
-    }
+    if (_hasLikelyLocalKnowledge(request)) return null;
 
     return { type: 'auto', query: request };
 }
@@ -1238,7 +1165,7 @@ function _extractSourcesFromText(text) {
         return match;
     });
 
-    return sources.slice(0, 12);
+    return sources;
 }
 
 function _extractSourcesFromProviderPayload(responseData) {
@@ -1303,56 +1230,36 @@ function _ensureWebSourcesInReply(reply, sources, webWasUsed) {
     const text = String(reply || '').trim();
     if (!webWasUsed) return text;
 
-    const hasSourcesHeader = /sources\s*&\s*references|sources\s*:|references\s*:|\bsource\b/i.test(text);
-    const hasMarkdownLinks = /\[[^\]]+\]\(https?:\/\/[^\s)]+\)/i.test(text) || /(?:^|\s)(https?:\/\/[^\s<>'")\]]+)/i.test(text);
-    const hasWhereToGetMoreHeader = /where\s+to\s+get\s+more|learn\s+more|further\s+reading|additional\s+resources|official\s+links/i.test(text);
-
-    const mergedSources = _mergeSourceLists(sources, _extractSourcesFromText(text));
-    if (shortResponseModeEnabled) {
-        if (hasMarkdownLinks || mergedSources.length === 0) return text;
-        const source = mergedSources[0];
-        return `${text}\n\nSource: [${source.title}](${source.url})`;
+    const retrieved = _mergeSourceLists(sources);
+    const allowed = new Set(retrieved.map(source => source.url));
+    const cited = _extractSourcesFromText(text);
+    const answerBody = text.split(/(?:^|\n)\s*(?:#{1,6}\s*|\*\*)?(?:sources?\s*(?:&|and)\s*references?|references?|where\s+to\s+get\s+more|further\s+reading)\b/i)[0];
+    if (!_extractSourcesFromText(answerBody).length || cited.some(source => !allowed.has(source.url)) || /\[\d+(?:\s*,\s*\d+)*\]/.test(text)) {
+        console.warn('Web answer omitted: citations were missing or did not match retrieved pages.');
+        return 'I could not produce an answer with verifiable source links. Please try again.';
     }
 
-    const sourceLines = [
-        '',
-        '---',
-        '**Sources & References**'
-    ];
-    const moreLines = [
-        '',
-        '**Where to get more**'
-    ];
+    if (/where\s+to\s+get\s+more|further\s+reading/i.test(text)) return text;
+    const uncited = retrieved.filter(source => !cited.some(item => item.url === source.url));
+    const furtherReading = uncited.length ? uncited : retrieved;
+    const links = furtherReading.slice(0, 4).map(source => `- [${source.title}](${source.url})`);
+    return `${text}\n\n**Where to get more**\n${links.join('\n')}`;
+}
 
-    if (mergedSources.length === 0) {
-        // Avoid leaving dangling [1]/[2] style citations with no actual links.
-        return text.replace(/\[\d+(?:\s*,\s*\d+)*\]/g, '').replace(/\s{2,}/g, ' ').trim();
-    }
-
-    for (const src of mergedSources.slice(0, 8)) {
-        sourceLines.push(`- ${src.title}`);
-        sourceLines.push(`  Link: [${src.url}](${src.url})`);
-    }
-
-    for (const src of mergedSources.slice(0, 5)) {
-        moreLines.push(`- ${src.title}: [${src.url}](${src.url})`);
-    }
-
-    const needsSourcesSection = !(hasSourcesHeader && hasMarkdownLinks);
-    const needsWhereToGetMoreSection = !hasWhereToGetMoreHeader;
-    if (!needsSourcesSection && !needsWhereToGetMoreSection) {
-        return text;
-    }
-
-    let output = text;
-    if (needsSourcesSection) {
-        output += `\n${sourceLines.join('\n')}`;
-    }
-    if (needsWhereToGetMoreSection) {
-        output += `\n${moreLines.join('\n')}`;
-    }
-
-    return output;
+async function _retrieveSourcePages(candidates) {
+    const pages = await Promise.all(_mergeSourceLists(candidates).slice(0, 5).map(async source => {
+        const content = await _jinaFetch(source.url);
+        const body = content && content.match(/^Markdown Content:\s*\n([\s\S]*)/im);
+        const sourceUrl = content && content.match(/^URL Source:\s*(\S+)/im);
+        if (!body || !body[1].trim() || !sourceUrl ||
+            _normalizeSourceUrl(sourceUrl[1]) !== source.url) return null;
+        const title = content.match(/^Title:\s*(.+)$/im);
+        return {
+            source: { title: title ? title[1].trim() : source.title, url: source.url },
+            content: body[1].trim()
+        };
+    }));
+    return pages.filter(Boolean);
 }
 
 async function getWebSearchContext(userMessage) {
@@ -1361,48 +1268,22 @@ async function getWebSearchContext(userMessage) {
 
     console.log('?? Web intent detected:', intent.type);
 
+    let candidates;
     if (intent.type === 'url') {
-        const blocks = [];
-        const sources = [];
-        for (const url of intent.urls.slice(0, 2)) {
-            const content = await _jinaFetch(url);
-            if (content) {
-                blocks.push(`=== LIVE PAGE CONTENT: ${url} ===\n${content}\n=== END PAGE CONTENT ===`);
-                const pageSources = _extractSourcesFromText(content);
-                const titleLine = content.match(/^Title:\s*(.+)$/im);
-                sources.push({ title: titleLine ? titleLine[1].trim() : _sourceTitleFromUrl(url), url });
-                sources.push(...pageSources);
-            }
-        }
-        if (!blocks.length) return null;
-        return { context: blocks.join('\n\n'), sources: _mergeSourceLists(sources) };
+        candidates = intent.urls.slice(0, 2).map(url => ({ url, title: _sourceTitleFromUrl(url) }));
+    } else {
+        const query = _buildWebSearchQuery(intent.query || userMessage);
+        const result = await _jinaSearch(query);
+        if (!result) return null;
+        const resultUrls = [...result.matchAll(/^URL:\s*(https?:\/\/\S+)/gim)]
+            .map(match => ({ url: match[1], title: _sourceTitleFromUrl(match[1]) }));
+        candidates = resultUrls.length ? resultUrls : _extractSourcesFromText(result);
     }
-
-    // Prefer the current NFL schedule page for Super Bowl date questions because
-    // generic search results can surface an older edition of the event.
-    if (_isSuperBowlDateRequest(intent.query || userMessage)) {
-        const officialUrl = _officialSuperBowlDatesUrl();
-        const content = await _jinaFetch(officialUrl);
-        if (content) {
-            const titleLine = content.match(/^Title:\s*(.+)$/im);
-            return {
-                context: `=== LIVE PAGE CONTENT: ${officialUrl} ===\n${content}\n=== END PAGE CONTENT ===`,
-                sources: [{
-                    title: titleLine ? titleLine[1].trim() : 'NFL important dates',
-                    url: officialUrl
-                }]
-            };
-        }
-    }
-
-    // Search
-    const query = _buildWebSearchQuery(intent.query || userMessage);
-    const result = await _jinaSearch(query);
-    if (!result) return null;
-    const sources = _extractSourcesFromText(result);
+    const pages = await _retrieveSourcePages(candidates);
+    if (!pages.length) return null;
     return {
-        context: `=== LIVE WEB SEARCH RESULTS ===\n${result}\n=== END SEARCH RESULTS ===`,
-        sources: _mergeSourceLists(sources)
+        context: pages.map(page => `=== LIVE PAGE CONTENT: ${page.source.url} ===\n${page.content}\n=== END PAGE CONTENT ===`).join('\n\n'),
+        sources: pages.map(page => page.source)
     };
 }
 
@@ -1525,15 +1406,13 @@ If live web blocks are included, treat them as current evidence and use them dir
             '- For explicit requests to create a video, the app can submit a video-generation job if the user has configured a fal.ai key. Say briefly that the job will be attempted and its status will appear in chat; never claim it is completed before the app shows the result. For requests to find videos, search for relevant links instead.',
             '- Treat the current date/time in REAL-TIME CONTEXT as authoritative. Interpret "next" and "upcoming" relative to that date; never describe a past event or expired date as the next occurrence. For schedules and future events, verify the year and date against an official source, and say when a future date cannot be confirmed.',
             '- You have real-time web search capability. Proactively search when a question is factual, educational, research-oriented, current, uncertain, asks for a definition/explanation/comparison, or would benefit from reliable external evidence. Do not wait for the user to say "look it up"; do not search for simple greetings, casual conversation, or tasks fully grounded in the user-provided text/files.',
-            '- NEVER say you cannot browse, cannot search the web, or do not have internet access. If a search fails, be transparent that live verification failed rather than presenting unverified current claims as certain.',
+            '- If a search fails, be transparent that live verification failed rather than presenting unverified claims as certain.',
             isAvon
                 ? '- Your identity is A.V.O.N.; "Avon" is your accepted short name and means the same assistant. A user addressing you as Avon is addressing you correctly. Knowledge Base blocks about N.O.V.A. do not change your identity; never call yourself N.O.V.A. or expand N.O.V.A.'
                 : '- If Knowledge Base blocks are included, treat them as highest-priority user context. This includes your identity information � use it to answer questions about who you are, your name, and your purpose.',
             '- For AUDIO ANALYSIS PACKET content, treat the transcript as the primary source. Do not invent words, timestamps, speaker identities, or facts not supported by it.',
             '- If the message includes "=== LIVE PAGE CONTENT" or "=== LIVE WEB SEARCH RESULTS ===", treat that as current web data and use it directly.',
-            shortResponseModeEnabled
-                ? '- For web-backed answers in shorter response mode, cite key factual claims inline and keep source links compact. Omit separate source sections for simple lookups; include further-reading sections only when the user requests detailed research.'
-                : '- For every web-backed answer, cite web-derived claims inline with clickable markdown links where possible, then end with BOTH sections: "Sources & References" and "Where to get more". Each must use source title plus a full clickable markdown URL.',
+            '- For web-backed answers, cite each factual claim, prior research, method, and comparison inline with a clickable link to a retrieved page that supports it. Use only retrieved page URLs, never invented references or links from search snippets. If evidence is insufficient, say so and omit the unsupported claim.',
             '- Prefer official documentation, primary research, government sources, and first-party announcements for factual claims. Do not cite a search engine or Jina as the authority when the underlying source is available.',
             '- Use clear headings, short paragraphs, bullets, and numbered steps instead of dense walls of text. Format mathematics for readability: put standalone equations on their own line using $$...$$, use \\(...\\) for inline math, and do not bury formulas in ordinary prose. Use subscripts and superscripts where helpful, for example $$sigmoid(x_i) = 1 / (1 + e^{-x_i})$$.',
             assistantPersonalities?.nova && options.assistant !== 'other' ? `Custom N.O.V.A personality knowledge:\n${assistantPersonalities.nova}` : '',

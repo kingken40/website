@@ -961,7 +961,8 @@ const aiSrc = read('nova_runtime_ai.js');
 const ai = load(slice(aiSrc, 'function isAreYouUpCheck', '// Enhanced AI integration'));
 const webTools = load(`${slice(aiSrc, 'const _WEB_URL_RE', 'function prepareOpenAIMessages')}\n${slice(aiSrc, 'function buildWebTaskMessage', 'function extractResponseText')}`, {
     persistentMaterial: [],
-    shortResponseModeEnabled: false
+    shortResponseModeEnabled: false,
+    URL
 });
 const mainSrc = read('nova_main.js');
 
@@ -977,6 +978,81 @@ test('prompt carries task-offer and you-up guidance and the reply is not hardcod
     assert.ok(aiSrc.includes('Never claim something was stored or sent unless it actually was'));
     assert.ok(aiSrc.includes('options.youUpCheck'));
     assert.ok(!aiSrc.includes("'For you sir, always.'"), 'reply must come from the model, not a fixed string');
+});
+
+test('web answers reject invented or missing citations instead of attaching unrelated sources', () => {
+    const sources = [
+        { title: 'Evidence', url: 'https://example.org/study' },
+        { title: 'Further reading', url: 'https://example.org/more' }
+    ];
+    const valid = webTools._ensureWebSourcesInReply('Result [Evidence](https://example.org/study)', sources, true);
+    assert.ok(valid.includes('Where to get more'));
+    assert.ok(valid.includes('[Further reading](https://example.org/more)'));
+    for (const reply of [
+        'An unsupported claim.',
+        'An unsupported claim.\n\n**Sources & References**\n[Evidence](https://example.org/study)',
+        'A claim [Invented](https://example.org/fake)',
+        'A claim [Evidence](https://example.org/study) [1]'
+    ]) {
+        assert.ok(webTools._ensureWebSourcesInReply(reply, sources, true).includes('could not produce'), reply);
+    }
+    assert.strictEqual(webTools._ensureWebSourcesInReply('Hello!', [], false), 'Hello!');
+});
+
+test('web research uses fetched pages, not search snippets or unrelated outbound links', async () => {
+    const sandbox = load(slice(aiSrc, 'const _WEB_URL_RE', 'function prepareOpenAIMessages'), {
+        persistentMaterial: [], URL, AbortController,
+        console: { log() {}, warn() {} }
+    });
+    sandbox._jinaSearch = async () => 'Title: Study\nURL: https://example.org/study\nDescription: misleading snippet\n\nTitle: Missing\nURL: https://example.org/missing';
+    sandbox._jinaFetch = async url => url.endsWith('/study')
+        ? 'Title: Real Study\nURL Source: https://example.org/study\nMarkdown Content:\nEvidence from the page. [Other](https://example.org/unread)'
+        : null;
+    const bundle = await sandbox.getWebSearchContext('compare research methods');
+    assert.strictEqual(bundle.sources.length, 1);
+    assert.strictEqual(bundle.sources[0].url, 'https://example.org/study');
+    assert.ok(bundle.context.includes('Evidence from the page.'));
+    assert.ok(!bundle.context.includes('misleading snippet'));
+    assert.ok(!bundle.sources.some(source => source.url.includes('unread')));
+    sandbox._jinaFetch = async () => null;
+    assert.strictEqual(await sandbox.getWebSearchContext('compare research methods'), null);
+    assert.strictEqual(sandbox._resolveWebIntent('How do vaccines work?').type, 'auto');
+    assert.strictEqual(sandbox._resolveWebIntent('Describe photosynthesis').type, 'auto');
+    assert.strictEqual(sandbox._resolveWebIntent('Summarize this file'), null);
+});
+
+test('server proxy returns only answers citing retrieved pages and stops when retrieval fails', async () => {
+    let responseText = 'Supported claim [Study](https://example.org/study).';
+    let requests = 0;
+    const sandbox = load(slice(aiSrc, 'async function generateViaServerProxy', 'function isAreYouUpCheck'), {
+        _resolveWebIntent: () => ({ type: 'search' }),
+        getWebSearchContext: async () => ({
+            context: 'Retrieved page content',
+            sources: [{ title: 'Study', url: 'https://example.org/study' }]
+        }),
+        buildWebTaskMessage: (message, context) => `${message}\n${context}`,
+        prepareOpenAIMessages: message => [{ role: 'user', content: message }],
+        currentModel: 'test-model',
+        assistantPresetSelections: {},
+        resolveActivePersonalityPreset: () => null,
+        AbortController, setTimeout, clearTimeout,
+        fetch: async () => {
+            requests++;
+            return { ok: true, json: async () => ({ choices: [{ message: { content: responseText } }] }) };
+        },
+        setLastResponseModel() {},
+        extractResponseText: choice => choice.message.content,
+        needsResponseCompletion: () => false,
+        _ensureWebSourcesInReply: webTools._ensureWebSourcesInReply
+    });
+    const good = await sandbox.generateViaServerProxy('explain research', 'nova');
+    assert.ok(good.reply.includes('Supported claim'));
+    responseText = 'Claim [Fake](https://example.org/fake).';
+    const bad = await sandbox.generateViaServerProxy('explain research', 'nova');
+    assert.ok(bad.reply.includes('could not produce'));
+    sandbox.getWebSearchContext = async () => null;
+    await assert.rejects(() => sandbox.generateViaServerProxy('explain research', 'nova'), /Could not retrieve source pages/);
+    assert.strictEqual(requests, 2);
 });
 
 test('audio video requests search for links grounded in the uploaded transcript', () => {

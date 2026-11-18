@@ -6,6 +6,8 @@ AI5 is a browser-based AI assistant experience built around N.O.V.A. and A.V.O.N
 
 Use the chat to ask questions, explain a topic, brainstorm ideas, analyze information, work through a problem, or get help with writing and coding. AI5 can use live web search for requests that need current or external information. Search results depend on the network and the configured AI services being available.
 
+For web research, AI5 retrieves source pages and asks the assistant to cite supporting evidence inline, with links for further reading. If pages cannot be retrieved or the answer contains missing or unrecognized links, AI5 reports that it could not verify the answer rather than presenting search snippets as citations. Retrieved links confirm page access, not that every generated claim is correct; review the cited passages for important decisions. Requests grounded in your own files or notes can use that material without a web search.
+
 ## Choose an assistant style
 
 The mode cards tailor the assistant's approach:
