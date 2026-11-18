@@ -1223,8 +1223,10 @@ function setupSpeechRecognition() {
     recognition.onresult = function(event) {
         let finalTranscript = '';
         let interimTranscript = '';
+        const mobileTurn = IS_TOUCH_PHONE && alwaysListeningHotkeyMode && alwaysListeningTurnActive;
         
-        for (let i = event.resultIndex; i < event.results.length; i++) {
+        // The result list includes prior finals; rebuild mobile turns so revised interim text and repeated words survive.
+        for (let i = mobileTurn ? 0 : event.resultIndex; i < event.results.length; i++) {
             const transcript = pickBestTranscript(event.results[i]);
             
             if (event.results[i].isFinal) {
@@ -1248,7 +1250,13 @@ function setupSpeechRecognition() {
         if (isMicMutedForSpeech()) return;
         if (isAssistantEchoTranscript(finalTranscript)) finalTranscript = '';
         if (isAssistantEchoTranscript(interimTranscript)) interimTranscript = '';
-        if (!finalTranscript && !interimTranscript) return;
+        if (!finalTranscript && !interimTranscript) {
+            if (mobileTurn) {
+                pendingTranscript = '';
+                lastInterimTranscript = '';
+            }
+            return;
+        }
         
         // Handle wake phrase detection when wake listening is active
         if (isWakeListening && wakeWordEnabled) {
@@ -1270,6 +1278,10 @@ function setupSpeechRecognition() {
             if (interimTranscript) {
                 updateVoiceStatus(`Listening: "${interimTranscript}"`);
             }
+        } else if (mobileTurn) {
+            pendingTranscript = finalTranscript;
+            lastInterimTranscript = interimTranscript;
+            updateVoiceStatus(`Listening: "${joinTranscriptParts(finalTranscript, interimTranscript)}"`);
         } else {
             // Push-to-talk mode - accumulate transcript while button is held
             if (finalTranscript) {

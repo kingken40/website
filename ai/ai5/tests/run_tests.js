@@ -92,6 +92,38 @@ test('mobile recognition submits captured words on end or error without sending 
     assert.deepStrictEqual(submissions, ['Can you hear me clearly?', 'Please explain this', 'Words before the error']);
     assert.strictEqual(sandbox.window.voiceRecognitionError, 'network');
     assert.strictEqual(sandbox.window.alwaysListeningHotkeyMode, false);
+
+    sandbox.window.nextTurn();
+    recognition.onstart();
+    const first = [{ transcript: 'This is very', confidence: 1 }];
+    const second = [{ transcript: 'very important', confidence: 1 }];
+    first.isFinal = true;
+    second.isFinal = false;
+    recognition.onresult({ resultIndex: 0, results: [first, second] });
+    second[0].transcript = 'very important to me';
+    recognition.onresult({ resultIndex: 1, results: [first, second] });
+    recognition.onend();
+    assert.deepStrictEqual(submissions, [
+        'Can you hear me clearly?', 'Please explain this', 'Words before the error',
+        'This is very very important to me'
+    ]);
+
+    sandbox.window.nextTurn();
+    recognition.onstart();
+    const repeated = [{ transcript: 'very', confidence: 1 }];
+    first[0].transcript = 'very';
+    repeated.isFinal = true;
+    recognition.onresult({ resultIndex: 0, results: [first] });
+    recognition.onresult({ resultIndex: 1, results: [first, repeated] });
+    recognition.onend();
+    assert.strictEqual(submissions[submissions.length - 1], 'very very');
+
+    sandbox.window.nextTurn();
+    recognition.onstart();
+    say('outdated draft', false);
+    say('', false);
+    recognition.onend();
+    assert.strictEqual(submissions.length, 5, 'a withdrawn interim result must not be sent');
 });
 
 test('mobile microphone shows permission failure and starts on a retry tap', async () => {
